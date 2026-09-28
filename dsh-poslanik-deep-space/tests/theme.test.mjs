@@ -20,6 +20,11 @@ test('манифест и пакет описывают клиентскую т�
   assert.equal(pkg.dsh.bundle.patch, './cordis.patch.yml')
   assert.equal(pkg.dsh.client.platform, 'web')
   assert.deepEqual(pkg.exports['./client'], './lib/client.js')
+  // Страховка от pnpm add: он однажды молча выбросил этот ключ при переписывании
+  // package.json, и клиентская половина перестала подключаться.
+  assert.deepEqual(pkg.dsh.client.inject, ['@deepseek-ai/dsh-client-ui-slots'])
+  assert.equal(pkg.dependencies['@deepseek-ai/schemastery'], '3.18.4')
+  assert.equal(pkg.version, manifest.version)
 })
 
 test('host-половина отдаёт Config и регистрирует настройки', () => {

@@ -30,6 +30,16 @@ else fail(`версии разошлись: package.json ${packageJson.version} 
 if (packageJson.name === manifest.id) ok(`имя совпадает с id: ${manifest.id}`)
 else fail(`имя ${packageJson.name} ≠ id ${manifest.id}`)
 
+// pnpm add переписывает package.json и однажды молча выбросил dsh.client.inject —
+// без него клиентская половина не подключается. Страхуем здесь.
+if (packageJson.dsh?.client?.platform === undefined) fail('в package.json нет dsh.client.platform')
+else if (!packageJson.dsh.client.inject?.includes('@deepseek-ai/dsh-client-ui-slots')) {
+  fail('в package.json нет dsh.client.inject со слотом настроек')
+} else ok('dsh.client.inject на месте')
+
+if (packageJson.dsh?.bundle?.patch === undefined) fail('в package.json нет dsh.bundle.patch')
+else ok('dsh.bundle.patch на месте')
+
 for (const file of [packageJson.main, manifest.client.main, packageJson.dsh.bundle.patch]) {
   try {
     readFileSync(join(root, file))

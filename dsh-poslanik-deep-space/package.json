@@ -11,6 +11,18 @@
     "poslanik"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sovero/dsh_plugins.git",
+    "directory": "dsh-poslanik-deep-space"
+  },
+  "homepage": "https://github.com/Sovero/dsh_plugins/tree/main/dsh-poslanik-deep-space",
+  "bugs": {
+    "url": "https://github.com/Sovero/dsh_plugins/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./lib/index.js",
   "exports": {
     ".": "./lib/index.js",
@@ -42,7 +54,7 @@
     "test": "node --experimental-test-isolation=none --test tests/theme.test.mjs",
     "version:set": "node scripts/version-set.mjs"
   },
-  "devDependencies": {
+  "dependencies": {
     "@deepseek-ai/schemastery": "3.18.4"
   }
 }
