@@ -1,0 +1,4 @@
+# DSH bundle patch: установленные профили сливают этот слой автоматически.
+- insert:
+    - id: dsh-poslanik-deep-space
+      name: dsh-poslanik-deep-space
