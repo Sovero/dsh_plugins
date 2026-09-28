@@ -76,7 +76,7 @@ test('панель настроек двуязычная, язык живёт в
   assert.match(client, /function translator\(preference\)/u)
   assert.match(client, /language: 'auto'/u)
   assert.match(client, /pds-lang/u)
-  assert.match(host, /z\.enum\(\['auto', 'ru', 'en'\]\)/u)
+  assert.match(host, /Language\(\)\.default\('auto'\)/u)
   assert.equal(/localStorage/u.test(client), false, 'настройки принадлежат хосту, не браузеру')
 })
 
@@ -111,8 +111,40 @@ test('светила: карлики, солнца и чёрные дыры', ()
   assert.match(client, /photонное кольцо|Фотонное кольцо/u)
   assert.match(client, /drawDwarfs\(ctx, this\.width, this\.height\)/u)
   assert.match(client, /drawBlackHoles\(ctx, this\.width, this\.height\)/u)
-  assert.match(host, /z\.boolean\(\)\.default\(true\)\.description\('Чёрные дыры/u)
   assert.match(client, /features: Object\.freeze\(\{/u)
+  assert.match(host, /z\.boolean\(\)\.default\(true\)\.description\('Чёрные дыры/u)
+  assert.match(host, /z\.union\(\[z\.const\('auto'\), z\.const\('ru'\), z\.const\('en'\)\]\)/u)
+})
+
+test('host-половина грузится с настоящим schemastery', async (t) => {
+  // Статическая проверка всегда: в schemastery 3.18.4 нет z.enum, такое поле
+  // роняет загрузку хоста, и плагин пропадает с экрана без единой ошибки в UI.
+  assert.equal(/z\.enum\(/u.test(host), false, 'z.enum в schemastery отсутствует — используйте z.union из z.const')
+  assert.match(host, /const Language = \(\) => z\.union/u)
+
+  let module
+  try {
+    module = await import('../lib/index.js')
+  } catch (error) {
+    if (/Cannot find package|Cannot find module/u.test(error.message)) {
+      t.skip('schemastery не установлен: выполните pnpm install')
+      return
+    }
+    throw error
+  }
+  assert.equal(typeof module.apply, 'function')
+  assert.equal(typeof module.Config, 'function')
+
+  // Перечисление собирается через z.union из z.const: значения из панели
+  // принимаются, а посторонние отвергаются с внятным сообщением.
+  assert.doesNotThrow(() => module.Config({}))
+  assert.doesNotThrow(() => module.Config({ language: 'en', underlay: true, intensity: 1.2 }))
+  assert.doesNotThrow(() => module.Config({ language: 'ru' }))
+  assert.throws(() => module.Config({ language: 'xx' }), /expected .*auto.*ru.*en/su)
+
+  for (const field of ['enabled', 'stars', 'ships', 'comets', 'planets', 'perturbation', 'underlay', 'suns', 'blackholes', 'language', 'intensity']) {
+    assert.ok(Object.hasOwn(module.Config({}), field), `в схеме нет поля ${field}`)
+  }
 })
 
 test('уважает prefers-reduced-motion и остановку вкладки', () => {
