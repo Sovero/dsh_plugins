@@ -78,6 +78,31 @@ test('мост состояния живёт на хосте и не может 
   // Подписки и маршрут не имеют права ронять хост при неожиданных данных.
   assert.match(host, /не удалось подписаться/u)
   assert.match(host, /маршрут состояния не зарегистрирован/u)
+  // ctx.inject возвращает функцию отписки, а НЕ результат колбэка. Если
+  // записать `const state = ctx.inject(...)`, то state — функция, поле session
+  // не читается, и обработчик падает на запасном пути.
+  // Комментарии вырезаем: в них ошибка описана словами и попала бы под запрет.
+  const hostCode = host.replace(/^\s*\/\/.*$/gmu, '')
+  assert.equal(
+    /const \w+ = ctx\.inject\(/u.test(hostCode),
+    false,
+    'результат ctx.inject нельзя присваивать: это функция отписки',
+  )
+  // Вне колбэка к ctx.config обращаться нельзя: Cordis бросает исключение
+  // «cannot get property config without inject», а не отдаёт undefined.
+  const handler = hostCode.slice(
+    hostCode.indexOf('fetch: async () =>'),
+    hostCode.indexOf("ctx.inject(['settings']"),
+  )
+  assert.equal(
+    /ctx\.config/u.test(handler),
+    false,
+    'ctx.config в обработчике запроса бросает исключение и ломает ответ',
+  )
+  assert.equal(/state\?\.session/u.test(hostCode), false, 'state — обычный объект, а не результат inject')
+  assert.match(host, /const state = \{ session: true \}/u)
+  assert.match(host, /state\.session = child\.config\.session !== false/u)
+  assert.match(host, /state\.session === false/u)
   // Клиент ходит по своему пути обычным запросом и не трогает чужой канал.
   assert.match(client, /function bindSessionState\(ctx\)/u)
   assert.match(client, /const STATE_PATH = '\/api\/dsh-poslanik-deep-space\.state'/u)

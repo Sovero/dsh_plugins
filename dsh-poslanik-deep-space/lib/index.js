@@ -99,7 +99,24 @@ function createBridge() {
 
 export function apply(ctx) {
   const bridge = createBridge()
-  const state = ctx.inject(['config'], (child) => child.config ?? ctx.config)
+
+  // Отключатель моста хранится в обычном объекте, который наполняет колбэк
+  // inject. Раньше здесь стояло `const state = ctx.inject(...)` — но inject
+  // возвращает функцию отписки, а НЕ результат колбэка, поэтому state всегда
+  // был функцией, state.session не читался, и обработчик запроса падал на
+  // запасном пути `ctx.config`, который бросает «cannot get property config
+  // without inject». Ошибка сыпалась каждый опрос клиента.
+  //
+  // Вне колбэка к ctx.config обращаться нельзя: Cordis не подменяет
+  // несвойственные поля на undefined, а бросает исключение.
+  const state = { session: true }
+  ctx.inject(['config'], (child) => {
+    try {
+      if (child.config !== undefined) state.session = child.config.session !== false
+    } catch (error) {
+      console.warn('[poslanik-deep-space] настройка отклика недоступна, мост остаётся включён', error)
+    }
+  })
 
   // Подписки на события агента. Каждая обёрнута: неизвестное событие или
   // неожиданная форма полезной нагрузки не должны ронять хост.
@@ -151,10 +168,10 @@ export function apply(ctx) {
         fetch: async () => {
           // Отключатель уважается на стороне хоста: выключил — мост молчит,
           // клиент получит пустое состояние и просто не будет реагировать.
-          // Значение читается в момент запроса, а не при подписке, иначе
-          // тумблер в панели настроек не подействовал бы без перезапуска.
-          const current = state?.session ?? ctx.config?.session
-          const value = current === false ? { sessions: [], settled: 0, revision: 0 } : bridge.snapshot()
+          // Читается ТОЛЬКО state: ctx.config здесь бросает исключение.
+          const value = state.session === false
+            ? { sessions: [], settled: 0, revision: 0 }
+            : bridge.snapshot()
           return new Response(JSON.stringify(value), {
             status: 200,
             headers: { 'content-type': 'application/json' },

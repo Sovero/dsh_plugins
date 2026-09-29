@@ -1,6 +1,6 @@
 {
   "id": "dsh-poslanik-deep-space",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "./lib/index.js",
   "description": "Тема «Глубокий космос» для DSH / Deep space theme for DSH: stars, ships with trails and course changes, meteors, comets and planets under the interface text; pointer movement applies an electromagnetic perturbation.",
   "client": {
