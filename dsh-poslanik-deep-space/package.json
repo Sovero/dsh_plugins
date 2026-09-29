@@ -1,6 +1,6 @@
 {
   "name": "dsh-poslanik-deep-space",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "type": "module",
   "description": "Тема «Глубокий космос» для DSH / Deep space theme for DSH: stars, dwarfs, suns, black holes, ships with trails and course changes, meteors, comets and planets under the interface text; pointer movement applies an electromagnetic perturbation.",
   "keywords": [

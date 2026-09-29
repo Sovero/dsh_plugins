@@ -520,13 +520,34 @@ test('планеты не наезжают: гравитация тянет, р�
   // Притяжение симметрично: минус у второй планеты, иначе система тащила бы
   // энергию из ниоткуда и планеты разлетались бы по спирали.
   assert.match(client, /function applyPlanetGravity\(dt\)/u)
-  assert.match(client, /const d2 = dx \* dx \+ dy \* dy \+ soft \* soft/u)
   assert.match(client, /a\.vx \+= fx/u)
   assert.match(client, /b\.vx -= fx/u)
   assert.match(client, /a\.vy \+= fy/u)
   assert.match(client, /b\.vy -= fy/u)
-  // Смягчение обязательно: при нулевом расстоянии сила уходит в бесконечность.
-  assert.match(client, /const PLANET_SOFTEN = 260/u)
+  // Масса нормализована. Раньше брался квадрат радиуса дважды: произведение
+  // выходило порядка 65 миллионов, и планета получала десятки тысяч пикселей
+  // в секунду за кадр — перелетала экран и перерождалась, отсюда «снаряды».
+  assert.match(client, /function planetMass\(planet\)/u)
+  assert.match(client, /const scaled = planet\.radius \/ 100/u)
+  assert.match(client, /planetMass\(a\) \* planetMass\(b\)/u)
+  assert.equal(
+    /a\.radius \* a\.radius \* b\.radius \* b\.radius/u.test(client),
+    false,
+    'масса снова не нормализована',
+  )
+  // Потолок ускорения: притяжение искривляет путь, но не выбрасывает за экран.
+  assert.match(client, /const PLANET_MAX_ACCEL = 5/u)
+  assert.match(client, /Math\.min\(PLANET_MAX_ACCEL, /u)
+  // Потолок скорости — жёсткая гарантия: разогнаться планете нечем.
+  assert.match(client, /const PLANET_MAX_SPEED = 42/u)
+  assert.match(client, /const scale = PLANET_MAX_SPEED \/ speed/u)
+  assert.match(client, /planet\.vx \*= scale/u)
+  // Стартовая скорость медленная: 5–15 выглядели слишком быстро.
+  assert.match(client, /const speed = rand\(4, 11\) \* planet\.depth/u)
+  // Закон мягкий: деление на расстояние, а не на квадрат, и большое смягчение.
+  assert.match(client, /\(d \+ PLANET_SOFTEN\)/u)
+  assert.match(client, /const PLANET_SOFTEN = 400/u)
+  assert.match(client, /const d = Math\.max\(1, Math\.hypot\(dx, dy\)\)/u)
   // Разделение — жёсткая гарантия, которой не даёт гравитация.
   assert.match(client, /function separatePlanets\(\)/u)
   assert.match(client, /const need = a\.radius \+ b\.radius \+ PLANET_GAP/u)
@@ -598,6 +619,49 @@ test('планеты не наезжают: гравитация тянет, р�
     Math.hypot(same.planets[1].x - same.planets[0].x, same.planets[1].y - same.planets[0].y) >= needSmall,
     true,
   )
+})
+
+test('планета не разгоняется: минута движения не ломает потолок', () => {
+  // Константы берём из самого файла, а дублировать числа в тесте не будем.
+  const prelude = ['PLANET_G', 'PLANET_SOFTEN', 'PLANET_MAX_ACCEL', 'PLANET_MAX_SPEED', 'PLANET_GAP']
+    .map((name) => extractConst(name))
+  assert.equal(prelude.every((text) => text !== null), true, 'нет констант гравитации')
+  // Модель целиком: масса, притяжение, разделение, появление и шаг кадра.
+  const model = client.slice(
+    client.indexOf('function planetMass'),
+    client.indexOf('function createPlanets'),
+  )
+  const bind = new Function(
+    'space',
+    'width',
+    'height',
+    `${prelude.join('\n')}\n${model}\nreturn { updatePlanets }`,
+  )
+  // Две планеты, намеренно сближенные: гравитация тут работает на полную.
+  const scene = {
+    planets: [
+      { x: 320, y: 300, vx: 0, vy: 0, radius: 80, laneTop: 0, laneBottom: 0.5, spin: 0 },
+      { x: 880, y: 300, vx: 0, vy: 0, radius: 70, laneTop: 0.5, laneBottom: 1, spin: 0 },
+    ],
+  }
+  const limit = Number(extractConst('PLANET_MAX_SPEED').match(/=\s*(\d+)/u)[1])
+  const api = bind(scene, 1920, 1080)
+  // Минута при 30 кадрах в секунду.
+  for (let step = 0; step < 1800; step += 1) {
+    api.updatePlanets(1 / 30, 1920, 1080)
+    for (const planet of scene.planets) {
+      const speed = Math.hypot(planet.vx, planet.vy)
+      assert.equal(
+        speed <= limit * (1 + 1e-9),
+        true,
+        `после ${step} кадров скорость ${speed.toFixed(3)} выше потолка ${limit}`,
+      )
+    }
+  }
+  for (const planet of scene.planets) {
+    assert.equal(Number.isFinite(planet.x) && Number.isFinite(planet.y), true, 'координаты разъехались')
+    assert.equal(planet.x > -800 && planet.x < 2700, true, `планета улетела за экран: x=${planet.x}`)
+  }
 })
 
 test('спутники есть не у всех планет, и они обходят диск', () => {

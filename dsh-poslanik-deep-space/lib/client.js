@@ -800,11 +800,15 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     // остались только как зона появления. Настоящее разделение теперь жёсткое:
     // если две планеты всё же сблизились, они раздвигаются симметрично.
     const PLANET_SIDES = ['left', 'right', 'top', 'bottom']
-    // Гравитационная постоянная подобрана так, чтобы притяжение было заметно
-    // (траектории искривляются), но планета за минуту не улетела в центр.
-    const PLANET_G = 900
-    // Смягчение: без него притяжение на малых расстояниях даёт разрыв по скорости.
-    const PLANET_SOFTEN = 260
+    // Притяжение подобрано так, чтобы траектория заметно искривлялась, но
+    // планета за минуту не улетела в центр экрана.
+    const PLANET_G = 2200
+    // Смягчение: притяжение почти постоянно и не взрывается вблизи.
+    const PLANET_SOFTEN = 400
+    // Потолок ускорения, px/с².
+    const PLANET_MAX_ACCEL = 5
+    // Потолок скорости, px/с: планета обязана выглядеть медленной.
+    const PLANET_MAX_SPEED = 42
     // Зазор между дисками: планеты не должны касаться даже краями.
     const PLANET_GAP = 26
 
@@ -816,7 +820,9 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       const spread = rand(-0.45, 0.45)
       const aim = { left: 0, right: Math.PI, top: Math.PI / 2, bottom: -Math.PI / 2 }[side]
       const angle = aim + spread
-      const speed = rand(5, 15) * planet.depth
+      // Стартовая скорость тоже должна быть медленной: 5–15 px/с — планета
+      // проходит ширину экрана за пару минут, а не за секунду.
+      const speed = rand(4, 11) * planet.depth
       planet.vx = Math.cos(angle) * speed
       planet.vy = Math.sin(angle) * speed * 0.55
       // Старт — за границей кадра на своей стороне, чтобы появление читалось.
@@ -865,6 +871,21 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
 
     // Взаимное притяжение. Импульс симметричен: минус у второй планеты, иначе
     // система тащила бы энергию из ниоткуда.
+    //
+    // Масса нормализована: берётся (r / 100)², то есть у планеты 34–92 px масса
+    // 0.12–0.85. Раньше масса считалась как r²·r², произведение выходило
+    // порядка 65 миллионов, и планета за один кадр получала десятки тысяч
+    // пикселей в секунду: она перелетала экран, упиралась в край и
+    // перерождалась — отсюда «снаряды» и мелькание.
+    //
+    // Закон мягкий: притяжение делится на расстояние, а не на квадрат, и
+    // смягчение большое. Ускорение и скорость ограничены потолком, поэтому
+    // разогнаться планеты не могут в принципе, сколько бы кадров ни шло.
+    function planetMass(planet) {
+      const scaled = planet.radius / 100
+      return scaled * scaled
+    }
+
     function applyPlanetGravity(dt) {
       const planets = space.planets
       for (let i = 0; i < planets.length; i += 1) {
@@ -873,13 +894,12 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
           const b = planets[j]
           const dx = b.x - a.x
           const dy = b.y - a.y
-          const soft = PLANET_SOFTEN
-          const d2 = dx * dx + dy * dy + soft * soft
-          const d = Math.sqrt(d2)
-          // Масса растёт как квадрат радиуса: большая планета тянет сильнее.
-          const force = (PLANET_G * a.radius * a.radius * b.radius * b.radius) / d2
-          const fx = (dx / d) * force * dt
-          const fy = (dy / d) * force * dt
+          const d = Math.max(1, Math.hypot(dx, dy))
+          // Ограничение ускорения: притяжение может искривить путь, но не
+          // имеет права швырнуть планету за край экрана.
+          const pull = Math.min(PLANET_MAX_ACCEL, (PLANET_G * planetMass(a) * planetMass(b)) / (d + PLANET_SOFTEN))
+          const fx = (dx / d) * pull * dt
+          const fy = (dy / d) * pull * dt
           a.vx += fx
           a.vy += fy
           b.vx -= fx
@@ -925,6 +945,19 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       }
       applyPlanetGravity(dt)
       separatePlanets()
+      // Потолок скорости применяется ПОСЛЕ всех сил, а не до них: иначе между
+      // ограничением и концом кадра гравитация снова набирала бы скорость выше
+      // предела. Теперь скорость не превышает потолок ни в один момент кадра, и
+      // планета не может перелететь экран и переродиться — отсюда был «мелькающий»
+      // перелёт снарядом.
+      for (const planet of space.planets) {
+        const speed = Math.hypot(planet.vx, planet.vy)
+        if (speed > PLANET_MAX_SPEED) {
+          const scale = PLANET_MAX_SPEED / speed
+          planet.vx *= scale
+          planet.vy *= scale
+        }
+      }
     }
 
     function createPlanets(width, height) {
