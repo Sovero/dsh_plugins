@@ -1,0 +1,54 @@
+{
+  "name": "dsh-ocean-theme",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Тема «Океан» для DSH / Ocean theme for DSH: animated ocean under the interface, fish schools, whales, sharks, jellyfish, kelp and a wrecked ship; pointer movement disturbs the water surface.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "dsh-theme",
+    "ocean",
+    "theme"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sovero/dsh_plugins.git",
+    "directory": "dsh-ocean-theme"
+  },
+  "homepage": "https://github.com/Sovero/dsh_plugins/tree/main/dsh-ocean-theme",
+  "bugs": {
+    "url": "https://github.com/Sovero/dsh_plugins/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "tools",
+    "dsh.plugin.json",
+    "cordis.patch.yml",
+    "README.md",
+    "README_EN.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "node tools/smoke.mjs lib/client.js scene.svg"
+  },
+  "dependencies": {}
+}

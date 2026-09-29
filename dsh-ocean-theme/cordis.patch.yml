@@ -1,0 +1,4 @@
+# Слой патча бандла: установленный профиль сливает его автоматически.
+- insert:
+    - id: dsh-ocean-theme
+      name: dsh-ocean-theme
