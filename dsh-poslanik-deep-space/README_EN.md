@@ -72,6 +72,11 @@ DSH: Settings → General → «Космос / Deep space». Switches for the sc
 pointer perturbation, the layout mode, brightness, and the panel language. The
 host stores everything in `profiles/web/cordis.patch.yml`.
 
+Frame rate is a dropdown next to brightness: off / 15 / 30 / 60, 30 by default.
+Leftover time accumulates and a frame is skipped whole rather than partially, so
+the scene never renders in halves; on a 144 Hz display the cap visibly saves
+power.
+
 ## Files
 
 | File | Purpose |

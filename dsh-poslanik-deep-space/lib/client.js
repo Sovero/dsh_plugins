@@ -166,6 +166,17 @@ html[${THEME_ATTR}] .pds-switch input { width: 16px; height: 16px; accent-color:
 html[${THEME_ATTR}] .pds-range { display: grid; grid-column: 1 / -1; gap: 8px; }
 html[${THEME_ATTR}] .pds-range span { color: rgba(195, 208, 230, 0.82); font-size: 12px; }
 html[${THEME_ATTR}] .pds-range input { width: min(360px, 100%); accent-color: #b9d4f7; }
+html[${THEME_ATTR}] .pds-select {
+  width: min(360px, 100%);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(190, 214, 255, 0.22);
+  background: rgba(16, 22, 40, 0.75);
+  color: #d8e6ff;
+  font-size: 12px;
+  cursor: pointer;
+}
+html[${THEME_ATTR}] .pds-select:disabled { opacity: 0.5; cursor: default; }
 html[${THEME_ATTR}] .pds-lang-row { display: flex; gap: 8px; flex-wrap: wrap; }
 html[${THEME_ATTR}] .pds-lang {
   padding: 5px 12px;
@@ -198,6 +209,10 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         shipsHint: 'Шлейф, смена курса, огонь навигации.',
         comets: 'Кометы и метеоры',
         cometsHint: 'Хвосты комет и пролетающие метеоры.',
+        session: 'Отклик на работу агента',
+        sessionHint: 'Двойная звезда при генерации, вспышка по завершении, красный отсвет при ошибке.',
+        constellations: 'Созвездия',
+        constellationsHint: 'Узнаваемые фигуры: Медведица, Орион, Кассиопея, Южный Крест.',
         planets: 'Планеты',
         planetsHint: 'Медленный дрейф с терминатором и кольцом.',
         perturbation: 'Возмущение от мыши',
@@ -209,6 +224,9 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         blackholes: 'Чёрные дыры',
         blackholesHint: 'Тень, фотонное кольцо и раскручивающийся диск.',
         intensity: (percent) => `Яркость ${percent}%`,
+        frameRate: 'Частота кадров',
+        frameRateHint: 'Потолок отрисовки. «Выкл» — частота экрана.',
+        frameRateOff: 'Выкл',
         saveFailed: 'Не удалось сохранить настройку.',
         saveOffline: 'Настройка не сохранена: нет связи с хостом.',
       },
@@ -222,6 +240,10 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         shipsHint: 'Trails, course changes, navigation light.',
         comets: 'Comets and meteors',
         cometsHint: 'Comet tails and passing meteors.',
+        session: 'Reacts to the agent',
+        sessionHint: 'A binary star while it works, a flash when it finishes, a red flare on error.',
+        constellations: 'Constellations',
+        constellationsHint: 'Recognisable figures: the Bear, Orion, Cassiopeia, the Southern Cross.',
         planets: 'Planets',
         planetsHint: 'Slow drift with terminator and ring.',
         perturbation: 'Pointer perturbation',
@@ -233,6 +255,9 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         blackholes: 'Black holes',
         blackholesHint: 'Shadow, photon ring and a spinning accretion disc.',
         intensity: (percent) => `Brightness ${percent}%`,
+        frameRate: 'Frame rate',
+        frameRateHint: 'Render cap. “Off” — the display refresh rate.',
+        frameRateOff: 'Off',
         saveFailed: 'Could not save the setting.',
         saveOffline: 'Setting not saved: the host is unreachable.',
       },
@@ -249,6 +274,17 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     }
 
     // ── настройки хоста ────────────────────────────────────────────────────
+    // Потолок кадров: 0 — рисовать каждый кадр монитора, остальное — потолок.
+    // Числа совпадают с перечислением в схеме хоста, неизвестное значение
+    // молча уходит в безопасные 30, а не в полное отсутствие ограничения.
+    const FPS_CHOICES = [0, 15, 30, 60]
+    const DEFAULT_FPS = 30
+
+    function frameIntervalFrom(fps) {
+      if (!FPS_CHOICES.includes(fps)) return 1 / DEFAULT_FPS
+      return fps === 0 ? 0 : 1 / fps
+    }
+
     const DEFAULT_SETTINGS = Object.freeze({
       enabled: true,
       stars: true,
@@ -261,6 +297,9 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       blackholes: true,
       language: 'auto',
       intensity: 0.85,
+      fps: DEFAULT_FPS,
+      session: true,
+      constellations: true,
     })
 
     function normalizeSettings(value) {
@@ -278,6 +317,9 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         blackholes: value?.blackholes !== false,
         language,
         intensity: Number.isFinite(intensity) ? Math.min(1.4, Math.max(0.2, intensity)) : DEFAULT_SETTINGS.intensity,
+        fps: FPS_CHOICES.includes(value?.fps) ? value.fps : DEFAULT_FPS,
+        session: value?.session !== false,
+        constellations: value?.constellations !== false,
       })
     }
 
@@ -414,9 +456,15 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       const densities = [0.00016, 0.0001, 0.00005]
       const sizes = [[0.35, 0.75], [0.7, 1.25], [1.1, 2.1]]
       const alphas = [[0.22, 0.45], [0.35, 0.65], [0.5, 0.9]]
-      return depths.map((depth, layer) => ({
+      // Слои разведены по скорости: дальний еле ползёт, ближний идёт быстрее
+      // всех. Максимум опущен с 44 до 22 — на 30 кадрах небо не «бежит», а
+      // разрыв между слоями сохранён, иначе параллакс перестаёт читаться.
+      const drifts = [5, 11, 22]
+      const layers = depths.map((depth, layer) => ({
         depth,
-        drift: 2.5 + depth * 9,
+        drift: drifts[layer],
+        // Внутри слоя звёзды тоже идут не в ногу: у каждой своя скорость,
+        // см. поле flow. Разброс убирает ощущение общего потока.
         stars: Array.from({ length: Math.max(24, Math.round(area * densities[layer])) }, () => ({
           x: Math.random() * width,
           y: Math.random() * height,
@@ -424,8 +472,13 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
           alpha: rand(alphas[layer][0], alphas[layer][1]),
           phase: Math.random() * TAU,
           twinkle: rand(0.4, 1.5),
+          flow: 0.8 + Math.random() * 0.5,
         })),
       }))
+      // Звёздные карты — самый дальний слой: они почти не сдвигаются и лежат
+      // под остальными, иначе структуры расползлись бы вместе с равномерной сыпью.
+      layers.push(createChartLayer(width, height))
+      return layers
     }
 
     // ── светила ─────────────────────────────────────────────────────────────
@@ -486,6 +539,37 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         phase: Math.random() * TAU,
         drift: rand(-0.3, 0.3),
       }))
+    }
+
+    // Времена суток: один атмосферный слой, который очень медленно дрейфует
+    // по палитре. Период — в минутах, альфа держится низкой, чтобы небесный
+    // свет никогда не засветлял интерфейс.
+    const ATMO_ALPHA = 0.16
+    const ATMO_PERIOD = 900
+
+    // Возвращает [hue, saturation, lightness, alpha] для фоновой дымки.
+    // Рассвет держится на подъёме яркости первые секунды сессии.
+    function atmosphereColor(time, dawn) {
+      const phase = (time / ATMO_PERIOD) * TAU
+      const hue = 222 + Math.sin(phase) * 18
+      const saturation = 32 + Math.sin(phase * 0.5) * 6
+      const lightness = 6 + (Math.cos(phase) * 0.5 + 0.5) * 3
+      // Рассвет — короткий тёплый подъём, гаснущий примерно за 8 секунд.
+      const dawnLift = dawn === undefined || dawn <= 0 ? 0 : Math.max(0, 1 - dawn / 8)
+      const alpha = ATMO_ALPHA + dawnLift * 0.1
+      return [hue, saturation, lightness + dawnLift * 3, alpha]
+    }
+
+    function drawAtmosphere(ctx, width, height) {
+      const [hue, saturation, lightness, alpha] = atmosphereColor(
+        space.time,
+        space.dawn === undefined ? 0 : space.dawn,
+      )
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`
+      ctx.fillRect(0, 0, width, height)
+      ctx.restore()
     }
 
     function drawDwarfs(ctx, width, height) {
@@ -585,6 +669,58 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       ctx.restore()
     }
 
+    // Круг Эйнштейна: настоящего преломления пикселей здесь нет — вместо
+    // него дуги дальней полосы, повёрнутые вокруг горизонта событий. Дёшево
+    // и узнаваемо: у чёрной дыры появляется оправа из искажённого неба.
+    function lensingArcs(hole) {
+      return [
+        { startAngle: Math.PI * 0.82, endAngle: Math.PI * 1.18, scale: 1.72 },
+        { startAngle: Math.PI * 1.82, endAngle: Math.PI * 2.18, scale: 1.94 },
+      ]
+    }
+
+    function drawLensing(ctx) {
+      if (space.options.blackholes === false) return
+      if (space.bandsSignature === null) return
+      const band = space.bands.far.canvas
+      if (band === undefined || band.width === 0) return
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      for (const hole of space.blackHoles) {
+        const x = (((hole.x + space.time * hole.drift * 0.0005) % 1.2) - 0.1) * space.width
+        const y = hole.y * space.height
+        for (const arc of lensingArcs(hole)) {
+          // Кусок дальнего неба, повёрнутый и сжатый в кольцо вокруг тени.
+          ctx.save()
+          ctx.translate(x, y)
+          ctx.rotate(arc.startAngle)
+          ctx.globalAlpha = 0.3
+          const size = hole.radius * arc.scale * 2
+          ctx.drawImage(
+            band,
+            0,
+            0,
+            band.width,
+            band.height,
+            0,
+            -size / 2,
+            size,
+            size,
+          )
+          ctx.restore()
+        }
+        // Тонкий светящийся обод тени: без него оправа не читается как линза.
+        const ring = ctx.createRadialGradient(x, y, hole.radius * 0.92, x, y, hole.radius * 1.9)
+        ring.addColorStop(0, 'rgba(255, 236, 200, 0.3)')
+        ring.addColorStop(1, 'rgba(255, 190, 120, 0)')
+        ctx.fillStyle = ring
+        ctx.beginPath()
+        ctx.arc(x, y, hole.radius * 1.9, 0, TAU)
+        ctx.fill()
+      }
+      ctx.restore()
+    }
+
     function drawBlackHoles(ctx, width, height) {
       if (space.options.blackholes === false) return
       ctx.save()
@@ -594,6 +730,22 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         const r = hole.radius
         const inner = r * 1.45
         const outer = r * hole.disc
+
+        // Ошибка агента вспыхивает у ближайшей дыры красным. Гаснет сама:
+        // яркость берётся из затухающего счётчика, а не из флага.
+        if (state.error > 0) {
+          const flare = ctx.createRadialGradient(x, y, r * 0.4, x, y, r * 3.4)
+          flare.addColorStop(0, `rgba(255, 90, 70, ${clamp(state.error * 0.34, 0, 1)})`)
+          flare.addColorStop(0.45, `rgba(220, 60, 50, ${clamp(state.error * 0.14, 0, 1)})`)
+          flare.addColorStop(1, 'rgba(180, 40, 40, 0)')
+          ctx.save()
+          ctx.globalCompositeOperation = 'lighter'
+          ctx.fillStyle = flare
+          ctx.beginPath()
+          ctx.arc(x, y, r * 3.4, 0, TAU)
+          ctx.fill()
+          ctx.restore()
+        }
 
         ctx.save()
         ctx.translate(x, y)
@@ -641,7 +793,141 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       ctx.restore()
     }
 
-    function createPlanets() {
+    // Планеты живут в пикселях и подчиняются взаимной гравитации.
+    //
+    // Прежние «полосы неба» зажимали только вертикаль, и на общей границе двух
+    // полос обе планеты оказывались в одной точке — так они и наезжали. Полосы
+    // остались только как зона появления. Настоящее разделение теперь жёсткое:
+    // если две планеты всё же сблизились, они раздвигаются симметрично.
+    const PLANET_SIDES = ['left', 'right', 'top', 'bottom']
+    // Гравитационная постоянная подобрана так, чтобы притяжение было заметно
+    // (траектории искривляются), но планета за минуту не улетела в центр.
+    const PLANET_G = 900
+    // Смягчение: без него притяжение на малых расстояниях даёт разрыв по скорости.
+    const PLANET_SOFTEN = 260
+    // Зазор между дисками: планеты не должны касаться даже краями.
+    const PLANET_GAP = 26
+
+    function spawnPlanet(planet, width, height) {
+      const side = PLANET_SIDES[Math.floor(Math.random() * PLANET_SIDES.length)]
+      planet.side = side
+      // Угол внутрь кадра: от стороны отмеряем небольшой разброс, чтобы
+      // траектории не шли строго по нормали.
+      const spread = rand(-0.45, 0.45)
+      const aim = { left: 0, right: Math.PI, top: Math.PI / 2, bottom: -Math.PI / 2 }[side]
+      const angle = aim + spread
+      const speed = rand(5, 15) * planet.depth
+      planet.vx = Math.cos(angle) * speed
+      planet.vy = Math.sin(angle) * speed * 0.55
+      // Старт — за границей кадра на своей стороне, чтобы появление читалось.
+      const margin = planet.radius + 60
+      if (side === 'left') planet.x = -margin
+      else if (side === 'right') planet.x = width + margin
+      else planet.x = Math.random() * width
+      if (side === 'top') planet.y = -margin
+      else if (side === 'bottom') planet.y = height + margin
+      else planet.y = planet.laneTop * height + (planet.laneBottom - planet.laneTop) * height * rand(0.15, 0.85)
+      return planet
+    }
+
+    // Стартовое разнесение: планета ставится в своей полосе, но не ближе
+    // суммы радиусов к уже стоящим. Это гарантия на первый кадр, когда
+    // гравитация ещё ничего не успела развести.
+    function placePlanets(planets, width, height) {
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        let fits = true
+        for (let index = 0; index < planets.length; index += 1) {
+          const planet = planets[index]
+          for (let other = 0; other < index; other += 1) {
+            const neighbour = planets[other]
+            const need = planet.radius + neighbour.radius + PLANET_GAP
+            if (Math.hypot(planet.x - neighbour.x, planet.y - neighbour.y) < need) {
+              fits = false
+            }
+          }
+        }
+        if (fits) return
+        // Не подошло — сдвигаем по очереди: крайние уходят за экран, а те,
+        // что уже на экране, разводятся по своей полосе.
+        for (let index = 0; index < planets.length; index += 1) {
+          const planet = planets[index]
+          if (planet.x > -planet.radius && planet.x < width + planet.radius) {
+            planet.x = rand(0, width)
+          }
+          if (planet.y > -planet.radius && planet.y < height + planet.radius) {
+            const top = planet.laneTop * height + planet.radius
+            const bottom = planet.laneBottom * height - planet.radius
+            planet.y = top < bottom ? rand(top, bottom) : rand(0, height)
+          }
+        }
+      }
+    }
+
+    // Взаимное притяжение. Импульс симметричен: минус у второй планеты, иначе
+    // система тащила бы энергию из ниоткуда.
+    function applyPlanetGravity(dt) {
+      const planets = space.planets
+      for (let i = 0; i < planets.length; i += 1) {
+        for (let j = i + 1; j < planets.length; j += 1) {
+          const a = planets[i]
+          const b = planets[j]
+          const dx = b.x - a.x
+          const dy = b.y - a.y
+          const soft = PLANET_SOFTEN
+          const d2 = dx * dx + dy * dy + soft * soft
+          const d = Math.sqrt(d2)
+          // Масса растёт как квадрат радиуса: большая планета тянет сильнее.
+          const force = (PLANET_G * a.radius * a.radius * b.radius * b.radius) / d2
+          const fx = (dx / d) * force * dt
+          const fy = (dy / d) * force * dt
+          a.vx += fx
+          a.vy += fy
+          b.vx -= fx
+          b.vy -= fy
+        }
+      }
+    }
+
+    // Жёсткое разделение. Гравитация сама по себе лишь искривляет путь и при
+    // малых скоростях сводит планеты в точку, поэтому наезд пресекается здесь:
+    // при пересечении дисков обе планеты получают одинаковый толчок наружу.
+    function separatePlanets() {
+      const planets = space.planets
+      for (let i = 0; i < planets.length; i += 1) {
+        for (let j = i + 1; j < planets.length; j += 1) {
+          const a = planets[i]
+          const b = planets[j]
+          const dx = b.x - a.x
+          const dy = b.y - a.y
+          const need = a.radius + b.radius + PLANET_GAP
+          const d = Math.hypot(dx, dy)
+          if (d >= need) continue
+          // Совпадение точек — случай вырожденный: берём фиксированное
+          // направление, иначе деление на ноль даст NaN и планету выбросит.
+          const nx = d > 0.001 ? dx / d : 1
+          const ny = d > 0.001 ? dy / d : 0
+          const push = (need - d) / 2
+          a.x -= nx * push
+          a.y -= ny * push
+          b.x += nx * push
+          b.y += ny * push
+        }
+      }
+    }
+
+    function updatePlanets(dt, width, height) {
+      for (const planet of space.planets) {
+        planet.x += planet.vx * dt
+        planet.y += planet.vy * dt
+        const margin = planet.radius + 60
+        if (planet.x < -margin || planet.x > width + margin) spawnPlanet(planet, width, height)
+        else if (planet.y < -margin || planet.y > height + margin) spawnPlanet(planet, width, height)
+      }
+      applyPlanetGravity(dt)
+      separatePlanets()
+    }
+
+    function createPlanets(width, height) {
       const count = 2 + Math.floor(Math.random() * 2)
       const kinds = ['gas', 'rock', 'ice']
       const baseHue = { gas: 28, rock: 18, ice: 198 }
@@ -649,64 +935,791 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         const kind = kinds[index % kinds.length]
         const hue = baseHue[kind] + Math.floor(rand(-8, 8))
         const planet = {
-          x: Math.random(),
-          y: rand(0.12, 0.88),
+          depth: rand(0.45, 1),
           radius: rand(34, 92),
           hue,
           kind,
           lightAngle: rand(-2.6, -0.5),
-          speed: rand(0.6, 2.2) * (Math.random() < 0.5 ? -1 : 1),
+          // Вращение вокруг оси: медленное и в разные стороны, знак задаёт
+          // видимое направление. Углов наклон не путает с lightAngle — это
+          // другая ось, она продолжает задавать освещение.
+          spin: rand(0.02, 0.085) * (Math.random() < 0.5 ? -1 : 1),
+          spinAngle: Math.random() * TAU,
           ring: kind === 'gas' && index % 2 === 0,
           tilt: rand(-0.5, -0.2),
           alpha: kind === 'gas' ? 0.5 : 0.42,
         }
+        // Каждая планета получает свою полосу неба, и py зажат в неё, поэтому
+        // две планеты физически не могут оказаться рядом ни при рождении, ни
+        // на лету. Полосы делят высоту экрана, а небо — ваньки-встаньку: сосед
+        // сверху или снизу всё равно далеко по вертикали.
+        planet.laneTop = index / count
+        planet.laneBottom = (index + 1) / count
         if (kind === 'gas') {
-          planet.bands = Array.from({ length: 5 }, () => ({
-            offset: rand(-0.55, 0.55),
-            height: rand(0.04, 0.12),
-            hue: hue + Math.floor(rand(-14, 14)),
-            alpha: rand(0.06, 0.14),
+          // Полосы газового гиганта: их больше и они контрастнее прежних
+          // 0.06–0.14, которые после умножения на alpha планеты давали 0.03 —
+          // рельефа не было видно вовсе.
+          planet.bands = Array.from({ length: 9 }, (_, band) => ({
+            offset: rand(-0.72, 0.72),
+            height: rand(0.035, 0.1),
+            hue: hue + Math.floor(rand(-22, 22)),
+            alpha: rand(0.2, 0.42),
+            // Полосы разной ширины: тонкие и толстые, иначе диск выглядит
+            // ровно покрашенным.
+            weight: band % 3 === 0 ? 1.5 : 1,
           }))
         } else {
-          planet.spots = Array.from({ length: 7 }, () => ({
-            x: rand(-0.7, 0.7),
-            y: rand(-0.7, 0.7),
-            r: rand(0.04, 0.13),
-            hue: hue + Math.floor(rand(-20, 20)),
-            alpha: rand(0.05, 0.12),
+          // Пятна и кратеры: часть вытянута, часть круглая, альфа заметная.
+          planet.spots = Array.from({ length: 11 }, () => ({
+            x: rand(-0.78, 0.78),
+            y: rand(-0.78, 0.78),
+            r: rand(0.05, 0.17),
+            squash: rand(0.55, 1),
+            hue: hue + Math.floor(rand(-30, 30)),
+            alpha: rand(0.18, 0.4),
           }))
+          // Спутники заводятся не у всех планет: пустому небу кольца не нужны.
+          // У части планет по одному–три, у каждого своя орбита и своя скорость.
+          if (Math.random() < 0.55) {
+            const moons = 1 + Math.floor(Math.random() * 3)
+            planet.orbitTilt = rand(-0.45, 0.1)
+            planet.orbiters = Array.from({ length: moons }, (_, index) => {
+              const orbit = planet.radius * (1.85 + index * 0.8 + rand(0, 0.35))
+              return {
+                r: orbit,
+                // Ближние орбиты быстрее дальних — так и ведёт себя Кеплер,
+                // и глаз это считывает как движение, а не как вращение диска.
+                speed: 0.42 / Math.pow(orbit / (planet.radius * 2), 1.5) * rand(0.8, 1.25),
+                phase: Math.random() * TAU,
+                size: Math.max(0.9, planet.radius * rand(0.05, 0.115)),
+                hue: 206 + Math.floor(rand(-24, 24)),
+                alpha: rand(0.5, 0.9),
+              }
+            })
+          }
+          // Тёмные моря — крупные низкопрозрачные пятна, дающие масштаб.
+          planet.seas = Array.from({ length: 3 }, () => ({
+            x: rand(-0.6, 0.6),
+            y: rand(-0.6, 0.6),
+            r: rand(0.2, 0.42),
+            squash: rand(0.6, 1),
+            hue: hue + Math.floor(rand(-40, -10)),
+            alpha: rand(0.12, 0.24),
+          }))
+          // Огни городов. Живут на НОЧНОЙ стороне: точка гаснет на светлой
+          // стороне, тускнеет к терминатору и прижимается к краю диска. У
+          // земного облика города собраны в скопления, а не рассыпаны.
+          planet.cities = Array.from({ length: 14 }, () => {
+            // Скопление: сперва выбирается центр, потом точка рядом с ним.
+            const clusterX = rand(-0.62, 0.62)
+            const clusterY = rand(-0.62, 0.62)
+            return {
+              x: clamp(clusterX + rand(-0.22, 0.22), -0.82, 0.82),
+              y: clamp(clusterY + rand(-0.22, 0.22), -0.82, 0.82),
+              // Размер считается от радиуса планеты. Прежние 0.006–0.017 при
+              // радиусе 34–92 px давали 0.2–1.5 пикселя — точка меньше
+              // пикселя не рисуется вовсе, и городов просто не было видно.
+              r: rand(0.022, 0.055),
+              hue: 38 + Math.floor(rand(-6, 8)),
+              alpha: rand(0.6, 1),
+            }
+          })
         }
-        return planet
+        return spawnPlanet(planet, width, height)
       })
     }
 
-    function createShips() {
-      const count = 5 + Math.floor(Math.random() * 4)
-      return Array.from({ length: count }, () => {
-        const depth = rand(0.2, 1)
-        return {
-          x: Math.random(),
-          y: rand(0.08, 0.92),
-          depth,
-          size: 5 + depth * 22,
-          speed: (3 + depth * 26) * (Math.random() < 0.5 ? -1 : 1),
-          navPhase: Math.random() * TAU,
-          navRate: rand(0.6, 1.6),
-          heading: Math.random() < 0.5 ? 0 : Math.PI,
-        }
-      })
-    }
+    // Кометы: три размера и три типа хвоста. Маленькие быстрые с коротким
+    // пылевым хвостом, средние — самые обычные, крупные медленные с длинным
+    // ионовым. Скорость задаётся базой, помноженной на класс, а размер внутри
+    // класса — глубиной, поэтому дальняя большая всё равно мельче ближней.
+    const COMET_CLASSES = Object.freeze({
+      wisp: Object.freeze({ head: 0.55, speed: 1.65, length: 0.5, width: 1.5 }),
+      bearer: Object.freeze({ head: 1, speed: 1, length: 1, width: 2.4 }),
+      giant: Object.freeze({ head: 1.9, speed: 0.55, length: 1.7, width: 3.6 }),
+    })
+
+    // dust — широкий тусклый пылевой, ion — узкий яркий и резкий,
+    // plasma — двуцветный с коротким противотоком.
+    const COMET_VARIANTS = Object.freeze(['dust', 'ion', 'plasma'])
 
     function createComets() {
-      return Array.from({ length: 1 + Math.floor(Math.random() * 2) }, () => ({
-        x: Math.random(),
-        y: rand(0.1, 0.7),
-        vx: rand(9, 20) * (Math.random() < 0.5 ? -1 : 1),
-        vy: rand(2, 7),
-        length: rand(160, 320),
-        alpha: rand(0.35, 0.6),
-        wobble: Math.random() * TAU,
+      const names = Object.keys(COMET_CLASSES)
+      const count = 4 + Math.floor(Math.random() * 3)
+      return Array.from({ length: count }, (_, index) => {
+        const name = names[index % names.length]
+        const spec = COMET_CLASSES[name]
+        const depth = rand(0.4, 1)
+        return {
+          className: name,
+          variant: COMET_VARIANTS[index % COMET_VARIANTS.length],
+          depth,
+          head: spec.head * depth,
+          lineWidth: spec.width * depth,
+          length: rand(160, 320) * spec.length,
+          x: Math.random(),
+          y: rand(0.1, 0.7),
+          vx: rand(9, 20) * spec.speed * (Math.random() < 0.5 ? -1 : 1),
+          vy: rand(2, 7) * spec.speed,
+          alpha: rand(0.35, 0.6),
+          wobble: Math.random() * TAU,
+        }
+      })
+    }
+
+    // Звёздные карты: узнаваемые структуры на фиксированных местах неба
+    // вместо равномерной сыпи. Каждая — детерминированный генератор от
+    // зерна, поэтому при перезапуске окна карта не прыгает.
+    const CHART_SPOTS = Object.freeze([
+      Object.freeze({ name: 'spiral', x: 0.18, y: 0.24, scale: 1, tilt: -0.32 }),
+      Object.freeze({ name: 'globular', x: 0.79, y: 0.71, scale: 0.85, tilt: 0 }),
+      Object.freeze({ name: 'andromeda', x: 0.52, y: 0.9, scale: 1.25, tilt: -0.5 }),
+      Object.freeze({ name: 'pleiades', x: 0.88, y: 0.18, scale: 0.7, tilt: 0.18 }),
+    ])
+
+    // Логарифмическая спираль с ветвлением: рукава отходят от ядра плавно.
+    function chartSpiral(seed, spot) {
+      const stars = []
+      const arms = 2
+      const steps = 130
+      const reach = 0.11 * spot.scale
+      for (let step = 0; step < steps; step += 1) {
+        const t = step / steps
+        const radius = reach * Math.pow(t, 1.7)
+        for (let arm = 0; arm < arms; arm += 1) {
+          const angle = t * 5.2 + (arm / arms) * TAU + spot.tilt
+          const jitter = ((seed * 9301 + step * 49297 + arm * 233) % 233280) / 233280
+          stars.push({
+            x: spot.x + Math.cos(angle) * radius + (jitter - 0.5) * 0.004,
+            y: spot.y + Math.sin(angle) * radius * 0.72 + (jitter - 0.5) * 0.004,
+            radius: 0.4 + t * 0.9,
+            alpha: 0.16 + (1 - t) * 0.4,
+            twinkle: 0.4 + jitter,
+            phase: jitter * TAU,
+          })
+        }
+      }
+      // Ядро — плотное скопление в центре.
+      for (let index = 0; index < 26; index += 1) {
+        const jitter = ((seed * 7919 + index * 104729) % 104729) / 104729
+        const angle = jitter * TAU
+        const radius = 0.018 * spot.scale * Math.sqrt(jitter)
+        stars.push({
+          x: spot.x + Math.cos(angle) * radius,
+          y: spot.y + Math.sin(angle) * radius * 0.72,
+          radius: 0.5 + jitter * 0.5,
+          alpha: 0.5,
+          twinkle: 0.6,
+          phase: jitter * TAU,
+        })
+      }
+      return stars
+    }
+
+    // Шаровое скопление: плотное ядро и разреженная кромка.
+    function chartGlobular(seed, spot) {
+      const stars = []
+      const count = 190
+      for (let index = 0; index < count; index += 1) {
+        const jitter = ((seed * 15485863 + index * 32452843) % 999983) / 999983
+        const angle = jitter * TAU
+        // Кубический закон: центр забит, край пустеет.
+        const radius = 0.075 * spot.scale * Math.pow(jitter, 0.42)
+        stars.push({
+          x: spot.x + Math.cos(angle) * radius,
+          y: spot.y + Math.sin(angle) * radius,
+          radius: 0.35 + (1 - Math.pow(jitter, 0.42)) * 0.75,
+          alpha: 0.22 + (1 - Math.pow(jitter, 0.6)) * 0.5,
+          twinkle: 0.4 + jitter * 0.9,
+          phase: jitter * TAU,
+        })
+      }
+      return stars
+    }
+
+    // Андромеда: наклонённый эллипс с ядром и разреженной пылью.
+    function chartAndromeda(seed, spot) {
+      const stars = []
+      for (let index = 0; index < 150; index += 1) {
+        const jitter = ((seed * 49979687 + index * 67867967) % 1000003) / 1000003
+        const spread = Math.pow(jitter, 0.6)
+        const angle = jitter * TAU
+        const along = Math.cos(angle) * 0.14 * spot.scale * spread
+        const across = Math.sin(angle) * 0.032 * spot.scale * spread
+        stars.push({
+          x: spot.x + along * Math.cos(spot.tilt) - across * Math.sin(spot.tilt),
+          y: spot.y + along * Math.sin(spot.tilt) + across * Math.cos(spot.tilt),
+          radius: 0.3 + spread * 0.7,
+          alpha: 0.12 + spread * 0.42,
+          twinkle: 0.3 + jitter * 0.7,
+          phase: jitter * TAU,
+        })
+      }
+      for (let index = 0; index < 40; index += 1) {
+        const jitter = ((seed * 86028121 + index * 179424673) % 1000033) / 1000033
+        const angle = jitter * TAU
+        const along = Math.cos(angle) * 0.2 * spot.scale
+        const across = Math.sin(angle) * 0.07 * spot.scale
+        stars.push({
+          x: spot.x + along * Math.cos(spot.tilt) - across * Math.sin(spot.tilt),
+          y: spot.y + along * Math.sin(spot.tilt) + across * Math.cos(spot.tilt),
+          radius: 0.28,
+          alpha: 0.1,
+          twinkle: 0.5,
+          phase: jitter * TAU,
+        })
+      }
+      return stars
+    }
+
+    // Плеяды: сцепленная группа из семи ярких звёзд с ореолом — их холодный
+    // синий отлив отличает скопление от рассеянной пыли.
+    function chartPleiades(seed, spot) {
+      const stars = []
+      for (let index = 0; index < 7; index += 1) {
+        const jitter = ((seed * 32452843 + index * 49979687) % 999983) / 999983
+        const angle = jitter * TAU
+        const radius = 0.038 * spot.scale * (0.4 + jitter)
+        stars.push({
+          x: spot.x + Math.cos(angle) * radius,
+          y: spot.y + Math.sin(angle) * radius * 0.85,
+          radius: 1.1 + jitter * 0.7,
+          alpha: 0.72 + jitter * 0.28,
+          twinkle: 0.5 + jitter * 0.8,
+          phase: jitter * TAU,
+          cool: true,
+        })
+      }
+      for (let index = 0; index < 60; index += 1) {
+        const jitter = ((seed * 86028121 + index * 32452843) % 1000033) / 1000033
+        const angle = jitter * TAU
+        const radius = 0.07 * spot.scale * Math.sqrt(jitter)
+        stars.push({
+          x: spot.x + Math.cos(angle) * radius,
+          y: spot.y + Math.sin(angle) * radius * 0.85,
+          radius: 0.3 + jitter * 0.4,
+          alpha: 0.1 + jitter * 0.2,
+          twinkle: 0.4 + jitter,
+          phase: jitter * TAU,
+          cool: true,
+        })
+      }
+      return stars
+    }
+
+    const CHART_BUILDERS = Object.freeze({
+      spiral: chartSpiral,
+      globular: chartGlobular,
+      andromeda: chartAndromeda,
+      pleiades: chartPleiades,
+    })
+
+    // Собирает все карты в плоский список звёзд. Зерно обязательно: без него
+    // карта пересобиралась бы заново при каждом resize и дёргалась бы.
+    function chartBodies(seed) {
+      const stars = []
+      CHART_SPOTS.forEach((spot, index) => {
+        stars.push(...CHART_BUILDERS[spot.name](seed + index * 7919, spot))
+      })
+      return stars
+    }
+
+    function createChartLayer(width, height) {
+      const drift = 1.1
+      return {
+        // Глубина обязательна: warpField берёт её у слоя, и без неё возмущение
+        // от курсора посчиталось бы по undefined.
+        depth: 0.15,
+        drift,
+        stars: chartBodies(20260928).map((star) => ({
+          x: star.x * width,
+          y: star.y * height,
+          radius: star.radius,
+          alpha: star.alpha,
+          twinkle: star.twinkle,
+          phase: star.phase,
+          flow: 0.8 + Math.random() * 0.5,
+          cool: star.cool === true,
+        })),
+      }
+    }
+
+    // Созвездия: узнаваемые фигуры из настоящих ярких звёзд. Координаты
+    // заданы внутри квадрата фигуры (0…1) и переносятся в точку неба.
+    //
+    // Главное правило: все звёзды фигуры смещаются ОДНИМ и тем же сдвигом.
+    // Иначе фигура расползлась бы и перестала быть узнаваемой.
+    const CONSTELLATIONS = Object.freeze([
+      Object.freeze({
+        name: 'Большая Медведица',
+        x: 0.06,
+        y: 0.74,
+        scale: 1,
+        // Медведица: ковш. mag — видимая величина, 1 самая яркая.
+        stars: Object.freeze([
+          [0.97, 0.06, 1.8], [0.79, 0.19, 2.2], [0.61, 0.3, 1.8],
+          [0.44, 0.26, 3.3], [0.29, 0.44, 2.4], [0.11, 0.4, 2.4], [0.07, 0.18, 1.8],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]]),
+      }),
+      Object.freeze({
+        name: 'Орион',
+        x: 0.3,
+        y: 0.04,
+        scale: 0.92,
+        stars: Object.freeze([
+          [0.04, 0.12, 1.6], [0.31, 0.05, 2.1], [0.41, 0.4, 2.4],
+          [0.5, 0.44, 2.2], [0.59, 0.48, 2.6], [0.44, 0.88, 2.5], [0.74, 0.92, 0.4],
+        ]),
+        // Пояс Ориона — три звезды в линию, главный его признак.
+        links: Object.freeze([
+          [0, 2], [1, 4], [2, 3], [3, 4], [4, 6], [2, 5], [0, 1],
+        ]),
+      }),
+      Object.freeze({
+        name: 'Кассиопея',
+        x: 0.62,
+        y: 0.36,
+        scale: 0.86,
+        // Буква W — её узнают мгновенно.
+        stars: Object.freeze([
+          [0.03, 0.52, 2.4], [0.24, 0.18, 2.2], [0.46, 0.62, 2.5],
+          [0.68, 0.18, 2.5], [0.94, 0.58, 3.4],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [2, 3], [3, 4]]),
+      }),
+      Object.freeze({
+        name: 'Южный Крест',
+        x: 0.9,
+        y: 0.6,
+        scale: 0.8,
+        stars: Object.freeze([
+          [0.5, 0.03, 1.3], [0.5, 0.97, 1.7], [0.22, 0.38, 2.8],
+          [0.78, 0.6, 2.7], [0.86, 0.12, 3.1],
+        ]),
+        // Два конца креста и его перекладина.
+        links: Object.freeze([[0, 1], [2, 3], [0, 4]]),
+      }),
+      Object.freeze({
+        name: 'Лев',
+        x: 0.02,
+        y: 0.32,
+        scale: 0.9,
+        // Серп и треугольник хвоста — фигура читается сразу.
+        stars: Object.freeze([
+          [0.1, 0.62, 2.6], [0.2, 0.4, 2.4], [0.36, 0.24, 2.7],
+          [0.58, 0.18, 2.5], [0.8, 0.26, 2.3], [0.84, 0.52, 2.6],
+          [0.66, 0.68, 3.3], [0.42, 0.6, 3.4], [0.16, 0.82, 1.4],
+        ]),
+        links: Object.freeze([
+          [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 0], [7, 8],
+        ]),
+      }),
+      Object.freeze({
+        name: 'Скорпион',
+        x: 0.28,
+        y: 0.56,
+        scale: 0.88,
+        // Длинное изогнутое тело и жало; Антарес — красная звезда в поясе.
+        stars: Object.freeze([
+          [0.06, 0.2, 2.9], [0.16, 0.34, 2.6], [0.3, 0.45, 2.7],
+          [0.45, 0.5, 1.1], [0.6, 0.48, 2.5], [0.72, 0.38, 2.8],
+          [0.8, 0.22, 2.6], [0.88, 0.08, 2.9], [0.96, 0.2, 3.2],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [6, 8]]),
+      }),
+      Object.freeze({
+        name: 'Близнецы',
+        x: 0.44,
+        y: 0.06,
+        scale: 0.8,
+        // Две параллельные цепочки и головы — «близнецы» читаются по схожести.
+        stars: Object.freeze([
+          [0.12, 0.12, 1.6], [0.2, 0.4, 1.6], [0.12, 0.66, 1.6], [0.08, 0.86, 1.9],
+          [0.62, 0.1, 1.2], [0.56, 0.38, 1.6], [0.7, 0.64, 1.6], [0.62, 0.86, 2.3],
+          [0.34, 0.28, 2.8], [0.4, 0.52, 2.8],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [2, 3], [4, 5], [5, 6], [6, 7], [0, 4], [8, 9]]),
+      }),
+      Object.freeze({
+        name: 'Орел',
+        x: 0.74,
+        y: 0.5,
+        scale: 0.78,
+        // Треугольник-крылья и звезда под ними — тело на согнутых крыльях.
+        stars: Object.freeze([
+          [0.04, 0.12, 2.7], [0.5, 0.3, 0.8], [0.96, 0.12, 2.7],
+          [0.5, 0.82, 3.1], [0.26, 0.46, 3.4], [0.76, 0.46, 3.5],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [0, 2], [1, 3], [0, 4], [2, 5]]),
+      }),
+      Object.freeze({
+        name: 'Дракон',
+        x: 0.52,
+        y: 0.66,
+        scale: 0.94,
+        // Зигзаг: голова, шея, тело и хвост вниз.
+        stars: Object.freeze([
+          [0.06, 0.08, 3.1], [0.22, 0.16, 2.8], [0.4, 0.12, 2.7],
+          [0.58, 0.22, 3.0], [0.7, 0.4, 2.6], [0.62, 0.58, 2.8],
+          [0.44, 0.64, 2.9], [0.26, 0.6, 3.0], [0.12, 0.72, 3.1], [0.06, 0.9, 2.8],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9]]),
+      }),
+      Object.freeze({
+        name: 'Лебедь',
+        x: 0.36,
+        y: 0.3,
+        scale: 0.82,
+        // Северный крест: длинное крыло, поперечная перекладина, голова.
+        stars: Object.freeze([
+          [0.5, 0.02, 1.8], [0.5, 0.5, 2.2], [0.5, 0.98, 2.5],
+          [0.18, 0.42, 2.6], [0.84, 0.56, 2.7], [0.5, 0.78, 3.2],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [3, 1], [1, 4]]),
+      }),
+      Object.freeze({
+        name: 'Центавр',
+        x: 0.66,
+        y: 0.86,
+        scale: 0.9,
+        // Гигант рядом с Южным Крестом; здесь та же длинная вытянутость.
+        stars: Object.freeze([
+          [0.06, 0.24, 2.6], [0.3, 0.3, 2.4], [0.56, 0.4, 1.1],
+          [0.78, 0.5, 2.5], [0.92, 0.66, 2.3], [0.5, 0.78, 2.6],
+          [0.26, 0.7, 2.7],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [2, 3], [3, 4], [2, 5], [5, 6], [6, 1]]),
+      }),
+      Object.freeze({
+        name: 'Пёс Большой',
+        x: 0.06,
+        y: 0.9,
+        scale: 0.86,
+        // Сириус — самая яркая звезда неба, нос собаки.
+        stars: Object.freeze([
+          [0.06, 0.78, 0.4], [0.22, 0.66, 2.2], [0.42, 0.52, 2.6],
+          [0.64, 0.38, 1.8], [0.84, 0.24, 2.1], [0.7, 0.12, 2.5],
+          [0.46, 0.16, 3.0],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]),
+      }),
+      Object.freeze({
+        name: 'Лира',
+        x: 0.7,
+        y: 0.2,
+        scale: 0.7,
+        // Маленький параллелограмм с Вегой — крошечная, но узнаваемая.
+        stars: Object.freeze([
+          [0.14, 0.16, 0.3], [0.2, 0.62, 3.6], [0.66, 0.72, 3.3],
+          [0.82, 0.26, 3.2], [0.52, 0.1, 4.2],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [2, 3], [3, 0], [0, 4]]),
+      }),
+      Object.freeze({
+        name: 'Персей',
+        x: 0.82,
+        y: 0.86,
+        scale: 0.84,
+        // Изогнутая цепочка к Мирафу — фигура «подплывает» к Южному Кресту.
+        stars: Object.freeze([
+          [0.08, 0.86, 2.2], [0.22, 0.66, 2.4], [0.4, 0.52, 2.8],
+          [0.62, 0.4, 2.2], [0.84, 0.24, 2.3], [0.7, 0.12, 2.9],
+        ]),
+        links: Object.freeze([[0, 1], [1, 2], [2, 3], [3, 4], [3, 5]]),
+      }),
+    ])
+
+    // Силуэты-подсказки. Не иллюстрация, а намёк: полупрозрачная форма,
+    // наложенная на фигуру, чтобы тот, кто знает созвездие, угадал, а остальные
+    // ничего не заметили. Поэтому они еле видны и лежат ПОД звёздами.
+    //
+    // Три примитива, чтобы не тащить в проект графику:
+    //   poly   — замкнутая область,
+    //   stroke — линия переменной толщины (лапы, хвост, шея),
+    //   disc   — круг (голова, глаз).
+    // Все координаты — в той же системе 0…1, что и звёзды фигуры.
+    const SILHOUETTE_ALPHA = 0.075
+    const SILHOUETTE_LINE = 0.1
+
+    const CONSTELLATION_SILHOUETTES = Object.freeze({
+      'Большая Медведица': Object.freeze({
+        // Медведь: тело вдоль ковша, голова у морды, четыре лапы, короткий хвост.
+        marks: Object.freeze([
+          { kind: 'poly', points: Object.freeze([[0.14, 0.26], [0.5, 0.18], [0.66, 0.34], [0.5, 0.54], [0.2, 0.5]]) },
+          { kind: 'disc', x: 0.1, y: 0.19, r: 0.11, alpha: 1.15 },
+          { kind: 'poly', points: Object.freeze([[0.02, 0.14], [0.1, 0.08], [0.13, 0.2], [0.05, 0.22]]) },
+          { kind: 'stroke', width: 0.035, points: Object.freeze([[0.22, 0.5], [0.2, 0.66]]) },
+          { kind: 'stroke', width: 0.035, points: Object.freeze([[0.34, 0.54], [0.33, 0.7]]) },
+          { kind: 'stroke', width: 0.035, points: Object.freeze([[0.5, 0.54], [0.5, 0.7]]) },
+          { kind: 'stroke', width: 0.035, points: Object.freeze([[0.62, 0.44], [0.66, 0.58]]) },
+          { kind: 'stroke', width: 0.02, points: Object.freeze([[0.66, 0.3], [0.8, 0.16], [0.9, 0.24]]) },
+        ]),
+      }),
+      'Орион': Object.freeze({
+        // Охотник: голова, плечи, туловище, ПОЯС поперёк и сабля вниз.
+        marks: Object.freeze([
+          { kind: 'disc', x: 0.17, y: 0.08, r: 0.075, alpha: 1.15 },
+          { kind: 'poly', points: Object.freeze([[0.03, 0.14], [0.3, 0.05], [0.4, 0.36], [0.3, 0.46], [0.1, 0.34]]) },
+          { kind: 'poly', alpha: 1.5, points: Object.freeze([[0.37, 0.4], [0.63, 0.46], [0.62, 0.54], [0.36, 0.48]]) },
+          { kind: 'stroke', width: 0.04, points: Object.freeze([[0.1, 0.16], [0.24, 0.36]]) },
+          { kind: 'stroke', width: 0.04, points: Object.freeze([[0.3, 0.08], [0.34, 0.3]]) },
+          { kind: 'stroke', width: 0.05, points: Object.freeze([[0.42, 0.5], [0.44, 0.88]]) },
+          { kind: 'stroke', width: 0.05, points: Object.freeze([[0.6, 0.54], [0.74, 0.9]]) },
+          { kind: 'stroke', width: 0.03, alpha: 1.3, points: Object.freeze([[0.49, 0.5], [0.52, 0.72]]) },
+        ]),
+      }),
+      'Кассиопея': Object.freeze({
+        // Царица на троне: изгиб W — её сидящая поза, сверху корона.
+        marks: Object.freeze([
+          { kind: 'poly', points: Object.freeze([[0.1, 0.62], [0.3, 0.28], [0.5, 0.66], [0.7, 0.28], [0.9, 0.6], [0.86, 0.8], [0.14, 0.8]]) },
+          { kind: 'disc', x: 0.46, y: 0.42, r: 0.08, alpha: 1.15 },
+          { kind: 'poly', alpha: 1.3, points: Object.freeze([[0.36, 0.32], [0.56, 0.3], [0.54, 0.2], [0.38, 0.22]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.5, 0.5], [0.26, 0.24]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.5, 0.5], [0.72, 0.24]]) },
+        ]),
+      }),
+      'Южный Крест': Object.freeze({
+        marks: Object.freeze([
+          { kind: 'poly', alpha: 1.3, points: Object.freeze([[0.45, 0.06], [0.55, 0.06], [0.55, 0.94], [0.45, 0.94]]) },
+          { kind: 'poly', alpha: 1.3, points: Object.freeze([[0.24, 0.4], [0.76, 0.58], [0.74, 0.68], [0.22, 0.5]]) },
+        ]),
+      }),
+      'Лев': Object.freeze({
+        // Голова льва у когтя Регула, грива дугой, хвост уходит вверх.
+        marks: Object.freeze([
+          { kind: 'disc', x: 0.16, y: 0.8, r: 0.13, alpha: 1.1 },
+          { kind: 'poly', alpha: 0.8, points: Object.freeze([[0.02, 0.6], [0.3, 0.54], [0.32, 0.96], [0.04, 0.98]]) },
+          { kind: 'poly', points: Object.freeze([[0.1, 0.7], [0.24, 0.68], [0.26, 0.9], [0.1, 0.92]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.3, 0.56], [0.5, 0.26]]) },
+          { kind: 'stroke', width: 0.025, points: Object.freeze([[0.78, 0.28], [0.88, 0.1], [0.96, 0.18]]) },
+        ]),
+      }),
+      'Скорпион': Object.freeze({
+        // Изогнутое тело, клешни у головы и жало на конце хвоста.
+        marks: Object.freeze([
+          { kind: 'stroke', width: 0.07, points: Object.freeze([[0.1, 0.22], [0.3, 0.45], [0.5, 0.5], [0.72, 0.4], [0.86, 0.2]]) },
+          { kind: 'poly', points: Object.freeze([[0.04, 0.16], [0.16, 0.2], [0.1, 0.3], [0.02, 0.24]]) },
+          { kind: 'poly', points: Object.freeze([[0.06, 0.36], [0.18, 0.34], [0.12, 0.46], [0.02, 0.44]]) },
+          { kind: 'stroke', width: 0.04, points: Object.freeze([[0.86, 0.2], [0.97, 0.16], [0.93, 0.3]]) },
+        ]),
+      }),
+      'Близнецы': Object.freeze({
+        // Две фигуры рядом: у каждой голова, торс и две ноги.
+        marks: Object.freeze([
+          { kind: 'disc', x: 0.12, y: 0.1, r: 0.06, alpha: 1.15 },
+          { kind: 'poly', points: Object.freeze([[0.06, 0.18], [0.2, 0.16], [0.22, 0.58], [0.04, 0.6]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.09, 0.6], [0.08, 0.86]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.18, 0.58], [0.2, 0.86]]) },
+          { kind: 'disc', x: 0.6, y: 0.08, r: 0.06, alpha: 1.15 },
+          { kind: 'poly', points: Object.freeze([[0.54, 0.16], [0.68, 0.14], [0.7, 0.56], [0.52, 0.58]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.57, 0.58], [0.56, 0.86]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.66, 0.56], [0.68, 0.86]]) },
+        ]),
+      }),
+      'Орел': Object.freeze({
+        // Раскинутые крылья — широкий треугольник, тело и голова в центре.
+        marks: Object.freeze([
+          { kind: 'poly', points: Object.freeze([[0.03, 0.1], [0.5, 0.3], [0.97, 0.1], [0.74, 0.44], [0.5, 0.34], [0.26, 0.44]]) },
+          { kind: 'poly', points: Object.freeze([[0.42, 0.26], [0.58, 0.26], [0.56, 0.8], [0.44, 0.8]]) },
+          { kind: 'disc', x: 0.5, y: 0.22, r: 0.06, alpha: 1.15 },
+        ]),
+      }),
+      'Дракон': Object.freeze({
+        // Голова, длинное тело по зигзагу и хвост вниз.
+        marks: Object.freeze([
+          { kind: 'poly', points: Object.freeze([[0.03, 0.05], [0.2, 0.03], [0.24, 0.16], [0.08, 0.18]]) },
+          { kind: 'stroke', width: 0.06, points: Object.freeze([[0.14, 0.14], [0.4, 0.12], [0.62, 0.24], [0.66, 0.46], [0.44, 0.64], [0.2, 0.6]]) },
+          { kind: 'stroke', width: 0.04, points: Object.freeze([[0.2, 0.6], [0.1, 0.74], [0.06, 0.92]]) },
+        ]),
+      }),
+      'Лебедь': Object.freeze({
+        // Длинная шея вдоль канала Креста, крылья по бокам.
+        marks: Object.freeze([
+          { kind: 'stroke', width: 0.06, points: Object.freeze([[0.5, 0.06], [0.5, 0.9]]) },
+          { kind: 'poly', points: Object.freeze([[0.5, 0.4], [0.2, 0.34], [0.24, 0.6], [0.5, 0.56]]) },
+          { kind: 'poly', points: Object.freeze([[0.5, 0.4], [0.8, 0.48], [0.76, 0.7], [0.5, 0.6]]) },
+          { kind: 'disc', x: 0.5, y: 0.05, r: 0.05, alpha: 1.2 },
+          { kind: 'stroke', width: 0.025, points: Object.freeze([[0.54, 0.04], [0.64, 0.02]]) },
+        ]),
+      }),
+      'Центавр': Object.freeze({
+        // Человеческая часть справа, вытянутое тело лошади и четыре ноги.
+        marks: Object.freeze([
+          { kind: 'poly', points: Object.freeze([[0.62, 0.2], [0.78, 0.22], [0.8, 0.46], [0.64, 0.48]]) },
+          { kind: 'disc', x: 0.7, y: 0.14, r: 0.055, alpha: 1.15 },
+          { kind: 'poly', points: Object.freeze([[0.1, 0.28], [0.6, 0.3], [0.62, 0.52], [0.14, 0.5]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.2, 0.5], [0.18, 0.74]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.32, 0.52], [0.3, 0.76]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.46, 0.52], [0.48, 0.76]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.56, 0.5], [0.58, 0.74]]) },
+        ]),
+      }),
+      'Пёс Большой': Object.freeze({
+        // Собака вдоль диагонали: морда у Сириуса, спина, лапы, хвост.
+        marks: Object.freeze([
+          { kind: 'poly', points: Object.freeze([[0.26, 0.66], [0.62, 0.4], [0.72, 0.56], [0.36, 0.8]]) },
+          { kind: 'disc', x: 0.18, y: 0.74, r: 0.08, alpha: 1.1 },
+          { kind: 'poly', points: Object.freeze([[0.08, 0.66], [0.2, 0.7], [0.16, 0.86], [0.06, 0.82]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.36, 0.8], [0.34, 0.94]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.58, 0.66], [0.6, 0.8]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.66, 0.54], [0.86, 0.3], [0.94, 0.36]]) },
+        ]),
+      }),
+      'Лира': Object.freeze({
+        // Лира: рама из двух плавных стоек и звукосборной коробки.
+        marks: Object.freeze([
+          { kind: 'poly', points: Object.freeze([[0.22, 0.26], [0.78, 0.26], [0.7, 0.7], [0.3, 0.7]]) },
+          { kind: 'stroke', width: 0.05, points: Object.freeze([[0.2, 0.64], [0.18, 0.26], [0.5, 0.1], [0.82, 0.26], [0.8, 0.64]]) },
+          { kind: 'stroke', width: 0.015, alpha: 0.7, points: Object.freeze([[0.32, 0.66], [0.68, 0.66]]) },
+        ]),
+      }),
+      'Персей': Object.freeze({
+        // Фигура с поднятой рукой — Мираф держит над головой меч.
+        marks: Object.freeze([
+          { kind: 'disc', x: 0.42, y: 0.34, r: 0.06, alpha: 1.15 },
+          { kind: 'poly', points: Object.freeze([[0.34, 0.42], [0.52, 0.4], [0.56, 0.66], [0.32, 0.68]]) },
+          { kind: 'stroke', width: 0.035, points: Object.freeze([[0.34, 0.46], [0.18, 0.3], [0.12, 0.16]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.36, 0.68], [0.26, 0.88]]) },
+          { kind: 'stroke', width: 0.03, points: Object.freeze([[0.52, 0.66], [0.62, 0.84]]) },
+          { kind: 'stroke', width: 0.025, alpha: 1.3, points: Object.freeze([[0.16, 0.14], [0.08, 0.04]]) },
+        ]),
+      }),
+    })
+
+    // Фигуры собираются один раз в пикселях холста. Сдвиг у всех один:
+    // координаты хранятся относительно сдвинутого начала фигуры.
+    function createConstellationLayer(width, height) {
+      // Фигура занимает заметную долю неба: прежний 0.22 и крошечные точки
+      // терялись среди сотен фоновых звёзд, и фигуру нельзя было узнать.
+      const size = Math.max(120, Math.min(width, height) * 0.17)
+      const figures = CONSTELLATIONS.map((figure) => ({
+        name: figure.name,
+        ox: figure.x * width,
+        oy: figure.y * height,
+        size: size * figure.scale,
+        // Звёзды приводятся к экранным координатам на месте: dx/dy прибавляются
+        // в момент отрисовки, и вся фигура едет как одно целое.
+        stars: figure.stars.map(([sx, sy, mag]) => ({
+          x: sx,
+          y: sy,
+          // Ярчесть превращается в радиус: mag 1 — самая большая точка.
+          // Именованные звёзды крупнее фоновых, иначе фигура тонет в сыпи.
+          radius: Math.max(1.5, 4.4 - mag * 0.72),
+        })),
+        links: figure.links,
       }))
+      // Дрейф медленный: небосклон ползёт, а не едет. 0.6 px/с — фигура за
+      // минуту смещается на треть экрана и не отвлекает от работы.
+      return { drift: 0.6, figures }
+    }
+
+    // Силуэт рисуется первым, под звёздами и линиями. Он настолько бледный,
+    // что виден только тем, кто уже знает, что это за фигура.
+    function drawSilhouette(ctx, figure, ox, oy, size) {
+      const shape = CONSTELLATION_SILHOUETTES[figure.name]
+      if (shape === undefined) return
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      for (const mark of shape.marks) {
+        const weight = mark.alpha === undefined ? 1 : mark.alpha
+        if (mark.kind === 'poly') {
+          ctx.beginPath()
+          for (let index = 0; index < mark.points.length; index += 1) {
+            const [px, py] = mark.points[index]
+            if (index === 0) ctx.moveTo(ox + px * size, oy + py * size)
+            else ctx.lineTo(ox + px * size, oy + py * size)
+          }
+          ctx.closePath()
+          ctx.fillStyle = `rgba(126, 168, 235, ${SILHOUETTE_ALPHA * weight})`
+          ctx.fill()
+        } else if (mark.kind === 'disc') {
+          ctx.beginPath()
+          ctx.arc(ox + mark.x * size, oy + mark.y * size, Math.max(0.5, mark.r * size), 0, TAU)
+          ctx.fillStyle = `rgba(126, 168, 235, ${SILHOUETTE_ALPHA * weight})`
+          ctx.fill()
+        } else {
+          ctx.beginPath()
+          for (let index = 0; index < mark.points.length; index += 1) {
+            const [px, py] = mark.points[index]
+            if (index === 0) ctx.moveTo(ox + px * size, oy + py * size)
+            else ctx.lineTo(ox + px * size, oy + py * size)
+          }
+          ctx.strokeStyle = `rgba(150, 190, 250, ${SILHOUETTE_LINE * weight})`
+          ctx.lineWidth = Math.max(0.6, mark.width * size)
+          ctx.stroke()
+        }
+      }
+      ctx.restore()
+    }
+
+    // Фигуры рисуются одним сдвигом на небо. Линии заметные: они и есть
+    // опознавательный признак — без них фигура не читается как созвездие.
+    function drawConstellations(ctx, width, time) {
+      if (space.options.constellations === false) return
+      const layer = space.constellations
+      if (layer === undefined) return
+      const dx = (((0 - time * layer.drift) % width) + width) % width
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      for (const figure of layer.figures) {
+        // Подсказка идёт первой: силуэт лежит под звёздами и линиями.
+        drawSilhouette(ctx, figure, figure.ox + dx, figure.oy, figure.size)
+        for (const [from, to] of figure.links) {
+          const a = figure.stars[from]
+          const b = figure.stars[to]
+          if (a === undefined || b === undefined) continue
+          const x1 = figure.ox + dx + a.x * figure.size
+          const y1 = figure.oy + a.y * figure.size
+          const x2 = figure.ox + dx + b.x * figure.size
+          const y2 = figure.oy + b.y * figure.size
+          // Два прохода: широкое бледное свечение и тонкая яркая нить поверх.
+          // Одной нити на тёмном небе почти не видно.
+          ctx.strokeStyle = 'rgba(140, 178, 240, 0.09)'
+          ctx.lineWidth = 3.2
+          ctx.beginPath()
+          ctx.moveTo(x1, y1)
+          ctx.lineTo(x2, y2)
+          ctx.stroke()
+          ctx.strokeStyle = 'rgba(186, 214, 255, 0.34)'
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(x1, y1)
+          ctx.lineTo(x2, y2)
+          ctx.stroke()
+        }
+        for (const star of figure.stars) {
+          const x = figure.ox + dx + star.x * figure.size
+          const y = figure.oy + star.y * figure.size
+          const halo = ctx.createRadialGradient(x, y, 0, x, y, star.radius * 3.4)
+          halo.addColorStop(0, 'rgba(226, 240, 255, 0.5)')
+          halo.addColorStop(0.35, 'rgba(180, 212, 255, 0.24)')
+          halo.addColorStop(1, 'rgba(140, 180, 255, 0)')
+          ctx.fillStyle = halo
+          ctx.beginPath()
+          ctx.arc(x, y, star.radius * 3.4, 0, TAU)
+          ctx.fill()
+          // Крестообразный луч у самых ярких — те же лучи, что у диффракции.
+          if (star.radius > 3) {
+            const len = star.radius * 3.6
+            ctx.strokeStyle = 'rgba(220, 236, 255, 0.28)'
+            ctx.lineWidth = 0.9
+            ctx.beginPath()
+            ctx.moveTo(x - len, y)
+            ctx.lineTo(x + len, y)
+            ctx.moveTo(x, y - len)
+            ctx.lineTo(x, y + len)
+            ctx.stroke()
+          }
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+          ctx.beginPath()
+          ctx.arc(x, y, star.radius, 0, TAU)
+          ctx.fill()
+        }
+      }
+      ctx.restore()
     }
 
     function createField() {
@@ -720,7 +1733,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       const dx = x - field.targetX
       const dy = y - field.targetY
       const speed = Math.hypot(dx, dy) / Math.max(dt, 0.001)
-      if (Number.isFinite(speed)) field.energy = clamp(field.energy + speed * 0.00024, 0, 1)
+      if (Number.isFinite(speed)) field.energy = clamp(field.energy + speed * 0.00008, 0, 1)
       field.targetX = x
       field.targetY = y
       if (!field.seeded) {
@@ -733,11 +1746,13 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     function updateField(field, dt) {
       field.x = lerp(field.x, field.targetX, 1 - Math.pow(0.0015, dt))
       field.y = lerp(field.y, field.targetY, 1 - Math.pow(0.0015, dt))
-      field.energy *= Math.pow(0.08, dt)
+      // Поле гаснет быстрее прежнего и держится теснее: возмущение от мыши —
+      // тонкий намёк, а не светящийся шар под курсором.
+      field.energy *= Math.pow(0.02, dt)
       if (field.energy < 0.002) field.energy = 0
-      field.radius = 96 + field.energy * 96
+      field.radius = 70 + field.energy * 58
       field.cooldown -= dt
-      if (field.energy > 0.55 && field.cooldown <= 0) {
+      if (field.energy > 0.72 && field.cooldown <= 0) {
         field.rings.push({ age: 0, life: 0.9 + field.energy * 0.5 })
         field.cooldown = 0.5 - field.energy * 0.18
       }
@@ -765,13 +1780,11 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     }
 
     // ── космос: отрисовка ──────────────────────────────────────────────────
+    // Прямой путь: небо и все туманности одним махом, без кэша. Обычный кадр
+    // сюда не ходит — он берёт готовые полосы. Остался на случай, когда кэш
+    // ещё не собран (нулевой размер слоя, сломанный getContext).
     function drawBackground(ctx, width, height, time) {
-      const sky = ctx.createLinearGradient(0, 0, 0, height)
-      sky.addColorStop(0, '#04060f')
-      sky.addColorStop(0.55, '#070a1a')
-      sky.addColorStop(1, '#0a0c1e')
-      ctx.fillStyle = sky
-      ctx.fillRect(0, 0, width, height)
+      paintSky(ctx, width, height, 0)
       if (space.options.stars === false) return
       ctx.save()
       ctx.globalCompositeOperation = 'lighter'
@@ -789,23 +1802,192 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       ctx.restore()
     }
 
-    function drawStars(ctx, width, time) {
+    // ── космос: кэшированные полосы параллакса ─────────────────────────────
+    // Небо и туманности прежде перерисовывались каждый кадр: одна заливка
+    // неба плюс четыре-шесть радиальных градиентов на весь экран. Теперь они
+    // живут в трёх канвасах-полосах и пересобираются только при смене размера
+    // или dpr, а в кадре остаётся три блита.
+    //
+    // Движение сохранено. Полоса сдвигается вправо на доли экрана в секунду
+    // (дальняя медленнее ближней), а картина в ней повторяется с шагом
+    // BAND_PERIOD — ровно с тем, с каким ходят сами туманности. Поэтому
+    // сдвиг в пределах периода показывает ту же картину: ни края, ни стыка.
+    const BAND_PERIOD = 1.2
+    const BAND_DRIFT = Object.freeze({ far: 1.6, mid: 3, near: 5.4 })
+    const BAND_DUST = 110
+
+    function bandSignature(width, height, dpr) {
+      return `${Math.round(width)}x${Math.round(height)}@${dpr}`
+    }
+
+    function createBand() {
+      const canvas = document.createElement('canvas')
+      return { canvas, ctx: canvas.getContext('2d'), signature: null }
+    }
+
+    // Сдвиг полосы по кругу шириной периода: содержимое полосы повторяется с
+    // этим шагом, поэтому возврат на ноль не виден глазу.
+    function bandShift(time, speed, period) {
+      if (!(period > 0)) return 0
+      const raw = time * speed
+      return ((raw % period) + period) % period
+    }
+
+    // Пыль и далёкое зерно ставятся по индексу, а не случайно: иначе пересборка
+    // полосы на ресайзе переставляла бы картину.
+    function hash01(seed) {
+      const value = Math.sin(seed * 12.9898) * 43758.5453
+      return value - Math.floor(value)
+    }
+
+    function paintSky(ctx, width, height, period) {
+      const sky = ctx.createLinearGradient(0, 0, 0, height)
+      sky.addColorStop(0, '#04060f')
+      sky.addColorStop(0.55, '#070a1a')
+      sky.addColorStop(1, '#0a0c1e')
+      ctx.fillStyle = sky
+      // Заливка на окно [−period, width + period]: столько нужно, чтобы полоса
+      // осталась непрозрачной при любом сдвиге. Градиент вертикальный, по
+      // горизонтали цвет тот же, поэтому лишнее не видно.
+      ctx.fillRect(-period, 0, width + period * 2, height)
+    }
+
+    // Срез туманностей [from, to) в полосу: те же радиальные градиенты, тот же
+    // lighter и тот же дрейф, что и в прямом пути. Копии кладутся ровно на
+    // период — с ними сдвиг полосы не меняет картину, а значит не бывает ни
+    // обрыва на краю холста, ни щелчка на переходе через ноль.
+    function paintNebulae(ctx, width, height, period, from, to) {
+      if (space.options.stars === false || to <= from) return
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      const reach = Math.max(width, height)
+      for (let index = from; index < to; index += 1) {
+        const nebula = space.nebulae[index]
+        if (nebula === undefined) continue
+        const base = (((nebula.x + space.time * nebula.drift) % 1.2) - 0.1) * width
+        const cy = nebula.y * height
+        const radius = nebula.radius * reach
+        const first = Math.ceil((-radius - base) / period)
+        const last = Math.floor((width + period + radius - base) / period)
+        for (let step = first; step <= last; step += 1) {
+          const cx = base + step * period
+          const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius)
+          glow.addColorStop(0, `hsla(${nebula.hue}, 70%, 62%, ${nebula.alpha})`)
+          glow.addColorStop(0.55, `hsla(${nebula.hue}, 70%, 50%, ${nebula.alpha * 0.35})`)
+          glow.addColorStop(1, 'hsla(0, 0%, 0%, 0)')
+          ctx.fillStyle = glow
+          // Вне круга градиент прозрачен, поэтому заливаем только его
+          // прямоугольник — картинка та же, а работы заметно меньше.
+          ctx.fillRect(-period, cy - radius, width + period * 2, radius * 2)
+        }
+      }
+      ctx.restore()
+    }
+
+    // Ближняя пыль у самой камеры. Намеренно слабая: полоса должна добавить
+    // глубины, а не поменять картину. Раскладывается сразу по всему окну
+    // отрисовки, копии ей не нужны — у пыли нет жёсткого края.
+    function paintNearDust(ctx, width, height, period) {
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.fillStyle = 'rgb(214, 226, 255)'
+      for (let index = 0; index < BAND_DUST; index += 1) {
+        const x = -period + hash01(index * 7 + 1) * (width + period * 2)
+        const y = hash01(index * 13 + 5) * height
+        const radius = 0.5 + hash01(index * 29 + 11) * 1.7
+        ctx.globalAlpha = 0.025 + hash01(index * 31 + 3) * 0.045
+        ctx.beginPath()
+        ctx.arc(x, y, radius, 0, TAU)
+        ctx.fill()
+      }
+      ctx.restore()
+    }
+
+    function renderBands() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const width = space.width
+      const height = space.height
+      const signature = bandSignature(width, height, dpr)
+      // Пока размер, dpr и режим звёзд те же — перерисовки нет вовсе.
+      if (space.bandsSignature === signature && space.bandsStars === space.options.stars) return
+      // Без 2d-контекста кэша нет: подпись не ставим, кадр уйдёт в прямой путь.
+      if (space.bands.far.ctx === null || space.bands.mid.ctx === null || space.bands.near.ctx === null) {
+        space.bandsSignature = null
+        return
+      }
+      space.bandsSignature = signature
+      space.bandsStars = space.options.stars
+      const period = Math.max(1, BAND_PERIOD * width)
+      for (const key of ['far', 'mid', 'near']) {
+        const band = space.bands[key]
+        band.canvas.width = Math.max(1, Math.round(width * dpr))
+        band.canvas.height = Math.max(1, Math.round(height * dpr))
+        band.ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        band.signature = signature
+      }
+      const count = space.nebulae.length
+      const far = Math.ceil(count / 3)
+      const mid = Math.ceil((count - far) / 2)
+      // Дальняя полоса несёт небо — она непрозрачна и кладётся первой,
+      // средняя и ближняя добавляют своё поверх через lighter.
+      paintSky(space.bands.far.ctx, width, height, period)
+      paintNebulae(space.bands.far.ctx, width, height, period, 0, far)
+      paintNebulae(space.bands.mid.ctx, width, height, period, far, far + mid)
+      paintNebulae(space.bands.near.ctx, width, height, period, far + mid, count)
+      paintNearDust(space.bands.near.ctx, width, height, period)
+    }
+
+    // Порог яркой звезды: всё крупнее считается пробивающим газ и рисуется
+    // поверх туманностей, остальное тонет в её дымке.
+    const BRIGHT_RADIUS = 1.2
+
+    function isBrightStar(star) {
+      return star.radius >= BRIGHT_RADIUS
+    }
+
+    // Крестообразные лучи яркой звезды: короткие, тонкие и только у самых
+    // крупных. Именно они читаются как дифракция на подсвеченном газе.
+    function drawStarFlare(ctx, x, y, radius, alpha) {
+      const len = radius * 5.5
+      const width = Math.max(0.6, radius * 0.35)
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.strokeStyle = `rgba(226, 240, 255, ${clamp(alpha * 0.5, 0, 1)})`
+      ctx.lineWidth = width
+      ctx.beginPath()
+      ctx.moveTo(x - len, y)
+      ctx.lineTo(x + len, y)
+      ctx.moveTo(x, y - len)
+      ctx.lineTo(x, y + len)
+      ctx.stroke()
+    }
+
+    // Фильтр mode разводит звёзды по слоям кадра: 'dim' уходят за газ и
+    // туманность их приглушает, 'bright' идут поверх и дают лучи.
+    function drawStars(ctx, width, time, mode) {
       if (space.options.stars === false) return
+      const bright = mode === 'bright'
       ctx.save()
       ctx.globalCompositeOperation = 'lighter'
       for (const layer of space.stars) {
         for (const star of layer.stars) {
-          const drifted = (((star.x - time * layer.drift) % width) + width) % width
+          const isBright = isBrightStar(star)
+          if (isBright !== bright) continue
+          const drifted = (((star.x - time * layer.drift * star.flow) % width) + width) % width
           const twinkle = 0.72 + 0.28 * Math.sin(time * star.twinkle + star.phase)
           const warped = space.options.perturbation ? warpField(space.field, drifted, star.y, layer.depth) : null
           const x = warped === null ? drifted : warped.x
           const y = warped === null ? star.y : warped.y
-          const alpha = star.alpha * twinkle * (warped === null ? 1 : 1 + warped.glow * 0.45)
-          const radius = star.radius * (warped === null ? 1 : 1 + warped.glow * 0.18)
-          ctx.fillStyle = `rgba(226, 236, 255, ${clamp(alpha, 0, 1)})`
+          const alpha = star.alpha * twinkle * (warped === null ? 1 : 1 + warped.glow * 0.16)
+          const radius = star.radius * (warped === null ? 1 : 1 + warped.glow * 0.06)
+          // Плеяды горят холоднее: синеватый отлив отличает скопление от
+          // рассеянных звёзд вокруг.
+          ctx.fillStyle = star.cool === true
+            ? `rgba(196, 222, 255, ${clamp(alpha, 0, 1)})`
+            : `rgba(226, 236, 255, ${clamp(alpha, 0, 1)})`
           ctx.beginPath()
           ctx.arc(x, y, radius, 0, TAU)
           ctx.fill()
+          if (bright && radius > 1.5) drawStarFlare(ctx, x, y, radius, alpha)
         }
       }
       ctx.restore()
@@ -837,16 +2019,77 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       ctx.restore()
     }
 
-    function drawPlanets(ctx, width, height) {
+    // Спутники. Половина орбиты — за планетой, половина — перед ней, поэтому
+    // они рисуются в двух местах кадра: near решает, какая половина сейчас
+    // на экране. Орбита сплюснута по вертикали — так она читается как
+    // наклонённая, а не как круг, нарисованный сбоку.
+    function drawOrbiters(ctx, planet, x, y, near) {
+      if (planet.orbiters === undefined) return
+      const tilt = planet.orbitTilt ?? 0
+      const cos = Math.cos(tilt)
+      const sin = Math.sin(tilt)
+      for (const orbiter of planet.orbiters) {
+        const angle = orbiter.phase + space.time * orbiter.speed
+        const along = Math.cos(angle) * orbiter.r
+        const across = Math.sin(angle) * orbiter.r * 0.34
+        if ((across >= 0) !== near) continue
+        const ox = x + along * cos - across * sin
+        const oy = y + along * sin + across * cos
+        const halo = ctx.createRadialGradient(ox, oy, 0, ox, oy, orbiter.size * 3.2)
+        halo.addColorStop(0, `hsla(${orbiter.hue}, 85%, 88%, ${orbiter.alpha * 0.5})`)
+        halo.addColorStop(0.4, `hsla(${orbiter.hue}, 80%, 72%, ${orbiter.alpha * 0.22})`)
+        halo.addColorStop(1, `hsla(${orbiter.hue}, 80%, 66%, 0)`)
+        ctx.fillStyle = halo
+        ctx.beginPath()
+        ctx.arc(ox, oy, orbiter.size * 3.2, 0, TAU)
+        ctx.fill()
+        ctx.fillStyle = `hsla(${orbiter.hue}, 70%, 92%, ${orbiter.alpha})`
+        ctx.beginPath()
+        ctx.arc(ox, oy, orbiter.size, 0, TAU)
+        ctx.fill()
+      }
+    }
+
+    // Дорожки орбит — очень тусклые: по ним и видно, что спутник летит, а не
+    // просто висит. Без них вращение не читается.
+    function drawOrbitTracks(ctx, planet, x, y) {
+      if (planet.orbiters === undefined) return
+      const tilt = planet.orbitTilt ?? 0
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      for (const orbiter of planet.orbiters) {
+        ctx.beginPath()
+        ctx.ellipse(
+          x,
+          y,
+          orbiter.r,
+          orbiter.r * 0.34,
+          tilt,
+          0,
+          TAU,
+        )
+        ctx.strokeStyle = `hsla(${orbiter.hue}, 60%, 70%, 0.07)`
+        ctx.lineWidth = 0.7
+        ctx.stroke()
+      }
+      ctx.restore()
+    }
+
+    function drawPlanets(ctx, width, height, step) {
       if (space.options.planets === false) return
       ctx.save()
       for (const planet of space.planets) {
-        const x = (((planet.x + space.time * planet.speed * 0.002) % 1.2) - 0.1) * width
-        const y = planet.y * height
+        // Движение и разделение живут в updatePlanets: здесь только картинка.
+        planet.spinAngle += planet.spin * step
+        const x = planet.x
+        const y = planet.y
         const radius = planet.radius
         const lx = Math.cos(planet.lightAngle)
         const ly = Math.sin(planet.lightAngle)
 
+        // Дальние спутники идут за диском: иначе они проплывали бы поверх.
+        drawOrbiters(ctx, planet, x, y, false)
+        drawOrbitTracks(ctx, planet, x, y)
         if (planet.ring) drawRing(ctx, planet, x, y, radius, 'back')
 
         // Тонкий ободок атмосферы со стороны света.
@@ -880,20 +2123,115 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2)
 
         // Рельеф: у газовых гигантов — полосы, у каменных и ледяных — пятна.
+        // Полосы параллельны экватору и не поворачиваются вместе с диском: их
+        // вращение читается по бегущим бликам вдоль экватора. Пятна лежат на
+        // поверхности, поэтому вращаются вместе с осью.
         if (planet.kind === 'gas') {
           for (const band of planet.bands) {
             ctx.fillStyle = `hsla(${band.hue}, 80%, 72%, ${planet.alpha * band.alpha})`
             ctx.beginPath()
-            ctx.ellipse(x, y + band.offset * radius, radius * 1.02, radius * band.height, 0, 0, TAU)
+            ctx.ellipse(
+              x,
+              y + band.offset * radius,
+              radius * 1.02,
+              radius * band.height * band.weight,
+              0,
+              0,
+              TAU,
+            )
+            ctx.fill()
+            // Блик, обегающий полосу: смещение по синусу даёт равномерный
+            // обход диска, а у краёв блик гаснет — как на настоящем шаре.
+            const travel = Math.sin(planet.spinAngle + band.offset * 4)
+            const streakX = x + travel * radius * 0.62
+            const edge = Math.abs(travel)
+            const fade = (1 - edge * edge) * 0.5
+            ctx.fillStyle = `hsla(${band.hue + 18}, 90%, 88%, ${planet.alpha * band.alpha * fade})`
+            ctx.beginPath()
+            ctx.ellipse(
+              streakX,
+              y + band.offset * radius,
+              radius * 0.34 * (0.4 + 0.6 * (1 - edge)),
+              radius * band.height * 0.7,
+              0,
+              0,
+              TAU,
+            )
             ctx.fill()
           }
         } else {
-          for (const spot of planet.spots) {
-            ctx.fillStyle = `hsla(${spot.hue}, 70%, 80%, ${planet.alpha * spot.alpha})`
+          ctx.save()
+          ctx.translate(x, y)
+          ctx.rotate(planet.spinAngle)
+          // Сначала тёмные моря: они лежат под поверхностью и дают масштаб,
+          // поэтому рисуются до пятен, иначе пятна тонут в их пятне.
+          for (const sea of planet.seas) {
+            ctx.fillStyle = `hsla(${sea.hue}, 45%, 30%, ${planet.alpha * sea.alpha})`
             ctx.beginPath()
-            ctx.arc(x + spot.x * radius, y + spot.y * radius, radius * spot.r, 0, TAU)
+            ctx.ellipse(
+              sea.x * radius,
+              sea.y * radius,
+              radius * sea.r,
+              radius * sea.r * sea.squash,
+              0,
+              0,
+              TAU,
+            )
             ctx.fill()
           }
+          for (const spot of planet.spots) {
+            ctx.fillStyle = `hsla(${spot.hue}, 70%, 82%, ${planet.alpha * spot.alpha})`
+            ctx.beginPath()
+            ctx.ellipse(
+              spot.x * radius,
+              spot.y * radius,
+              radius * spot.r,
+              radius * spot.r * spot.squash,
+              0,
+              0,
+              TAU,
+            )
+            ctx.fill()
+          }
+          // Огни городов видны только там, где ночь. Направление на свет в
+          // повёрнутой системе координат — это угол освещения минус угол
+          // собственного вращения, иначе маска ехала бы вместе с планетой.
+          const lightLocal = planet.lightAngle - planet.spinAngle
+          const lightX = Math.cos(lightLocal)
+          const lightY = Math.sin(lightLocal)
+          ctx.save()
+          ctx.globalCompositeOperation = 'lighter'
+          for (const city of planet.cities) {
+            // Проекция на направление света: минус — глубокая ночь.
+            const toward = city.x * lightX + city.y * lightY
+            const night = clamp(-toward * 2.4, 0, 1)
+            if (night <= 0.03) continue
+            // У самого края диска город сжимается и бледнеет: сферическое
+            // искажение, без него точки вылезали бы за силуэт планеты.
+            const edge = Math.sqrt(Math.max(0, 1 - city.x * city.x - city.y * city.y))
+            // Итоговая альфа усилена: на тёмной стороне иначе огни тонули в
+            // градиенте тени, и диск выглядел пустым.
+            const alpha = clamp(
+              planet.alpha * city.alpha * night * Math.min(1, edge * 3) * 2.6,
+              0,
+              1,
+            )
+            if (alpha <= 0.01) continue
+            ctx.fillStyle = `hsla(${city.hue}, 92%, 72%, ${alpha})`
+            ctx.beginPath()
+            ctx.ellipse(
+              city.x * radius,
+              city.y * radius,
+              radius * city.r * (0.35 + 0.65 * edge),
+              radius * city.r * 0.75 * (0.35 + 0.65 * edge),
+              0,
+              0,
+              TAU,
+            )
+            ctx.fill()
+          }
+          ctx.restore()
+          ctx.restore()
         }
         ctx.restore()
 
@@ -919,6 +2257,8 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         ctx.stroke()
 
         if (planet.ring) drawRing(ctx, planet, x, y, radius, 'front')
+        // Ближние спутники идут после диска — эта половина орбиты впереди.
+        drawOrbiters(ctx, planet, x, y, true)
       }
       ctx.restore()
     }
@@ -963,30 +2303,53 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       }
     }
 
+    // Инерция корабля. Раньше вектор скорости пересчитывался из курса каждый
+    // кадр (`vx = cos(heading) * speed`), то есть скорость всегда совпадала с
+    // курсом и корабль менял направление мгновенно. Теперь скорость — это
+    // состояние: она поворачивается с ограничением по углу, её модуль тянется
+    // к тяге с ограничением по ускорению, и на вираже тяга проседает.
+    const SHIP_ACCEL = 24
+    const SHIP_TURN = 0.55
+
     function updateShips(dt, width, height) {
       for (const ship of space.ships) {
         // Энергия восстанавливается сама и тратится на смену курса.
         ship.energy = Math.min(1, ship.energy + 0.16 * dt)
         ship.cooldown -= dt
         if (ship.cooldown <= 0 && ship.energy > 0.45) {
+          // Меняется замысел, а не траектория: корпус догонит его сам.
           ship.targetHeading += rand(-0.8, 0.8)
           ship.energy -= 0.45
           ship.cooldown = rand(1.8, 4)
         }
 
-        // Поворот идёт тем быстрее, чем больше энергии; на нуле корабль держит курс.
-        const difference = ((ship.targetHeading - ship.heading + Math.PI * 3) % TAU) - Math.PI
-        const turn = (0.25 + 0.9 * ship.energy) * dt
+        // Куда корабль летит СЕЙЧАС, а не куда собирается.
+        const current = Math.hypot(ship.vx, ship.vy)
+        const currentAngle = current > 0.0001 ? Math.atan2(ship.vy, ship.vx) : ship.heading
+        const difference = ((ship.targetHeading - currentAngle + Math.PI * 3) % TAU) - Math.PI
         ship.turning = Math.abs(difference) > 0.02
-        if (ship.turning) ship.heading += clamp(difference, -turn, turn)
-        // Крен следует за поворотом и сглаживается: на вираже корабль «ложится» набок.
-        ship.bank = lerp(ship.bank, clamp(difference * 1.4, -0.6, 0.6), 1 - Math.pow(0.08, dt))
+
+        // Поворот ограничен по углу: чем больше энергии, тем маневреннее корабль.
+        // Ограничение и есть инерция — резко сменить направление он не может.
+        const maxTurn = (SHIP_TURN * (0.5 + 0.5 * ship.energy)) * dt
+        const applied = clamp(difference, -maxTurn, maxTurn)
+        const nextAngle = currentAngle + applied
+
         // Тяга дышит сама и сбавляется на вираже — так движение выглядит живым.
-        const wanted = ship.turning ? 0.7 : 0.88 + 0.18 * Math.sin(space.time * 0.6 + ship.navPhase)
+        const wanted = ship.turning ? 0.66 : 0.9 + 0.16 * Math.sin(space.time * 0.6 + ship.navPhase)
         ship.throttle = lerp(ship.throttle, wanted, 1 - Math.pow(0.25, dt))
-        const current = ship.speed * ship.throttle
-        ship.vx = Math.cos(ship.heading) * current
-        ship.vy = Math.sin(ship.heading) * current
+        // Модуль скорости не прыгает: он разгоняется и тормозит с ускорением.
+        const target = ship.speed * ship.throttle
+        const nextSpeed = current + clamp(target - current, -SHIP_ACCEL * dt, SHIP_ACCEL * dt)
+
+        ship.vx = Math.cos(nextAngle) * nextSpeed
+        ship.vy = Math.sin(nextAngle) * nextSpeed
+        // Нос смотрит туда, куда корабль реально летит, и потому на вираже
+        // отстаёт от замысла — инерция видна глазом, без разрывов пути.
+        ship.heading = nextAngle
+        // Крен следует за фактической скоростью поворота и сглаживается.
+        const rate = applied / Math.max(dt, 0.001)
+        ship.bank = lerp(ship.bank, clamp(rate * 0.55, -0.6, 0.6), 1 - Math.pow(0.08, dt))
 
         ship.x += (ship.vx * dt) / width
         ship.y += (ship.vy * dt) / height
@@ -1100,6 +2463,74 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       }
     }
 
+    // Хвост рисуется по варианту кометы: пылевой широкий и тусклый, ионовый
+    // узкий и резкий, плазменный двуцветный с коротким противотоком. Все три
+    // работают через один и тот же вектор скорости, поэтому комета всегда
+    // «смотрит» туда, куда летит.
+    function drawCometTail(ctx, comet, headX, headY, tailX, tailY) {
+      if (comet.variant === 'dust') {
+        const tail = ctx.createLinearGradient(tailX, tailY, headX, headY)
+        tail.addColorStop(0, 'rgba(120, 190, 255, 0)')
+        tail.addColorStop(0.7, `rgba(150, 205, 255, ${comet.alpha * 0.22})`)
+        tail.addColorStop(1, `rgba(230, 245, 255, ${comet.alpha * 0.5})`)
+        ctx.strokeStyle = tail
+        ctx.lineWidth = comet.lineWidth * 1.6
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(tailX, tailY)
+        ctx.lineTo(headX, headY)
+        ctx.stroke()
+        return
+      }
+
+      if (comet.variant === 'ion') {
+        // Два луча слегка расходятся: раствор хвоста на кончике уже головы.
+        const half = comet.length * 0.04
+        for (const skew of [-1, 1]) {
+          const tipX = tailX - (headY - tailY) * half * skew * 0.02
+          const tipY = tailY + (headX - tailX) * half * skew * 0.02
+          const tail = ctx.createLinearGradient(tipX, tipY, headX, headY)
+          tail.addColorStop(0, 'rgba(90, 150, 255, 0)')
+          tail.addColorStop(0.6, `rgba(130, 190, 255, ${comet.alpha * 0.42})`)
+          tail.addColorStop(1, 'rgba(245, 252, 255, 0.9)')
+          ctx.strokeStyle = tail
+          ctx.lineWidth = comet.lineWidth * 0.7
+          ctx.lineCap = 'round'
+          ctx.beginPath()
+          ctx.moveTo(tipX, tipY)
+          ctx.lineTo(headX, headY)
+          ctx.stroke()
+        }
+        return
+      }
+
+      // plasma: широкий тёплый след позади и узкий холодный впереди.
+      const warm = ctx.createLinearGradient(tailX, tailY, headX, headY)
+      warm.addColorStop(0, 'rgba(255, 150, 90, 0)')
+      warm.addColorStop(0.65, `rgba(255, 186, 120, ${comet.alpha * 0.3})`)
+      warm.addColorStop(1, `rgba(255, 236, 210, ${comet.alpha * 0.55})`)
+      ctx.strokeStyle = warm
+      ctx.lineWidth = comet.lineWidth * 1.35
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(tailX, tailY)
+      ctx.lineTo(headX, headY)
+      ctx.stroke()
+
+      // Противоток: короткий выброс по другую сторону головы.
+      const antiX = headX + (headX - tailX) * 0.12
+      const antiY = headY + (headY - tailY) * 0.12
+      const anti = ctx.createLinearGradient(headX, headY, antiX, antiY)
+      anti.addColorStop(0, `rgba(190, 225, 255, ${comet.alpha * 0.4})`)
+      anti.addColorStop(1, 'rgba(190, 225, 255, 0)')
+      ctx.strokeStyle = anti
+      ctx.lineWidth = comet.lineWidth * 0.8
+      ctx.beginPath()
+      ctx.moveTo(headX, headY)
+      ctx.lineTo(antiX, antiY)
+      ctx.stroke()
+    }
+
     function drawComets(ctx, width, height, dt) {
       if (space.options.comets === false) return
       ctx.save()
@@ -1111,8 +2542,9 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         if (comet.x < -0.25 || comet.x > 1.25 || comet.y < -0.3 || comet.y > 1.3) {
           comet.x = Math.random()
           comet.y = rand(0.1, 0.7)
-          comet.vx = rand(9, 20) * (Math.random() < 0.5 ? -1 : 1)
-          comet.vy = rand(2, 7)
+          const spec = COMET_CLASSES[comet.className]
+          comet.vx = rand(9, 20) * spec.speed * (Math.random() < 0.5 ? -1 : 1)
+          comet.vy = rand(2, 7) * spec.speed
         }
 
         const headX = comet.x * width
@@ -1121,24 +2553,23 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         const tailX = headX - (comet.vx / speed) * comet.length
         const tailY = headY - (comet.vy / speed) * comet.length
 
-        const tail = ctx.createLinearGradient(tailX, tailY, headX, headY)
-        tail.addColorStop(0, 'rgba(120, 190, 255, 0)')
-        tail.addColorStop(0.7, `rgba(150, 205, 255, ${comet.alpha * 0.28})`)
-        tail.addColorStop(1, `rgba(230, 245, 255, ${comet.alpha * 0.6})`)
-        ctx.strokeStyle = tail
-        ctx.lineWidth = 2.4
-        ctx.beginPath()
-        ctx.moveTo(tailX, tailY)
-        ctx.lineTo(headX, headY)
-        ctx.stroke()
+        drawCometTail(ctx, comet, headX, headY, tailX, tailY)
 
-        const glow = ctx.createRadialGradient(headX, headY, 0, headX, headY, 22)
+        // Комa — ореол вокруг ядра, радиус зависит от класса.
+        const coma = 22 * comet.head
+        const glow = ctx.createRadialGradient(headX, headY, 0, headX, headY, coma)
         glow.addColorStop(0, `rgba(240, 250, 255, ${comet.alpha})`)
         glow.addColorStop(0.35, `rgba(160, 210, 255, ${comet.alpha * 0.5})`)
         glow.addColorStop(1, 'rgba(120, 180, 255, 0)')
         ctx.fillStyle = glow
         ctx.beginPath()
-        ctx.arc(headX, headY, 22, 0, TAU)
+        ctx.arc(headX, headY, coma, 0, TAU)
+        ctx.fill()
+
+        // Ядро: маленькая плотная точка, чтобы комета не выглядела каплей.
+        ctx.fillStyle = `rgba(255, 255, 255, ${clamp(comet.alpha * 1.2, 0, 1)})`
+        ctx.beginPath()
+        ctx.arc(headX, headY, Math.max(0.6, 1.5 * comet.head), 0, TAU)
         ctx.fill()
       }
       ctx.restore()
@@ -1183,6 +2614,171 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       ctx.restore()
     }
 
+    // ── отклик на работу агента ───────────────────────────────────────────
+    // Состояние приходит с хоста: клиент не знает текущую сессию и угадать
+    // её не может. Порядок проверок важен — ошибка важнее генерации.
+    const SESSION_POLL_MS = 1000
+    const STATE_PATH = '/api/dsh-poslanik-deep-space.state'
+
+    function modeFromSnapshot(snapshot) {
+      if (snapshot.error !== null && snapshot.error !== undefined) return 'error'
+      if (snapshot.running === true) return 'running'
+      return 'awaiting'
+    }
+
+    // Сводит список сессий в одно состояние сцены: генерация важнее покоя,
+    // ошибка важнее генерации, а завершившийся ход замечен по счётчику.
+    function stateFromPayload(payload, previous) {
+      const list = Array.isArray(payload?.sessions) ? payload.sessions : []
+      const busy = list.filter((entry) => entry.running === true)
+      const failed = list.filter((entry) => entry.error !== null && entry.error !== undefined)
+      const reference = failed[0] ?? busy[0] ?? list[0]
+      const settled = typeof payload?.settled === 'number' ? payload.settled : 0
+      return {
+        mode: reference === undefined ? 'awaiting' : modeFromSnapshot(reference),
+        settled,
+        // Рост счётчика означает, что ход только что закончился.
+        settledUp: previous !== undefined && settled > previous.settled,
+        busy: busy.length,
+        failed: failed.length,
+      }
+    }
+
+    function applyReaction(reaction, state) {
+      if (reaction === 'done') state.burst = 1
+      if (reaction === 'error') state.error = 1
+      return state
+    }
+
+    function bindSessionState(ctx) {
+      state.sessionId = null
+      state.failures = 0
+      // Маршрут свой собственный, а не вызов общего канала: канал /api
+      // принадлежит dsh-api-gateway и перехватчик у него один. Ходить по
+      // своему пути безопаснее, чем претендовать на чужой.
+      const request = () => window.fetch(STATE_PATH, { method: 'GET' }).then((response) => {
+        if (!response.ok) throw new Error(`состояние недоступно: ${response.status}`)
+        return response.json()
+      })
+      let stopped = false
+      const timer = window.setInterval(() => {
+        if (stopped || space.options.session === false) return
+        // Отвечает не сразу и может умереть вместе с соединением, поэтому
+        // любая ошибка — тихий отказ: тема продолжает рисоваться как раньше.
+        request()
+          .then((payload) => {
+            if (stopped) return
+            const next = stateFromPayload(payload, state)
+            if (next.settledUp && next.mode !== 'running') applyReaction('done', state)
+            if (next.mode === 'error') applyReaction('error', state)
+            state.mode = next.mode
+            state.busy = next.busy
+            state.failed = next.failed
+            state.settled = next.settled
+            state.connected = true
+          })
+          .catch(() => {
+            state.failures += 1
+            state.connected = false
+          })
+      }, SESSION_POLL_MS)
+      return () => {
+        stopped = true
+        window.clearInterval(timer)
+      }
+    }
+
+    // Состояние сцены живёт отдельно от настроек: его пишет мост с хоста.
+    const state = {
+      mode: 'awaiting',
+      settled: 0,
+      busy: 0,
+      failed: 0,
+      connected: false,
+      failures: 0,
+      reason: null,
+      sessionId: null,
+      burst: 0,
+      error: 0,
+    }
+
+    // Двойная звезда при генерации. Якорь выводится из зерна, а не из
+    // Math.random, иначе звезда прыгала бы при каждом populate.
+    function createDoubleStar(seed) {
+      const at = (step) => ((seed * 9301 + step * 49297) % 233280) / 233280
+      return {
+        anchorX: 0.18 + at(1) * 0.64,
+        anchorY: 0.16 + at(2) * 0.3,
+        phase: at(3) * TAU,
+        orbit: 0.4 + at(4) * 0.3,
+        // Звёзды разного цвета: пара читается как система, а не как две точки.
+        warm: 30 + Math.floor(at(5) * 20),
+        cool: 200 + Math.floor(at(6) * 30),
+      }
+    }
+
+    function updateReactions(dt) {
+      // Вспышки гаснут сами: иначе красная вспышка у дыры не отпустила бы.
+      state.burst = Math.max(0, state.burst - dt * 0.7)
+      state.error = Math.max(0, state.error - dt * 0.5)
+    }
+
+    function drawDoubleStar(ctx) {
+      if (state.mode !== 'running') return
+      const star = space.doubleStar
+      const x = star.anchorX * space.width
+      const y = star.anchorY * space.height
+      // Одна звезда даёт опорный свет, вторая обращается вокруг неё.
+      const breath = 0.5 + 0.5 * Math.sin(space.time * 2.1 + star.phase)
+      const spin = space.time * star.orbit + star.phase
+      const partnerX = x + Math.cos(spin) * 26
+      const partnerY = y + Math.sin(spin) * 10
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      const glowAt = (cx, cy, radius, hue, alpha) => {
+        const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius)
+        glow.addColorStop(0, `hsla(${hue}, 90%, 88%, ${alpha})`)
+        glow.addColorStop(0.4, `hsla(${hue}, 90%, 70%, ${alpha * 0.45})`)
+        glow.addColorStop(1, `hsla(${hue}, 90%, 60%, 0)`)
+        ctx.fillStyle = glow
+        ctx.beginPath()
+        ctx.arc(cx, cy, radius, 0, TAU)
+        ctx.fill()
+      }
+      const base = 0.35 + breath * 0.35
+      glowAt(x, y, 34 + breath * 10, star.warm, base)
+      glowAt(partnerX, partnerY, 20 + breath * 7, star.cool, base * 0.8)
+      ctx.restore()
+    }
+
+    // Вспышка по завершении хода: расходящееся кольцо светящейся пыли.
+    function drawDust(ctx) {
+      if (state.burst <= 0) return
+      const x = space.width * 0.5
+      const y = space.height * 0.42
+      const life = 1 - state.burst
+      const radius = 40 + life * Math.max(space.width, space.height) * 0.28
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.strokeStyle = `rgba(190, 220, 255, ${clamp(state.burst * 0.5, 0, 1)})`
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(x, y, radius, 0, TAU)
+      ctx.stroke()
+      // Частицы по кольцу: точка за точкой расходятся от вспышки.
+      for (let index = 0; index < 18; index += 1) {
+        const angle = (index / 18) * TAU + space.doubleStar.phase
+        const drift = radius + (index % 3) * 14
+        const px = x + Math.cos(angle) * drift
+        const py = y + Math.sin(angle) * drift * 0.7
+        ctx.fillStyle = `rgba(214, 234, 255, ${clamp(state.burst * 0.7, 0, 1)})`
+        ctx.beginPath()
+        ctx.arc(px, py, 1.6, 0, TAU)
+        ctx.fill()
+      }
+      ctx.restore()
+    }
+
     function drawField(ctx) {
       if (space.options.perturbation === false) return
       const field = space.field
@@ -1192,15 +2788,15 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       if (field.energy > 0) {
         const radius = field.radius
         const glow = ctx.createRadialGradient(field.x, field.y, 0, field.x, field.y, radius)
-        glow.addColorStop(0, `rgba(120, 180, 255, ${clamp(field.energy * 0.085, 0, 0.1)})`)
-        glow.addColorStop(0.4, `rgba(90, 140, 255, ${clamp(field.energy * 0.035, 0, 0.05)})`)
+        glow.addColorStop(0, `rgba(120, 180, 255, ${clamp(field.energy * 0.03, 0, 0.035)})`)
+        glow.addColorStop(0.4, `rgba(90, 140, 255, ${clamp(field.energy * 0.012, 0, 0.018)})`)
         glow.addColorStop(1, 'rgba(60, 110, 255, 0)')
         ctx.fillStyle = glow
         ctx.beginPath()
         ctx.arc(field.x, field.y, radius, 0, TAU)
         ctx.fill()
 
-        ctx.strokeStyle = `rgba(140, 190, 255, ${clamp(field.energy * 0.12, 0, 0.15)})`
+        ctx.strokeStyle = `rgba(140, 190, 255, ${clamp(field.energy * 0.05, 0, 0.06)})`
         ctx.lineWidth = 1
         for (let index = 0; index < 2; index += 1) {
           const ringRadius = radius * (0.4 + index * 0.26)
@@ -1209,14 +2805,14 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
           ctx.stroke()
         }
 
-        ctx.fillStyle = `rgba(220, 238, 255, ${clamp(field.energy * 0.26, 0, 0.3)})`
+        ctx.fillStyle = `rgba(220, 238, 255, ${clamp(field.energy * 0.12, 0, 0.14)})`
         ctx.beginPath()
         ctx.arc(field.x, field.y, 1.2 + field.energy * 1.2, 0, TAU)
         ctx.fill()
       }
       for (const ring of field.rings) {
         const share = 1 - ring.age / ring.life
-        ctx.strokeStyle = `rgba(150, 200, 255, ${clamp(share * 0.12, 0, 0.14)})`
+        ctx.strokeStyle = `rgba(150, 200, 255, ${clamp(share * 0.05, 0, 0.06)})`
         ctx.lineWidth = 1.2
         ctx.beginPath()
         ctx.arc(field.x, field.y, field.radius * (0.5 + (1 - share) * 1.5), 0, TAU)
@@ -1237,8 +2833,21 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       frame: 0,
       drawn: false,
       reducedMotion: false,
+      // Отсчёт рассвета: сцена стартует на пике, затем свет гаснет за ~8с.
+      dawn: 0,
+      dawnSince: 0,
+      doubleStar: createDoubleStar(7),
+      // Потолок кадров: frameInterval — минимальный интервал между
+      // отрисованными кадрами, 0 значит «каждый кадр монитора».
+      accumulator: 0,
+      frameInterval: frameIntervalFrom(DEFAULT_FPS),
       options: normalizeSettings(),
       nebulae: [],
+      // Кэш фона: три полосы параллакса. Пересобираются только при смене
+      // размера, dpr или режима звёзд, в кадре с них берутся три блита.
+      bands: { far: createBand(), mid: createBand(), near: createBand() },
+      bandsSignature: null,
+      bandsStars: true,
       stars: [],
       planets: [],
       ships: [],
@@ -1260,11 +2869,16 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         this.canvas.style.height = `${this.height}px`
         this.context.setTransform(dpr, 0, 0, dpr, 0, 0)
         this.stars = createStars(this.width, this.height)
+        this.constellations = createConstellationLayer(this.width, this.height)
+        renderBands()
       },
 
       populate() {
         this.nebulae = createNebulae()
-        this.planets = createPlanets()
+        this.planets = createPlanets(this.width, this.height)
+        // Стартовое разнесение: на первом кадре гравитация ещё ничего не
+        // успела развести, поэтому наезд исключается заранее.
+        placePlanets(this.planets, this.width, this.height)
         this.dwarfs = createDwarfs()
         this.suns = createSuns()
         this.blackHoles = createBlackHoles()
@@ -1272,12 +2886,29 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         this.comets = createComets()
         this.meteors = []
         this.meteorTimer = rand(1.5, 4)
+        // Туманности только что пересобраны — кэш полос устарел, перерисовываем.
+        this.bandsSignature = null
+        renderBands()
       },
 
       render(dt) {
         if (this.context === null) return
-        this.time += dt
-        updateField(this.field, dt)
+        // Потолок кадров: копим время и пропускаем кадр целиком, а не часть
+        // слоёв, — иначе на 15 кадрах в секунду картина мерцала бы наполовину.
+        //
+        // Важно: и время сцены, и интегрирование движений идут по
+        // НАКОПЛЕННОМУ шагу. Иначе при потолке 30 на 60-герцевом экране слои,
+        // считающие по space.time, спешили бы вдвое, а корабли, кометы и метеоры,
+        // считающие по dt, наоборот, ползли бы вдвое медленнее.
+        let step = dt
+        if (this.frameInterval > 0) {
+          this.accumulator += dt
+          if (this.accumulator < this.frameInterval) return
+          step = this.accumulator
+          this.accumulator -= this.frameInterval
+        }
+        this.time += step
+        updateField(this.field, step)
         const ctx = this.context
         // Слой мог получить размер позже, чем первый кадр: ловим это здесь.
         if (this.layer !== undefined && this.layer !== null && this.width > 0) {
@@ -1289,16 +2920,51 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
           trace('первый кадр отрисован', `качественная=${this.reducedMotion} прозрачность=${this.options.enabled}`)
         }
         ctx.clearRect(0, 0, this.width, this.height)
-        drawBackground(ctx, this.width, this.height, this.time)
-        drawStars(ctx, this.width, this.time)
+        // Тусклые звёзды рисуются ДО полос: газ над ними и есть дымка, которая
+        // их приглушает. Яркие идут после и свет сквозь газ пробивается.
+        drawStars(ctx, this.width, this.time, 'dim')
+        // Фон и туманности больше не строятся в кадре: три блита из кэша
+        // полос вместо семи полноэкранных заливок. Прямой путь остаётся
+        // только на случай, когда кэш ещё не собран.
+        if (this.bandsSignature === null) {
+          drawBackground(ctx, this.width, this.height, this.time)
+        } else {
+          const width = this.width
+          const height = this.height
+          const period = Math.max(1, BAND_PERIOD * width)
+          ctx.drawImage(space.bands.far.canvas, bandShift(this.time, BAND_DRIFT.far, period), 0, width, height)
+          // Средняя и ближняя полосы сложены поверх дальней аддитивно, как их
+          // рисовали с lighter по кадру.
+          ctx.globalCompositeOperation = 'lighter'
+          ctx.drawImage(space.bands.mid.canvas, bandShift(this.time, BAND_DRIFT.mid, period), 0, width, height)
+          ctx.drawImage(space.bands.near.canvas, bandShift(this.time, BAND_DRIFT.near, period), 0, width, height)
+          ctx.globalCompositeOperation = 'source-over'
+        }
+        drawStars(ctx, this.width, this.time, 'bright')
+        // Созвездия идут вместе со звёздами: яркие точки и тусклые линии между
+        // ними — одна картинка, а не два наложенных слоя.
+        drawConstellations(ctx, this.width, this.time)
+        // Атмосфера ложится поверх газа, но под звёздами: это дымка неба, а не
+        // вуаль поверх сцены. Подъём при первом содержательном ходе — рассвет.
+        if (this.dawn === undefined) this.dawn = 0
+        if (this.time - this.dawnSince < 0.0001) this.dawnSince = this.time
+        this.dawn = this.time - this.dawnSince
+        drawAtmosphere(ctx, this.width, this.height)
+        // Линзы идут до дисков: кольцо Эйнштейна огибает горизонт событий
+        // и не должно ложиться поверх аккреционного диска.
+        drawLensing(ctx)
         drawDwarfs(ctx, this.width, this.height)
         drawSuns(ctx, this.width, this.height)
         drawBlackHoles(ctx, this.width, this.height)
-        drawPlanets(ctx, this.width, this.height)
-        drawComets(ctx, this.width, this.height, dt)
-        drawMeteors(ctx, this.width, dt)
-        if (this.options.ships !== false) updateShips(dt, this.width, this.height)
+        if (this.options.planets !== false) updatePlanets(step, this.width, this.height)
+        drawPlanets(ctx, this.width, this.height, step)
+        drawComets(ctx, this.width, this.height, step)
+        drawMeteors(ctx, this.width, step)
+        if (this.options.ships !== false) updateShips(step, this.width, this.height)
         drawShips(ctx, this.width, this.height)
+        updateReactions(step)
+        drawDoubleStar(ctx)
+        drawDust(ctx)
         drawField(ctx)
       },
 
@@ -1448,6 +3114,26 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
             },
           }),
         ),
+        React.createElement(
+          'div',
+          { className: 'pds-range' },
+          React.createElement('span', null, text.frameRate),
+          React.createElement('div', { className: 'pds-settings-copy' }, React.createElement('span', null, text.frameRateHint)),
+          React.createElement(
+            'select',
+            {
+              className: 'pds-select',
+              disabled: !value.enabled || !state.editable,
+              value: String(value.fps),
+              onChange: (event) => {
+                props.controller.set({ fps: Number(event.target.value) })
+              },
+            },
+            FPS_CHOICES.map((choice) =>
+              React.createElement('option', { key: choice, value: String(choice) }, choice === 0 ? text.frameRateOff : String(choice)),
+            ),
+          ),
+        ),
         switchRow('stars', text.stars, text.starsHint),
         state.features.suns ? switchRow('suns', text.suns, text.sunsHint) : null,
         state.features.blackholes ? switchRow('blackholes', text.blackholes, text.blackholesHint) : null,
@@ -1456,6 +3142,8 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         switchRow('planets', text.planets, text.planetsHint),
         switchRow('perturbation', text.perturbation, text.perturbationHint),
         switchRow('underlay', text.underlay, text.underlayHint),
+        switchRow('session', text.session, text.sessionHint),
+        switchRow('constellations', text.constellations, text.constellationsHint),
       )
     }
 
@@ -1536,6 +3224,14 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         const applySettings = () => {
           const value = controller.get().value
           space.options = value
+          // Полосы кэша хранят туманности, значит галочка «звёзды» меняет их
+          // содержимое. bandsStars здесь НЕ трогаем: renderBands сам увидит
+          // расхождение с space.options.stars и пересоберёт полосы, а при
+          // неизменных настройках выйдет немедленно.
+          renderBands()
+          // Потолок кадров живёт в движке, а не в настройках: пересчитываем
+          // интервал из нормализованной частоты, чтобы движок не знал о схеме.
+          space.frameInterval = frameIntervalFrom(value.fps)
           layer.toggleAttribute('data-disabled', value.enabled === false)
           layer.style.opacity = String(value.underlay === true ? value.intensity : value.intensity * 0.4)
           // Режим «под текстом» ставит слой на z-index: -1; режим по умолчанию
@@ -1572,8 +3268,14 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         )
         trace('слот настроек зарегистрирован')
 
+        // Мост к хосту включается последним: к этому моменту сцена уже
+        // работает, и если канала не будет, тема просто останется спокойной.
+        const stopBridge = bindSessionState(ctx)
+        trace('мост состояния', state.connected ? 'отвечает' : `ждёт: ${state.reason ?? 'первый ответ'}`)
+
         return () => {
           space.stop()
+          stopBridge()
           for (const timer of timers) window.clearTimeout(timer)
           for (const [element, previous] of remembered) element.style.background = previous
           unsubscribe()

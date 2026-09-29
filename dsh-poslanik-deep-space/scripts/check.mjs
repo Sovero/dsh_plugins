@@ -30,12 +30,16 @@ else fail(`версии разошлись: package.json ${packageJson.version} 
 if (packageJson.name === manifest.id) ok(`имя совпадает с id: ${manifest.id}`)
 else fail(`имя ${packageJson.name} ≠ id ${manifest.id}`)
 
-// pnpm add переписывает package.json и однажды молча выбросил dsh.client.inject —
-// без него клиентская половина не подключается. Страхуем здесь.
+// pnpm add переписывает package.json, а dsh.client — единственное место, где
+// клиентская половина объявляет платформу. Раньше здесь стояла проверка на
+// `dsh.client.inject` со значением `@deepseek-ai/dsh-client-ui-slots`: пакет
+// такого имени в поставке DSH нет, из-за чего клиентская половина падала при
+// импорте, а профиль уходил в safe mode. Теперь проверяем обратное — чтобы
+// несуществующая пакетная зависимость не вернулась.
 if (packageJson.dsh?.client?.platform === undefined) fail('в package.json нет dsh.client.platform')
-else if (!packageJson.dsh.client.inject?.includes('@deepseek-ai/dsh-client-ui-slots')) {
-  fail('в package.json нет dsh.client.inject со слотом настроек')
-} else ok('dsh.client.inject на месте')
+else if (packageJson.dsh.client.inject !== undefined) {
+  fail('в package.json не должно быть dsh.client.inject: такого пакета нет в поставке DSH')
+} else ok('dsh.client без пакетных зависимостей')
 
 if (packageJson.dsh?.bundle?.patch === undefined) fail('в package.json нет dsh.bundle.patch')
 else ok('dsh.bundle.patch на месте')
