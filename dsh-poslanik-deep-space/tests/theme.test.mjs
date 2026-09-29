@@ -246,6 +246,13 @@ test('потолок кадров живёт в движке и в панели 
   assert.match(client, /if \(this\.accumulator < this\.frameInterval\) return/u)
   assert.match(client, /space\.frameInterval = frameIntervalFrom\(value\.fps\)/u)
   assert.match(client, /props\.controller\.set\(\{ fps: Number\(event\.target\.value\) \}\)/u)
+  // Скорость планет крутится в панели рядом с яркостью: 10–200 %, шаг 5.
+  assert.match(client, /text\.planetSpeed\(speedPercent\)/u)
+  assert.match(client, /props\.controller\.set\(\{ planetSpeed: Number\(event\.target\.value\) \/ 100 \}\)/u)
+  for (const bound of ["min: '10'", "max: '200'", "step: '5'"]) {
+    assert.ok(client.includes(bound), `в ползунке скорости планет нет ${bound}`)
+  }
+  assert.match(host, /planetSpeed: z\.number\(\)\.min\(0\.1\)\.max\(2\)\.default\(1\)/u)
 })
 
 test('корабли мелкие, с корпусом, тягой и шлейфом', () => {
@@ -540,10 +547,17 @@ test('планеты не наезжают: гравитация тянет, р�
   assert.match(client, /Math\.min\(PLANET_MAX_ACCEL, /u)
   // Потолок скорости — жёсткая гарантия: разогнаться планете нечем.
   assert.match(client, /const PLANET_MAX_SPEED = 42/u)
-  assert.match(client, /const scale = PLANET_MAX_SPEED \/ speed/u)
+  // Потолок урезается множителем дрейфа, иначе гравитация снова вытолкнула бы
+  // планету на прежнюю скорость при вдвое медленном режиме.
+  assert.match(client, /const limit = PLANET_MAX_SPEED \* planetDriftScale\(\)/u)
+  assert.match(client, /const scale = limit \/ speed/u)
   assert.match(client, /planet\.vx \*= scale/u)
   // Стартовая скорость медленная: 5–15 выглядели слишком быстро.
-  assert.match(client, /const speed = rand\(4, 11\) \* planet\.depth/u)
+  assert.match(client, /const speed = rand\(4, 11\) \* planet\.depth \* planetDriftScale\(\)/u)
+  // Множитель приходит из настроек темы и уважает границы 0.1–2.
+  assert.match(client, /function planetDriftScale\(\)/u)
+  assert.match(client, /Number\(space\.options\?\.planetSpeed\)/u)
+  assert.match(client, /Math\.min\(2, Math\.max\(0\.1, planetSpeed\)\)/u)
   // Закон мягкий: деление на расстояние, а не на квадрат, и большое смягчение.
   assert.match(client, /\(d \+ PLANET_SOFTEN\)/u)
   assert.match(client, /const PLANET_SOFTEN = 400/u)

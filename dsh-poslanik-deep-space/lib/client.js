@@ -224,6 +224,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         blackholes: 'Чёрные дыры',
         blackholesHint: 'Тень, фотонное кольцо и раскручивающийся диск.',
         intensity: (percent) => `Яркость ${percent}%`,
+        planetSpeed: (percent) => `Скорость планет ${percent}%`,
         frameRate: 'Частота кадров',
         frameRateHint: 'Потолок отрисовки. «Выкл» — частота экрана.',
         frameRateOff: 'Выкл',
@@ -255,6 +256,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         blackholes: 'Black holes',
         blackholesHint: 'Shadow, photon ring and a spinning accretion disc.',
         intensity: (percent) => `Brightness ${percent}%`,
+        planetSpeed: (percent) => `Planet speed ${percent}%`,
         frameRate: 'Frame rate',
         frameRateHint: 'Render cap. “Off” — the display refresh rate.',
         frameRateOff: 'Off',
@@ -300,10 +302,12 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       fps: DEFAULT_FPS,
       session: true,
       constellations: true,
+      planetSpeed: 1,
     })
 
     function normalizeSettings(value) {
       const intensity = Number(value?.intensity)
+      const planetSpeed = Number(value?.planetSpeed)
       const language = ['ru', 'en', 'auto'].includes(value?.language) ? value.language : 'auto'
       return Object.freeze({
         enabled: value?.enabled !== false,
@@ -320,6 +324,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         fps: FPS_CHOICES.includes(value?.fps) ? value.fps : DEFAULT_FPS,
         session: value?.session !== false,
         constellations: value?.constellations !== false,
+        planetSpeed: Number.isFinite(planetSpeed) ? Math.min(2, Math.max(0.1, planetSpeed)) : DEFAULT_SETTINGS.planetSpeed,
       })
     }
 
@@ -822,7 +827,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       const angle = aim + spread
       // Стартовая скорость тоже должна быть медленной: 5–15 px/с — планета
       // проходит ширину экрана за пару минут, а не за секунду.
-      const speed = rand(4, 11) * planet.depth
+      const speed = rand(4, 11) * planet.depth * planetDriftScale()
       planet.vx = Math.cos(angle) * speed
       planet.vy = Math.sin(angle) * speed * 0.55
       // Старт — за границей кадра на своей стороне, чтобы появление читалось.
@@ -884,6 +889,13 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     function planetMass(planet) {
       const scaled = planet.radius / 100
       return scaled * scaled
+    }
+
+    // Множитель дрейфа планет: 1 — как задумано, 0.5 — вдвое медленнее.
+    // Настройка приходит из настроек темы; без неё поведение прежнее.
+    function planetDriftScale() {
+      const value = Number(space.options?.planetSpeed)
+      return Number.isFinite(value) && value > 0 ? value : 1
     }
 
     function applyPlanetGravity(dt) {
@@ -952,8 +964,11 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       // перелёт снарядом.
       for (const planet of space.planets) {
         const speed = Math.hypot(planet.vx, planet.vy)
-        if (speed > PLANET_MAX_SPEED) {
-          const scale = PLANET_MAX_SPEED / speed
+        // Потолок урезается тем же множителем, что и разгон: при вдвое меньшей
+        // скорости гравитация не должна снова вытащить планету на прежний предел.
+        const limit = PLANET_MAX_SPEED * planetDriftScale()
+        if (speed > limit) {
+          const scale = limit / speed
           planet.vx *= scale
           planet.vy *= scale
         }
@@ -3083,6 +3098,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       const text = state.text
       const message = state.error
       const percent = Math.round(value.intensity * 100)
+      const speedPercent = Math.round(value.planetSpeed * 100)
       const switchRow = (key, title, hint) =>
         React.createElement(
           'label',
@@ -3144,6 +3160,22 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
             disabled: !value.enabled || !state.editable,
             onChange: (event) => {
               props.controller.set({ intensity: Number(event.target.value) / 100 })
+            },
+          }),
+        ),
+        React.createElement(
+          'div',
+          { className: 'pds-range' },
+          React.createElement('span', null, text.planetSpeed(speedPercent)),
+          React.createElement('input', {
+            type: 'range',
+            min: '10',
+            max: '200',
+            step: '5',
+            value: speedPercent,
+            disabled: !value.enabled || !state.editable,
+            onChange: (event) => {
+              props.controller.set({ planetSpeed: Number(event.target.value) / 100 })
             },
           }),
         ),

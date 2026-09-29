@@ -28,6 +28,9 @@ export const Config = z.object({
   session: z.boolean().default(true).description('Отклик на работу агента').volatile(),
   constellations: z.boolean().default(true).description('Созвездия').volatile(),
   intensity: z.number().min(0.2).max(1.4).default(0.85).description('Яркость · Brightness').volatile(),
+  // Множитель дрейфа планет: 1 — как задумано, 0.5 — вдвое медленнее.
+  // Вращение дисков и орбиты спутников не затрагиваются.
+  planetSpeed: z.number().min(0.1).max(2).default(1).description('Скорость планет · Planet drift').volatile(),
   fps: Fps().default(30).description('Частота кадров · Frame rate (0 — без ограничения)').volatile(),
 })
 
@@ -199,6 +202,7 @@ export function apply(ctx) {
           blackholes: z.boolean().default(true),
           language: Language().default('auto'),
           intensity: z.number().min(0.2).max(1.4).default(0.85),
+          planetSpeed: z.number().min(0.1).max(2).default(1),
           fps: Fps().default(30),
           session: z.boolean().default(true),
           constellations: z.boolean().default(true),
