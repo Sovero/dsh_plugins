@@ -77,11 +77,17 @@ Leftover time accumulates and a frame is skipped whole rather than partially, so
 the scene never renders in halves; on a 144 Hz display the cap visibly saves
 power.
 
+Planet drift speed is the second slider, next to brightness: 10–200 %, step 5,
+100 % by default. It is the `planetSpeed` host setting (0.1–2), scaling both the
+spawn speed and the speed ceiling, so gravity cannot push the planets back up to
+the old cap in the half-speed mode. Disk spin and satellite orbits are not
+scaled — that is not drift.
+
 ## Files
 
 | File | Purpose |
 | --- | --- |
-| `dsh.plugin.json` | plugin manifest: `main`, `client.main`, `client.inject` |
+| `dsh.plugin.json` | plugin manifest: `main`, `client.main` (no `client.inject`, on purpose) |
 | `lib/index.js` | host half: `Config` and settings registration |
 | `lib/client.js` | client half: style, layer, engine, bilingual settings panel |
 | `cordis.patch.yml` | loader patch inserting the plugin into the profile |
