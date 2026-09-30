@@ -2232,8 +2232,8 @@ lastA = Math.atan2(dy, dx);
 				),
 					React.createElement("div", { className: "dsh-ocean-row" },
 						React.createElement("span", { className: "dsh-ocean-name dsh-ocean-mode" }, "Сборка"),
-						React.createElement("span", { className: "dsh-ocean-track dsh-ocean-mode" }, "v61: голова молота вытянута, шия и широкая перекладина")
-				)
+						React.createElement("span", { className: "dsh-ocean-track dsh-ocean-mode" }, "v63: стекло переживает переключение схемы — тема и сцена больше не застывают")
+					)
 			);
 		}
 
@@ -2243,10 +2243,9 @@ lastA = Math.atan2(dy, dx);
 		 * @returns {void}
 		 */
 		function apply(ctx) {
-			// Тема не зависит ни от одного сервиса: сцена и токены поднимаются всегда,
-			// а слоты — только если браузерная оболочка их уже объявила.
-			var theme = ctx.get("theme");
-
+			// Ни сцена, ни слоты не ждут сервисы: они поднимаются всегда, а
+			// доступ к теме и слотам берётся в собственных эффектах ниже —
+			// браузерная половина грузится раньше, чем эти сервисы появляются.
 			var prefs = loadPrefs();
 			// Настройки приходят из localStorage сырыми. Раньше отсюда бралось
 			// `enabled: false` как есть, и одна стылая запись выключала тему
@@ -2260,14 +2259,6 @@ lastA = Math.atan2(dy, dx);
 				tint: clamp01(typeof prefs.tint === "number" ? prefs.tint : 0.8, 0.2, 1),
 				scheme: "dark"
 			};
-			if (theme !== undefined) {
-				try {
-					var snap = theme.getTheme();
-					if (snap && snap.active && snap.active.colorScheme === "light") run.scheme = "light";
-				} catch (error) {
-					/* остаёмся на тёмной палитре */
-				}
-			}
 
 			var repaint = null;
 			var repaintTimer = null;
@@ -2283,7 +2274,6 @@ lastA = Math.atan2(dy, dx);
 			}
 
 			ctx.effect(function () {
-				var dropTokens = null;
 				var dropStyle = null;
 				var dropLayer = null;
 				var LAYER_CLASS = "dsh-ocean-layer";
@@ -2589,10 +2579,6 @@ lastA = Math.atan2(dy, dx);
 				}
 
 				function paint() {
-					if (dropTokens) {
-						dropTokens();
-						dropTokens = null;
-					}
 					if (dropStyle) {
 						dropStyle();
 						dropStyle = null;
@@ -2633,16 +2619,6 @@ lastA = Math.atan2(dy, dx);
 						// отказе слоя обрезка вернётся, и ватерлиня снова уедет за край.
 dropStyle = insertStyle("document", "html,body{background-color:" + scheme.page + ";background-image:" + url + ";background-size:100% 100%;background-position:center center;background-repeat:no-repeat;background-attachment:fixed}");
 					}
-					if (theme !== undefined) {
-						var flat = buildTokens(run.scheme === "light");
-						var pair = {};
-						for (var key in flat) pair[key] = { light: flat[key], dark: flat[key] };
-						try {
-							dropTokens = theme.overrideTokens("dsh-ocean-theme", pair);
-						} catch (error) {
-							console.error("[ocean] токены темы не применились", error);
-						}
-					}
 				}
 				repaint = paint;
 				paint();
@@ -2662,7 +2638,6 @@ dropStyle = insertStyle("document", "html,body{background-color:" + scheme.page 
 					if (live.stop) live.stop();
 					live.stop = null;
 					repaint = null;
-					if (dropTokens) dropTokens();
 					if (dropStyle) dropStyle();
 					if (dropLayer) dropLayer();
 				};
@@ -2691,7 +2666,14 @@ dropStyle = insertStyle("document", "html,body{background-color:" + scheme.page 
 					"body{position:relative;isolation:isolate}" +
 					"html,body{background-color:transparent!important}" +
 					"#root{position:relative;z-index:10;background-color:transparent!important}" +
-					"#root>*{background-color:transparent!important}" +
+				// Внутренние подложки оболочки (рамка окна, тело рабочей области,
+				// боковая колонка) берут заливку из токенов темы, и плагин
+				// перекрывает их своим слоем: там rgba с альфой, сквозь которую
+				// видно воду. Правила `#root *{background-color:transparent}` и
+				// `#root>*{…}` здесь больше нет: они были вынужденной мерой, пока
+				// слой токенов до оболочки не доходил, и стирали стекло у всех
+				// панелей разом. Слой работает — значит, прозрачность не нужна.
+				"#root input,#root textarea,#root select{backdrop-filter:blur(6px)}" +
 					// Полотно растягивается ровно на окно, а не вписывается. Правило cover
 // обрезает картинку по меньшему из размеров, и на окне шире 16:9 срезает
 // верх и низ: ватерлиня (y=3) уезжает за край окна, всплески лопнувших
@@ -2713,16 +2695,63 @@ dropStyle = insertStyle("document", "html,body{background-color:" + scheme.page 
 				);
 			});
 
-			if (theme !== undefined) {
-				ctx.on("theme/change", function (snapshot) {
-					var next = snapshot && snapshot.active && snapshot.active.colorScheme === "light" ? "light" : "dark";
-					if (next !== run.scheme) {
-						run.scheme = next;
+
+			// Тема — единственный сервис, от которого плагин зависит по-настоящему:
+			// он несёт палитру стекла и признак светлой/тёмной схемы. Сервис берётся
+			// здесь, в собственном эффекте, а не один раз в apply: браузерная
+			// половина плагина садится в граф раньше, чем `theme` появляется, и
+			// `ctx.get("theme")` в apply отдавал undefined. Работает это только
+			// потому, что сервис объявлен в `exports.inject`: fiber ждёт его
+			// появления и перезапускает эффект сам.
+			//
+			// Слой накладывается ОДИН раз. Перекладывать его на каждое событие
+			// `theme/change` нельзя: `overrideTokens` сам публикует `theme/change`,
+			// слушатель звал бы его снова, и стекло уходило в бесконечную рекурсию
+			// (RangeError: Maximum call stack size exceeded). Работает форма слоя:
+			// каждому токену заданы ОБЕ схемы, и тема выбирает нужную сама. На
+			// событии остаётся узнать схему и перерисовать сцену.
+			ctx.effect(function () {
+				var theme = ctx.get("theme");
+				if (theme === undefined || theme === null) return;
+
+				/** Прочитать схему из снимка темы. */
+				function schemeOf(snapshot) {
+					return snapshot && snapshot.active && snapshot.active.colorScheme === "light" ? "light" : "dark";
+				}
+
+				var dropTokens = null;
+				try {
+					var scheme = schemeOf(theme.getTheme());
+					if (scheme !== run.scheme) {
+						run.scheme = scheme;
+						// Схема читается до первой отрисовки сцены: с светлой темой
+						// пользователь иначе увидел бы первый тёмный кадр, а потом вздрог.
 						requestRepaint();
 					}
-				});
-			}
+					// Слой накладывается ОДИН раз и несёт ОБЕ схемы сразу: тема
+					// выбирает нужную сама при публикации снимка. Раньше в пару
+					// клалась одна и та же величина для обоих ключей — слой
+					// замирал на первой схеме, и при переключении темы панели
+					// оставались стеклом ночной воды.
+					var dark = buildTokens(false);
+					var light = buildTokens(true);
+					var pair = {};
+					for (var key in dark) pair[key] = { light: light[key], dark: dark[key] };
+					dropTokens = theme.overrideTokens("dsh-ocean-theme", pair);
+				} catch (error) {
+					// Стекло — украшение. Ошибка темы не должна уносить океан.
+					console.error("[ocean] токены темы не применились", error);
+				}
 
+				return ctx.on("theme/change", function (snapshot) {
+					var next = schemeOf(snapshot);
+					if (next === run.scheme) return;
+					// Схема сцены меняется, а слой стекла остаётся прежним: обе
+					// схемы в нём уже заданы, и тема выбрала нужную сама.
+					run.scheme = next;
+					requestRepaint();
+				});
+			});
 			// Слотов в apply нет: `ctx.get("slots")` делал весь плагин реактивным
 			// к появлению сервиса — и отсюда «океан появился, а потом исчезает»:
 			// контекст протухал, эффекты снимались, и apply вызывался заново.
@@ -2769,7 +2798,20 @@ try {
 			});
 		}
 		exports.apply = apply;
-		exports.inject = [];
+		// Объявленные сервисы — это не украшение, а условие работы: fiber
+		// ждёт их появления, и только после этого ctx.get начинает отдавать
+		// живой сервис. С пустым inject эффекты темы и слотов выполнялись
+		// один раз, видели «сервиса нет» и больше не перезапускались —
+		// стекло не накладывалось, панель настроек не появлялась.
+		//
+		// `timer` обязателен по той же причине, но с обратной стороны: без него
+		// `ctx.timeout` бросает «cannot get property "timer" without inject»
+		// (dsh-cordis-client-runner/lib/client.js:347). Падал он прямо в
+		// слушателе `theme/change`, то есть ВНУТРИ рассылки события, — и
+		// обрывал её до подписчика макета. Из-за этого тема не могла
+		// переключиться: страница оставалась тёмной, хотя сервис снимок уже
+		// собирал. Плюс requestRepaint() зовёт ctx.timeout на пересборку сцены.
+		exports.inject = ['theme', 'slots', 'timer'];
 		return module.exports;
 	}
 });

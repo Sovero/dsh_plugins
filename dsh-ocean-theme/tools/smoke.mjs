@@ -98,9 +98,19 @@ globalThis.localStorage = win.localStorage
 
 const effects = []
 const listeners = []
+// Заглушка темы создаётся ОДИН раз: иначе каждый ctx.get('theme') отдавал бы
+// новый объект, и проверка в конце читала бы пустой список слоёв.
+const themeStub = {
+  // getTheme нужен плагину для чтения схемы, overrideTokens — для стекла.
+  // Слои запоминаем, чтобы дым проверял, что в них есть ОБЕ схемы: одна схема
+  // означала бы, что при переключении темы панели останутся стеклом прежней воды.
+  слои: [],
+  getTheme: () => ({ active: { colorScheme: 'dark' } }),
+  overrideTokens: (source, tokens) => { themeStub.слои.push({ source, tokens }); return () => {} },
+}
 const ctx = {
   get(name) {
-    if (name === 'theme') return { overrideTokens: () => () => {} }
+    if (name === 'theme') return themeStub
     if (name === 'slots') {
       return {
         inject(slot, cb) { cb() },
@@ -149,3 +159,23 @@ const uses = (svg.match(/<use /g) || []).length
 console.log('сцена: ' + svg.length + ' байт, тел ' + uses + ', эффектов ' + effects.length + ', слушателей ' + listeners.length)
 console.log('слотов зарегистрировано: ' + registered.map((r) => r.props.id).join(', '))
 console.log('сцена записана: ' + sceneOut)
+
+// Стекло обязано нести обе схемы: тема выбирает нужную сама, и панели
+// следуют за переключением темы, а не замирают на первой заливке.
+const слойСтекла = themeStub.слои.find((l) => l.source === 'dsh-ocean-theme')
+if (слойСтекла === undefined) {
+  console.error('плагин не наложил слой стекла на тему')
+  process.exit(1)
+}
+const значения = Object.entries(слойСтекла.tokens)
+const безПары = значения.filter(([, v]) => !v || typeof v !== 'object' || !v.light || !v.dark)
+if (безПары.length > 0) {
+  console.error('слой стекла без пары светлая/тёмная: ' + безПары.map(([k]) => k).join(', '))
+  process.exit(1)
+}
+const совпали = значения.filter(([, v]) => v.light === v.dark).map(([k]) => k)
+if (совпали.length > 0) {
+  console.error('светлая и тёмная схемы совпали, тему переключить будет нечем: ' + совпали.join(', '))
+  process.exit(1)
+}
+console.log('стекло: ' + значения.length + ' токенов, обе схемы различаются')
