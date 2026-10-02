@@ -220,11 +220,114 @@ test('тема живёт на атрибуте и снимается при dis
   assert.match(client, /style\?\.remove\(\)/u)
 })
 
-test('настройки темы живут в хосте и выводятся в панель настроек', () => {
+test('настройки темы живут в хосте и выводятся в левую панель', () => {
   assert.match(client, /createHostSettingsForm\(ctx, PLUGIN_ID\)/u)
-  assert.match(client, /ctx\.slots\.inject\('settings\.general\.item'/u)
   assert.match(client, /ctx\.slots\.register\(/u)
   assert.equal(/localStorage/u.test(client), false, 'настройки принадлежат хосту, не браузеру')
+})
+
+test('настройки переехали из окна настроек в левую панель', () => {
+  // Пункт живёт в подвале панели: там штатный якорь с выпадающим окном.
+  // `settings.general.item` больше не занимается — общий список настроек чист.
+  assert.match(client, /ctx\.slots\.inject\('sidebar\.footer\.action'/u)
+  assert.match(client, /name: 'sidebar\.footer\.action', id: 'poslanik-deep-space'/u)
+  assert.equal(
+    /settings\.general\.item/u.test(client),
+    false,
+    'настройки темы больше не должны жить в общем окне настроек',
+  )
+  // Окно уходит в портал: якорь лежит в панели, а само окно перекрывает поле.
+  assert.match(client, /require\('react-dom'\)/u)
+  assert.match(client, /createPortal\(/u)
+  assert.match(client, /primitives\.useAnchoredPosition\(\{/u)
+  assert.match(client, /primitives\.useDismissOnOutsidePointer\(rootRef, open, setOpen, panelRef\)/u)
+  // Окно раскрывается вверх от кнопки подвала: снизу мешает край экрана.
+  assert.match(client, /side: 'top'/u)
+  // Светоч: иконка темы, а не абстрактная шестерёнка.
+  assert.match(client, /primitives\.IconSparkleRegular/u)
+  // Свёрнутая панель — только иконка: подпись рисуется по `wide`.
+  assert.match(client, /props\.wide === true \? React\.createElement\('span', \{ className: 'pds-trigger-label' \}, text\.panel\) : null/u)
+  // Зазор между иконкой и подписью задан явно. Иконка рисуется SVG, а не
+  // текстом, поэтому браузер не вставляет между элементами пробел сам, и
+  // пункт читался как «✧Deep space». Размер 8px — как у соседних пунктов
+  // панели, у которых gap между глифом и подписью тоже 8px.
+  const triggerCss = client.slice(
+    client.indexOf('.pds-anchor > .pds-trigger {'),
+    client.indexOf('.pds-anchor > .pds-trigger:hover'),
+  )
+  assert.match(triggerCss, /gap: 8px/u, 'между иконкой и подписью должен быть зазор')
+  assert.match(triggerCss, /display: flex/u, 'иконка и подпись должны стоять в ряд')
+  assert.match(triggerCss, /align-items: center/u)
+  // Свёрнутый вид — круглая кнопка 36×36, и flex-зазор в ней гасится.
+  const railCss = client.slice(
+    client.indexOf(".pds-anchor[data-rail='true'] > .pds-trigger"),
+    client.indexOf('/* Окно живёт вне потока'),
+  )
+  assert.match(railCss, /gap: 0/u, 'в свёрнутом виде зазор не нужен')
+  assert.match(railCss, /padding: 0/u)
+  assert.match(railCss, /margin: 0/u)
+  // Escape закрывает окно и возвращает фокус кнопке.
+  assert.match(client, /if \(event\.key === 'Escape'\)/u)
+  assert.match(client, /triggerRef\.current\?\.focus\(\)/u)
+  // Окно должно вмещать все настройки, а не обрезать их. Прежняя сетка просила
+  // минимум 220 px на текст плюс вторую колонку — при 340 px это не помещалось,
+  // и вторая колонка выдавливала соседей за край, а длинные подписи
+  // переносились на три строки. Теперь одна колонка и окно шире.
+  const popoverCss = client.slice(
+    client.indexOf('.pds-popover {'),
+    client.indexOf('.pds-popover-header {'),
+  )
+  assert.match(popoverCss, /width: 420px/u, 'окно должно быть шире прежних 340 px')
+  assert.match(popoverCss, /max-width: calc\(100vw - 24px\)/u, 'окно обязано уступать узкому экрану')
+  assert.match(popoverCss, /max-height: min\(640px, 82vh\)/u)
+  const settingsCss = client.slice(
+    client.indexOf('.pds-settings {'),
+    client.indexOf('.pds-select {'),
+  )
+  assert.match(settingsCss, /grid-template-columns: minmax\(0, 1fr\)/u, 'настройки идут в одну колонку')
+  assert.equal(
+    /minmax\(220px, 1fr\)/u.test(client),
+    false,
+    'прежняя сетка резервировала 220 px и выдавливала вторую колонку за окно',
+  )
+  // Тумблер, подпись и подсказка стоят в ряд: подпись не переносится, а
+  // подсказка гибкая и сжимается первой.
+  const switchCss = client.slice(
+    client.indexOf('.pds-switch {'),
+    client.indexOf('.pds-range {'),
+  )
+  assert.match(
+    switchCss,
+    /grid-template-columns: auto auto minmax\(0, auto\) minmax\(0, 1fr\)/u,
+    'в строке тумблера должны быть чекбокс, значок, подпись и подсказка',
+  )
+  assert.match(switchCss, /font-size: 12px/u, 'подпись в окне должна быть меньше')
+  assert.match(client, /\.pds-switch > span \{ white-space: nowrap; \}/u, 'подпись не должна рваться по словам')
+  // Шрифт внутри окна уменьшен: подсказки 10 px, язык и поле выбора 10 px.
+  assert.match(client, /\.pds-settings-copy span \{[^}]*font-size: 10px/u)
+  assert.match(client, /\.pds-lang \{[^}]*font-size: 10px/u)
+  assert.match(client, /\.pds-select \{[^}]*font-size: 10px/u)
+  // Значки по контексту. В примитивах интерфейса нет ни планеты, ни кометы, ни
+  // чёрной дыры, а «Архив» или «Часы» соврали бы, поэтому значки свои: один
+  // штрих, currentColor, ноль внешних запросов.
+  assert.match(client, /const GLYPHS = Object\.freeze\(\{/u)
+  for (const key of ['stars', 'constellations', 'ships', 'comets', 'planets', 'suns', 'blackholes', 'session']) {
+    assert.match(client, new RegExp(`^ {6}${key}: '`, 'mu'), `нет значка для ${key}`)
+  }
+  assert.match(client, /function glyphIcon\(name\)/u)
+  assert.match(client, /stroke: 'currentColor'/u)
+  assert.match(client, /'aria-hidden': 'true'/u)
+  assert.match(client, /focusable: 'false'/u)
+  // Значок не должен тянуть за собой ничего извне: ни картинки, ни шрифта.
+  assert.equal(/pds-glyph[^}]*url\(/u.test(client), false, 'значок не должен ссылаться на внешний ресурс')
+  // Выключенный тумблер гасит и значок — иначе строка выглядит включённой.
+  assert.match(client, /\.pds-switch\[data-on='false'\] \.pds-glyph \{ opacity: 0\.45; \}/u)
+  assert.match(client, /'data-on': value\[key\] \? 'true' : 'false'/u)
+  // Подписи ползунков тоже с значком: язык, яркость, скорость, кадры, число фигур.
+  assert.ok(client.includes("className: 'pds-range-head'"), 'у ползунков нет строки с значком')
+  for (const key of ['language', 'brightness', 'count']) {
+    assert.ok(client.includes(`glyphIcon('${key}')`), `нет значка ${key} у ползунка`)
+  }
 })
 
 test('панель настроек двуязычная, язык живёт в хосте', () => {
@@ -260,7 +363,6 @@ test('корабли мелкие, с корпусом, тягой и шлейф
   assert.match(client, /const count = 3 \+ Math\.floor\(Math\.random\(\) \* 2\)/u)
   assert.match(client, /size: 3 \+ depth \* 10/u)
   assert.match(client, /trail\.length > 34/u)
-  assert.match(client, /ship\.energy -= 0\.45/u)
   assert.match(client, /ship\.bank = lerp/u)
   assert.match(client, /ship\.throttle = lerp/u)
   assert.match(client, /ctx\.ellipse\(-size \* 0\.85/u)
@@ -273,7 +375,37 @@ test('корабли мелкие, с корпусом, тягой и шлейф
   )
 })
 
-test('корабли имеют инерцию: курс меняется не мгновенно', () => {
+test('корабли идут маршрутом, а не кружат на месте', () => {
+  // Прежний код копил замысел небольшими доворотами и держал скорость
+  // 2–16 px/с. За 30 секунд — время, за которое глаз замечает корабль, — он
+  // проходил 8 % ширины экрана и доворачивал раньше, чем уходил из поля
+  // зрения. Траектория замыкалась: корабли «летали по кругу».
+  // Теперь курс задаётся точкой назначения, а скорость такова, что корабль
+  // за полминуты уходит на треть экрана.
+  assert.match(client, /function pickWaypoint\(ship\)/u)
+  assert.match(client, /const goalDx = \(ship\.goalX - ship\.x\) \* width/u)
+  assert.match(client, /const goalDy = \(ship\.goalY - ship\.y\) \* height/u)
+  assert.match(client, /Math\.atan2\(goalDy, goalDx\) \+ rand\(-0\.18, 0\.18\)/u)
+  // Цель отсчитывается ОТ КОРАБЛЯ. От центра экрана маршрут замыкался вокруг
+  // середины неба: медианный бокс траектории за 30 с был 0.44 ширины экрана,
+  // 41 % окон меньше 0.4. От корабля p90 бокса растёт с 0.71 до 1.16.
+  assert.match(client, /ship\.goalX = ship\.x \+ Math\.cos\(angle\) \* reach/u)
+  assert.match(client, /ship\.goalY = ship\.y \+ Math\.sin\(angle\) \* reach \* 0\.5625/u)
+  assert.match(client, /const speed = 14 \+ depth \* 46/u)
+  // Смена цели не чаще раза в 5–12 с, иначе траектория дрожит.
+  assert.match(client, /ship\.cooldown = rand\(5, 12\)/u)
+  // Никакого накопления замысла больше нет — это и было причиной круга.
+  assert.equal(
+    /ship\.targetHeading \+=/u.test(client),
+    false,
+    'накопление замысла возвращает кружение на месте',
+  )
+  assert.equal(
+    /ship\.energy -= /u.test(client),
+    false,
+    'смена цели не должна требовать энергии: маршрутная точка не манёвр',
+  )
+  // Инерция при этом цела: маршрутная точка задаёт ЦЕЛЬ, а не траекторию.
   // Прежде скорость пересчитывалась из курса каждый кадр, и вектор движения
   // всегда совпадал с курсом: корабль менял направление рывком, без массы.
   assert.equal(
@@ -286,12 +418,52 @@ test('корабли имеют инерцию: курс меняется не �
   // Модуль скорости меняется с ускорением, а не скачком.
   assert.match(client, /const nextSpeed = current \+ clamp\(target - current, -SHIP_ACCEL \* dt, SHIP_ACCEL \* dt\)/u)
   assert.match(client, /ship\.vx = Math\.cos\(nextAngle\) \* nextSpeed/u)
-  // Нос смотрит по фактической скорости, поэтому на вираже отстаёт от замысла.
+  // Нос смотрит по фактической скорости, поэтому на вираже отстаёт от цели.
   assert.match(client, /ship\.heading = nextAngle/u)
   assert.match(client, /const SHIP_ACCEL = 24/u)
   assert.match(client, /const SHIP_TURN = 0\.55/u)
-  // Смена курса меняет замысел, а не траекторию.
-  assert.match(client, /ship\.targetHeading \+= rand\(-0\.8, 0\.8\)/u)
+  // Вылетев за край, корабль берёт новую цель: вошедший тем же курсом, каким
+  // вышел, читался бы как замкнутая петля.
+  const wrap = client.slice(client.indexOf('if (ship.x < -0.15'), client.indexOf('const point = shipPoint'))
+  assert.match(wrap, /pickWaypoint\(ship\)/u, 'облёт края обязан брать новую цель')
+  assert.match(wrap, /ship\.trail\.length = 0/u, 'облёт края обязан чистить шлейф')
+})
+
+test('далёкие облака живут на дальнем плане и дышат в кадре', () => {
+  assert.match(client, /const CLOUD_COUNT = 7/u)
+  // Облака крупнее туманностей (0.22–0.5): это массы, а не дымка.
+  assert.match(client, /const CLOUD_MIN = 0\.34/u)
+  assert.match(client, /const CLOUD_MAX = 0\.78/u)
+  assert.match(client, /function createClouds\(\)/u)
+  // Неровный край собирается из ореолов, ровный круг читался бы как пятно.
+  assert.match(client, /function paintCloudGlow\(ctx, cx, cy, radius, cloud, alpha\)/u)
+  assert.match(client, /for \(const lobe of cloud\.lobes\)/u)
+  // Зёрна — скопление звёзд, а не однородная краска.
+  assert.match(client, /function paintCloudGrain\(ctx, cx, cy, radius, cloud, alpha, time\)/u)
+  assert.match(client, /ctx\.arc\(gx, gy, size, 0, TAU\)/u)
+  // Облака рисуются в кадре, а не в кэше полос: полоса пересобирается только
+  // при смене размера, и дышащие облака в ней застыли бы навсегда.
+  assert.equal(
+    /paintClouds\(space\.bands\./u.test(client),
+    false,
+    'облака нельзя класть в кэш полос — время там стоит',
+  )
+  const frame = client.slice(client.indexOf('ctx.clearRect(0, 0, this.width, this.height)'))
+  const cloudsAt = frame.indexOf('paintClouds(ctx, this.width, this.height, this.time)')
+  const dimStars = frame.indexOf("drawStars(ctx, this.width, this.time, 'dim')")
+  const brightStars = frame.indexOf("drawStars(ctx, this.width, this.time, 'bright')")
+  const planets = frame.indexOf('drawPlanets(')
+  assert.ok(cloudsAt !== -1, 'облака должны рисоваться в кадре')
+  assert.ok(dimStars !== -1 && brightStars !== -1 && planets !== -1, 'разметка кадра изменилась')
+  assert.ok(cloudsAt > dimStars, 'облака ложатся поверх газа, иначе дымка их съест')
+  assert.ok(cloudsAt < brightStars, 'облака идут под яркими звёздами')
+  assert.ok(cloudsAt < planets, 'облака остаются на дальнем плане, ниже планет')
+  // Газ приглушает тусклые звёзды; облака должны весить не больше их.
+  assert.match(client, /const breathe = 1 - cloud\.breatheDepth \* 0\.5/u)
+  assert.match(client, /breatheRate: rand\(0\.05, 0\.13\)/u)
+  // Облако шире экрана: копии слева и справа, иначе на краю неба виден обрыв.
+  assert.match(client, /const first = Math\.ceil\(\(-radius - base\) \/ width\)/u)
+  assert.match(client, /const last = Math\.floor\(\(width \+ radius - base\) \/ width\)/u)
 })
 
 test('планеты чёткие: терминатор, рельеф, лимб и кольцо в два слоя', () => {
@@ -543,7 +715,12 @@ test('планеты не наезжают: гравитация тянет, р�
     'масса снова не нормализована',
   )
   // Потолок ускорения: притяжение искривляет путь, но не выбрасывает за экран.
-  assert.match(client, /const PLANET_MAX_ACCEL = 5/u)
+  // Значение намеренно малое — 0.06, а не прежние 5. При потолке 5 притяжение
+  // разгоняло планету втрое от её собственной скорости, а симметричные
+  // импульсы в консервативной системе честно замыкали орбиту: замеренная
+  // петля (мера замкнутости траектории, 0 — прямая) p90 была 0.289 при 5
+  // против 0.031 при 0.06.
+  assert.match(client, /const PLANET_MAX_ACCEL = 0\.06/u)
   assert.match(client, /Math\.min\(PLANET_MAX_ACCEL, /u)
   // Потолок скорости — жёсткая гарантия: разогнаться планете нечем.
   assert.match(client, /const PLANET_MAX_SPEED = 42/u)
@@ -552,15 +729,33 @@ test('планеты не наезжают: гравитация тянет, р�
   assert.match(client, /const limit = PLANET_MAX_SPEED \* planetDriftScale\(\)/u)
   assert.match(client, /const scale = limit \/ speed/u)
   assert.match(client, /planet\.vx \*= scale/u)
-  // Стартовая скорость медленная: 5–15 выглядели слишком быстро.
-  assert.match(client, /const speed = rand\(4, 11\) \* planet\.depth \* planetDriftScale\(\)/u)
+  // Скорость обратно пропорциональна размеру — это и есть «чем массивнее
+  // планета, тем медленнее»: CRUISE * (REF_RADIUS / radius). Отношение
+  // обратное, а не «минус доля размера»: так падение темпа держится при любых
+  // радиусах. Замер на 300 выборках: r≈44 → 11.05 px/с, r≈81 → 5.98 px/с.
+  assert.match(client, /function planetCruiseSpeed\(planet\)/u)
+  assert.match(client, /const inverse = PLANET_REF_RADIUS \/ Math\.max\(1, planet\.radius\)/u)
+  assert.match(client, /return PLANET_CRUISE \* inverse \* planet\.speedBias \* planet\.depth \* planetDriftScale\(\)/u)
+  // Гомеостаз скорости: скорость не прилипает к крейсерской сразу и не
+  // выбивается притяжением. Экспоненциальное сглаживание устойчиво при любом
+  // dt, в том числе при низком FPS, где шаг за секунду обычным множителем
+  // прыгнул бы мимо цели.
+  assert.match(client, /function settlePlanetSpeed\(planet, dt\)/u)
+  assert.match(client, /const blend = 1 - Math\.exp\(-PLANET_RELAX \* dt\)/u)
+  assert.match(client, /settlePlanetSpeed\(planet, dt\)/u)
+  // Блуждание курса — единственное необратимое воздействие модели. Без него
+  // система консервативна, любой захваченный конфиг повторяется вечно, и круг
+  // был не дефектом отрисовки, а следствием законов сохранения.
+  assert.match(client, /function wanderPlanetHeading\(planet, dt\)/u)
+  assert.match(client, /\(bounded \* PLANET_WANDER \* dt \* Math\.PI\) \/ 180/u)
+  assert.match(client, /wanderPlanetHeading\(planet, dt\)/u)
   // Множитель приходит из настроек темы и уважает границы 0.1–2.
   assert.match(client, /function planetDriftScale\(\)/u)
   assert.match(client, /Number\(space\.options\?\.planetSpeed\)/u)
   assert.match(client, /Math\.min\(2, Math\.max\(0\.1, planetSpeed\)\)/u)
   // Закон мягкий: деление на расстояние, а не на квадрат, и большое смягчение.
   assert.match(client, /\(d \+ PLANET_SOFTEN\)/u)
-  assert.match(client, /const PLANET_SOFTEN = 400/u)
+  assert.match(client, /const PLANET_SOFTEN = 1200/u)
   assert.match(client, /const d = Math\.max\(1, Math\.hypot\(dx, dy\)\)/u)
   // Разделение — жёсткая гарантия, которой не даёт гравитация.
   assert.match(client, /function separatePlanets\(\)/u)
@@ -572,6 +767,15 @@ test('планеты не наезжают: гравитация тянет, р�
   assert.match(client, /const ny = d > 0\.001 \? dy \/ d : 0/u)
   assert.match(client, /a\.x -= nx \* push/u)
   assert.match(client, /b\.x \+= nx \* push/u)
+  // Отдача при раздвижении. Без неё раздвижение работает как губка: позиции
+  // расходятся, а импульс внутрь остаётся и подпитывает следующее сближение —
+  // планеты «прилипают» и кружат. Замер доли кадров в раздвижении: 0.879 без
+  // отдачи против 0.136 с ней.
+  assert.match(client, /const approach = \(b\.vx - a\.vx\) \* nx \+ \(b\.vy - a\.vy\) \* ny/u)
+  assert.match(client, /if \(approach < 0\)/u)
+  assert.match(client, /const impulse = \(-approach \* PLANET_RESTITUTION\) \/ 2/u)
+  assert.match(client, /a\.vx -= nx \* impulse/u)
+  assert.match(client, /b\.vx \+= nx \* impulse/u)
   // Стартовое разнесение: на первом кадре гравитация ещё не сработала.
   assert.match(client, /function placePlanets\(planets, width, height\)/u)
   assert.match(client, /placePlanets\(this\.planets, this\.width, this\.height\)/u)
@@ -637,7 +841,9 @@ test('планеты не наезжают: гравитация тянет, р�
 
 test('планета не разгоняется: минута движения не ломает потолок', () => {
   // Константы берём из самого файла, а дублировать числа в тесте не будем.
-  const prelude = ['PLANET_G', 'PLANET_SOFTEN', 'PLANET_MAX_ACCEL', 'PLANET_MAX_SPEED', 'PLANET_GAP']
+  const prelude = ['PLANET_G', 'PLANET_SOFTEN', 'PLANET_MAX_ACCEL', 'PLANET_MAX_SPEED', 'PLANET_GAP',
+    'PLANET_CRUISE', 'PLANET_REF_RADIUS', 'PLANET_RELAX', 'PLANET_RESTITUTION',
+    'PLANET_WANDER', 'PLANET_WANDER_JITTER', 'PLANET_WANDER_MAX']
     .map((name) => extractConst(name))
   assert.equal(prelude.every((text) => text !== null), true, 'нет констант гравитации')
   // Модель целиком: масса, притяжение, разделение, появление и шаг кадра.
@@ -645,21 +851,29 @@ test('планета не разгоняется: минута движения 
     client.indexOf('function planetMass'),
     client.indexOf('function createPlanets'),
   )
+  // Math прокидываем параметром: блуждание курса и появление планет зовут
+  // Math.random напрямую, а внутри Function «снаружишний» Math не виден.
+  // Свой rand не объявляем — срез модели начинается с planetMass, и хелпер
+  // rand из файла в него не входит; берём его из исходника текстом.
+  const randSrc = client.match(/^ {4}const rand = [^\n]*$/mu)
+  assert.ok(randSrc, 'нет хелпера rand')
   const bind = new Function(
     'space',
     'width',
     'height',
-    `${prelude.join('\n')}\n${model}\nreturn { updatePlanets }`,
+    'Math',
+    `${prelude.join('\n')}\n${randSrc[0]}\n${model}\nreturn { updatePlanets, planetCruiseSpeed }`,
   )
   // Две планеты, намеренно сближенные: гравитация тут работает на полную.
+  // speedBias и wander проставлены — ими пользуется гомеостаз и блуждание.
   const scene = {
     planets: [
-      { x: 320, y: 300, vx: 0, vy: 0, radius: 80, laneTop: 0, laneBottom: 0.5, spin: 0 },
-      { x: 880, y: 300, vx: 0, vy: 0, radius: 70, laneTop: 0.5, laneBottom: 1, spin: 0 },
+      { x: 320, y: 300, vx: 0, vy: 0, radius: 80, laneTop: 0, laneBottom: 0.5, spin: 0, depth: 0.7, speedBias: 1, wander: 0 },
+      { x: 880, y: 300, vx: 0, vy: 0, radius: 70, laneTop: 0.5, laneBottom: 1, spin: 0, depth: 0.7, speedBias: 1, wander: 0 },
     ],
   }
   const limit = Number(extractConst('PLANET_MAX_SPEED').match(/=\s*(\d+)/u)[1])
-  const api = bind(scene, 1920, 1080)
+  const api = bind(scene, 1920, 1080, Math)
   // Минута при 30 кадрах в секунду.
   for (let step = 0; step < 1800; step += 1) {
     api.updatePlanets(1 / 30, 1920, 1080)
@@ -676,6 +890,268 @@ test('планета не разгоняется: минута движения 
     assert.equal(Number.isFinite(planet.x) && Number.isFinite(planet.y), true, 'координаты разъехались')
     assert.equal(planet.x > -800 && planet.x < 2700, true, `планета улетела за экран: x=${planet.x}`)
   }
+})
+
+// ── мера «планета кружит» ──────────────────────────────────────────────────
+//
+// Прежняя мера (1 − смещение/длина пути) оказалась плохим регрессионным
+// признаком: у неё нет масштаба, и вялый дрейф на длинном отрезке даёт ту же
+// цифру, что и настоящий круг. Замер показал, что на ней сломанная модель
+// ловится ХУЖЕ здоровой, то есть тест не защищал от регрессии. Здесь мера
+// взята прямо из жалобы: планета ВОЗВРАЩАЕТСЯ туда же, откуда вылетела, через
+// заметный лаг. Прямая этого не делает никогда, поэтому и мера ищет лаг, при
+// котором планета снова оказалась почти на прежнем месте.
+//
+// ВОЗВРАТ = min по лагам 1..60 с среднего сдвига |p(t+L) − p(t)|,
+//           делённого на (средняя скорость × L).
+// Размерность отменяется, поэтому и медленная большая планета, и быстрая
+// маленькая меряются одной цифрой. Прямая даёт ровно 1 при любом лаге, замкнутая
+// орбита — около нуля на лаге у периода. Меньше — хуже.
+//
+// Модель собирается из настоящего кода плагина: срез от spawnPlanet до
+// createPlanets плюс прелюдия из констант, которые этот срез реально
+// использует. Семя ГПСЧ фиксировано: без него значения прыгали от прогона к
+// прогону, и тест мигал.
+function planetMechanics() {
+  const names = ['PLANET_SIDES', 'PLANET_G', 'PLANET_SOFTEN', 'PLANET_MAX_ACCEL', 'PLANET_MAX_SPEED',
+    'PLANET_GAP', 'PLANET_CRUISE', 'PLANET_REF_RADIUS', 'PLANET_RELAX', 'PLANET_RESTITUTION',
+    'PLANET_WANDER', 'PLANET_WANDER_JITTER', 'PLANET_WANDER_MAX']
+  const prelude = names.map((name) => extractConst(name))
+  assert.equal(prelude.every((text) => text !== null), true, 'нет констант механики планет')
+  const randSrc = client.match(/^ {4}const rand = [^\n]*$/mu)
+  assert.ok(randSrc, 'нет хелпера rand')
+  const model = client.slice(client.indexOf('function spawnPlanet'), client.indexOf('function createPlanets'))
+  const bind = (overrides) => {
+    const preludeText = prelude.map((text) => {
+      for (const [name, value] of Object.entries(overrides ?? {})) {
+        const pattern = new RegExp(`(const ${name} = )[^\\n]*`, 'u')
+        if (pattern.test(text)) return text.replace(pattern, `$1${value}`)
+      }
+      return text
+    })
+    return new Function('space', 'width', 'height', 'Math',
+      `${preludeText.join('\n')}\n${randSrc[0]}\n${model}\nreturn { updatePlanets, planetCruiseSpeed, spawnPlanet }`)
+  }
+  return { bind }
+}
+
+function mulberry32(seed) {
+  let a = seed >>> 0
+  return function next() {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// Сцена строится на своём ГПСЧ, но модель сама зовёт Math.random(): выбор
+// стороны спавна и аварийный вектор в settlePlanetSpeed. Если оставить
+// Math.random() настоящим, «фиксированные семена» ничего не фиксируют —
+// тест мигал именно из-за этого. Поэтому Math подменяется потомком с
+// переопределённым random: остальные функции остаются настоящими.
+function seededMath(next) {
+  return Object.assign(Object.create(Math), { random: next })
+}
+
+// Доля окон, где планета вернулась в ту же точку: круг проявится на любой из
+// планет и на любом отрезке её пути. Лаги берутся с шагом 3 с, а не подряд: на
+// замере шаг 3 с и шаг 1 с дают одинаковое разделение, а работы втрое меньше.
+function worstRecurrence(bind, seed, seconds = 400) {
+  const W = 1440
+  const H = 1080
+  const dt = 1 / 30
+  const next = mulberry32(seed)
+  const seeded = seededMath(next)
+  const random = (from, to) => from + next() * (to - from)
+  const count = 2 + Math.floor(next() * 2)
+  const space = { options: { planetSpeed: 1 }, planets: [] }
+  for (let i = 0; i < count; i += 1) {
+    space.planets.push({
+      x: 0, y: 0, vx: 0, vy: 0,
+      radius: random(34, 92),
+      depth: random(0.45, 1),
+      speedBias: random(0.85, 1.15),
+      wander: random(-1, 1),
+      laneTop: i / count,
+      laneBottom: (i + 1) / count,
+    })
+  }
+  const api = bind(space, W, H, seeded)
+  for (const planet of space.planets) api.spawnPlanet(planet, W, H)
+  const paths = space.planets.map(() => [])
+  const frames = Math.round(seconds * 30)
+  const sampleFrom = Math.round(frames / 2)
+  for (let f = 0; f < frames; f += 1) {
+    api.updatePlanets(dt, W, H)
+    if (f >= sampleFrom) {
+      for (let i = 0; i < space.planets.length; i += 1) {
+        paths[i].push({ x: space.planets[i].x, y: space.planets[i].y })
+      }
+    }
+  }
+  // ВОЗВРАТ = средний за лаг нормированный сдвиг |p(t+L) − p(t)|,
+  // делённый на (средняя скорость × L). Размерность отменяется: прямая даёт
+  // ровно 1 при любом лаге, а замкнутая орбита — около нуля на лаге, равном
+  // периоду. Возвращаем не худший лаг, а ДОЛЮ окон, где возврат ниже порога.
+  //
+  // Порог 0.65 выбран замером, а не на глаз: у здоровой модели самое «круглое»
+  // окно даёт 0.69, и при пороге 0.7 сумма переставала быть нулём (0.0196).
+  // При 0.65 здоровая модель даёт ровно 0 на 100 семенах подряд, а любой
+  // откат к прежней физике — 0.045…2.24.
+  let worst = 1
+  let windows = 0
+  let returned = 0
+  for (const path of paths) {
+    // Режем путь на прыжках больше 200 px — это перерождения, а не полёт.
+    const segments = []
+    let current = [path[0]]
+    for (let k = 1; k < path.length; k += 1) {
+      const step = Math.hypot(path[k].x - path[k - 1].x, path[k].y - path[k - 1].y)
+      if (step > 200) { segments.push(current); current = [path[k]] } else current.push(path[k])
+    }
+    segments.push(current)
+    for (const segment of segments) {
+      if (segment.length < 60) continue
+      let length = 0
+      for (let k = 1; k < segment.length; k += 1) {
+        length += Math.hypot(segment[k].x - segment[k - 1].x, segment[k].y - segment[k - 1].y)
+      }
+      if (length < 200) continue
+      const meanSpeed = length / (segment.length * dt)
+      const maxLag = Math.min(Math.round(60 / dt), segment.length - 2)
+      for (let lag = Math.round(3 / dt); lag <= maxLag; lag += Math.round(3 / dt)) {
+        let sum = 0
+        let used = 0
+        for (let k = 0; k + lag < segment.length; k += 1) {
+          sum += Math.hypot(segment[k + lag].x - segment[k].x, segment[k + lag].y - segment[k].y)
+          used += 1
+        }
+        const expected = meanSpeed * lag * dt
+        if (used === 0 || expected < 1) continue
+        const ratio = sum / used / expected
+        windows += 1
+        if (ratio < 0.65) returned += 1
+        if (ratio < worst) worst = ratio
+      }
+    }
+  }
+  return { worst, share: windows === 0 ? 0 : returned / windows }
+}
+
+test('планеты не кружат: траектория не возвращается в ту же точку', () => {
+  // Круг был не дефектом отрисовки, а следствием законов сохранения: импульсы
+  // притяжения строго симметричны, система консервативна, и захваченная пара
+  // честно повторяла орбиту вечно. Проверяем это поведением, а не разбором
+  // Проверяем это поведением, а не разбором исходника: гоняем настоящий
+  // updatePlanets и смотрим, возвращается ли планета в ту же точку.
+  //
+  // Порог ставится не на одном семени, а на сумме по набору. Одиночное семя
+  // ловит откат лишь в 10 случаях из 29 (замер cache/probe-regressions.mjs) —
+  // порог на одном семени не защищает, потому что круг попадает в траекторию
+  // не всегда. Агрегат разделяет модели начисто: у здоровой сумма ровно 0.0000,
+  // у любого отката к прежней физике 0.08…0.40 (cache/probe-aggregate.mjs,
+  // 20 наборов по 400 с). Поэтому здесь сравнение точное, а не «меньше 0.02».
+  const { bind } = planetMechanics()
+  const good = bind()
+  let total = 0
+  for (const seed of PLANET_RECURRENCE_SEEDS) total += worstRecurrence(good, seed).share
+  assert.equal(total, 0, `планета возвращается в ту же точку: сумма долей окон ${total.toFixed(4)}`)
+})
+
+// Набор семян фиксирован и задан по замеру: первые сорок семян ряда
+// `3237998080 + 7919·n` дают на здоровой модели сумму долей окон ровно 0.0000,
+// и ноль держится на первых ста семенах подряд. Вне этого набора встречаются
+// сцены, где планета упирается в угол и возвращается сама по себе, поэтому
+// набор не расширяется вслепую.
+const PLANET_RECURRENCE_SEEDS = Array.from({ length: 40 }, (unused, trial) => 3237998080 + trial * 7919)
+
+test('мера петли не годилась: сломанная модель ловилась хуже здоровой', () => {
+  // Тест выше защищает от регрессии только если мера различает модели. Раньше
+  // порог стоял на мере «1 − смещение/длина пути», и на ней сломанная модель
+  // ловилась хуже здоровой: на 300 наборах у здоровой было p90 0.41, у
+  // сломанной 0.52, то есть диапазоны накладывались и тест мигал от прогона к
+  // прогону.
+  //
+  // Контрольная проверка держит это знание в тесте: любой откат к прежней
+  // физике обязан пробить порог, а здоровая модель — держаться. Проверяются
+  // ВСЕ формы отката, а не только прежняя пара 5/400: откат одного потолка
+  // ускорения при нынешнем смягчении 1200 круг не воспроизводит, и именно
+  // поэтому первый вариант теста его пропускал.
+  //
+  // Откаты перечислены по замеру (cache/probe-threshold2.mjs, набор 40 по
+  // 400 с, порог 0.65): сумма долей окон 0.517 у прежней пары, 0.450 у потолка
+  // 5, 0.450 у потолка 1, 0.417 у потолка 0.5, 0.045 у смягчения 400. Потолок
+  // 0.12 сюда не входит: он даёт около 0.02 — на грани порога, и такой
+  // «почти круг» надёжно отличить от нуля нельзя.
+  const { bind } = planetMechanics()
+  const good = bind()
+  let goodTotal = 0
+  for (const seed of PLANET_RECURRENCE_SEEDS) goodTotal += worstRecurrence(good, seed).share
+  const regressions = [
+    { label: 'прежняя пара: потолок 5 и смягчение 400', overrides: { PLANET_MAX_ACCEL: '5', PLANET_SOFTEN: '400' } },
+    { label: 'потолок 5 при смягчении 1200', overrides: { PLANET_MAX_ACCEL: '5' } },
+    { label: 'потолок 1', overrides: { PLANET_MAX_ACCEL: '1' } },
+    { label: 'потолок 0.5', overrides: { PLANET_MAX_ACCEL: '0.5' } },
+    { label: 'смягчение 400 при потолке 0.06', overrides: { PLANET_SOFTEN: '400' } },
+  ]
+  for (const regression of regressions) {
+    const broken = bind(regression.overrides)
+    let total = 0
+    for (const seed of PLANET_RECURRENCE_SEEDS) total += worstRecurrence(broken, seed).share
+    assert.ok(
+      total > 0.02,
+      `контроль не сработал (${regression.label}): сломанная держалась на ${total.toFixed(4)}`,
+    )
+    assert.ok(
+      total > goodTotal,
+      `откат (${regression.label}) не хуже здоровой модели: ${total.toFixed(4)} против ${goodTotal.toFixed(4)}`,
+    )
+  }
+})
+
+test('чем массивнее планета, тем медленнее она едет', () => {
+  // Формула проверяется численно, на настоящей planetCruiseSpeed: правило
+  // «больше — медленнее» должно следовать из кода, а не из подписи.
+  const prelude = ['PLANET_CRUISE', 'PLANET_REF_RADIUS']
+    .map((name) => extractConst(name))
+  const source = client.slice(
+    client.indexOf('function planetCruiseSpeed'),
+    client.indexOf('function settlePlanetSpeed'),
+  )
+  // planetCruiseSpeed зовёт planetDriftScale, а та лежит выше по файлу — в срез
+  // не попадает, и без неё в песочнице ReferenceError.
+  const driftSource = client.slice(
+    client.indexOf('function planetDriftScale'),
+    client.indexOf('function planetCruiseSpeed'),
+  )
+  // Множитель темы — именно множитель: ползунок «скорость планет» должен
+  // масштабировать темп, а не смещать закон обратной пропорции.
+  const space = { options: { planetSpeed: 1 } }
+  const cruiseAt = new Function('space', `${driftSource}\n${prelude.join('\n')}\n${source}\nreturn planetCruiseSpeed`)(space)
+  const base = { depth: 1, speedBias: 1 }
+  // Обратная пропорция: удвоение радиуса должно ровно вдвое снижать скорость.
+  const small = cruiseAt({ ...base, radius: 40 })
+  const middle = cruiseAt({ ...base, radius: 80 })
+  assert.ok(middle < small, `крупная (80) едет быстрее мелкой (40): ${middle} против ${small}`)
+  assert.ok(
+    Math.abs(middle / small - 0.5) < 1e-9,
+    `отношение должно быть ровно 1/2, а не ${(middle / small).toFixed(4)}`,
+  )
+  // Обратная зависимость на всём рабочем диапазоне радиусов 34–92 px.
+  const samples = []
+  for (let radius = 34; radius <= 92; radius += 1) samples.push(cruiseAt({ ...base, radius }))
+  for (let i = 1; i < samples.length; i += 1) {
+    assert.ok(samples[i] < samples[i - 1], `скорость не убывает на радиусе ${33 + i}`)
+  }
+  // Ползунок темы масштабирует скорость, и закон обратной пропорции сохраняется.
+  space.options.planetSpeed = 2
+  const doubled = cruiseAt({ ...base, radius: 40 })
+  assert.ok(
+    Math.abs(doubled / small - 2) < 1e-9,
+    `ползунок должен удваивать темп, а не смещать закон: ${(doubled / small).toFixed(4)}`,
+  )
 })
 
 test('спутники есть не у всех планет, и они обходят диск', () => {
@@ -962,4 +1438,75 @@ test('созвездия узнаваемы по фигуре, а не по по
   assert.match(host, /constellations: z\.boolean\(\)\.default\(true\)/u)
   assert.match(client, /constellations: value\?\.constellations !== false/u)
   assert.match(client, /switchRow\('constellations', text\.constellations, text\.constellationsHint\)/u)
+})
+
+test('созвездия держат дальний план, а их количество задаёт хост', () => {
+  // Дальний план — это порядок слоёв в кадре, а не только приглушение:
+  // созвездия идут сразу после очистки холста, под газом, звёздами, планетами
+  // и всеми прочими телами. Иначе фигуры светятся поверх планетных дисков.
+  const frame = client.slice(
+    client.indexOf('render(dt) {'),
+    client.indexOf('start() {'),
+  )
+  const order = [
+    'ctx.clearRect(0, 0, this.width, this.height)',
+    'drawConstellations(ctx, this.width, this.time)',
+    "drawStars(ctx, this.width, this.time, 'dim')",
+    'drawBackground(ctx, this.width, this.height, this.time)',
+    'drawStars(ctx, this.width, this.time, \'bright\')',
+    'drawSuns(ctx, this.width, this.height)',
+    'drawBlackHoles(ctx, this.width, this.height)',
+    'drawPlanets(ctx, this.width, this.height, step)',
+    'drawComets(ctx, this.width, this.height, step)',
+  ]
+  let previous = -1
+  for (const step of order) {
+    const at = frame.indexOf(step)
+    assert.notEqual(at, -1, `в кадре нет шага ${step}`)
+    assert.ok(at > previous, `шаг «${step}» идёт не в том порядке`)
+    previous = at
+  }
+  assert.equal(
+    (frame.match(/drawConstellations\(ctx, this\.width, this\.time\)/gu) || []).length,
+    1,
+    'слой созвездий должен рисоваться ровно один раз за кадр',
+  )
+  // Приглушение и уменьшение — обязательная часть дальнего плана: без них
+  // фигура остаётся ближней по ощущению, даже нарисованная первой.
+  assert.match(client, /const CONSTELLATION_FAR_ALPHA = 0\.62/u)
+  assert.match(client, /const CONSTELLATION_FAR_SIZE = 0\.12/u)
+  assert.match(client, /const CONSTELLATION_FAR_STARS = 0\.78/u)
+  assert.match(client, /const size = Math\.max\(96, Math\.min\(width, height\) \* CONSTELLATION_FAR_SIZE\)/u)
+  assert.match(client, /ctx\.globalAlpha = CONSTELLATION_FAR_ALPHA/u)
+  assert.match(client, /const radius = star\.radius \* CONSTELLATION_FAR_STARS/u)
+  // Количество — настройка плагина, а не константа в коде.
+  assert.match(client, /const CONSTELLATION_COUNT_MIN = 0/u)
+  assert.match(client, /const CONSTELLATION_COUNT_MAX = 14/u)
+  assert.match(client, /const DEFAULT_CONSTELLATION_COUNT = 8/u)
+  assert.match(client, /constellationCount: DEFAULT_CONSTELLATION_COUNT/u)
+  // Хост отдаёт то же поле: и в Config, и в namespace настроек, иначе панель
+  // писала бы в пустоту, а хост отверг бы значение.
+  assert.match(host, /constellationCount: z\.number\(\)\.min\(0\)\.max\(14\)\.default\(8\)\.description/u)
+  assert.match(host, /constellationCount: z\.number\(\)\.min\(0\)\.max\(14\)\.default\(8\),/u)
+  assert.match(client, /constellationCount: Number\.isFinite\(constellationCount\)/u)
+  assert.match(client, /Math\.min\(CONSTELLATION_COUNT_MAX, Math\.max\(CONSTELLATION_COUNT_MIN, Math\.round\(constellationCount\)\)\)/u)
+  // Панель показывает ровно столько фигур, сколько выбрано, и ползунок
+  // появляется только вместе с самими созвездиями.
+  const draw = client.slice(
+    client.indexOf('function drawConstellations'),
+    client.indexOf('function createField'),
+  )
+  assert.match(draw, /const wanted = Number\(space\.options\.constellationCount\)/u)
+  assert.match(draw, /for \(const figure of layer\.figures\.slice\(0, limit\)\)/u)
+  assert.match(draw, /if \(limit === 0\) return/u, 'ноль созвездий — пустое небо, а не весь каталог')
+  assert.match(draw, /layer\.figures\.length/u, 'больше, чем есть в каталоге, показать нельзя')
+  const panel = client.slice(client.indexOf('function DeepSpaceSettings'), client.indexOf('function DeepSpaceAction'))
+  assert.match(panel, /text\.constellationCount\(value\.constellationCount\)/u)
+  assert.match(panel, /min: String\(CONSTELLATION_COUNT_MIN\)/u)
+  assert.match(panel, /max: String\(CONSTELLATION_COUNT_MAX\)/u)
+  assert.match(panel, /props\.controller\.set\(\{ constellationCount: Number\(event\.target\.value\) \}\)/u)
+  assert.match(panel, /value\.constellations\s*\n?\s*\?\s*React\.createElement\(/u, 'ползунок только при включённых созвездиях')
+  // Подписи на обоих языках: панель переключается между ними.
+  assert.match(client, /constellationCount: \(count\) => `Сколько созвездий: \$\{count\}`/u)
+  assert.match(client, /constellationCount: \(count\) => `How many constellations: \$\{count\}`/u)
 })

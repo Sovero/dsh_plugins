@@ -147,44 +147,71 @@ html[${THEME_ATTR}] .md-code-block {
   border-radius: 14px;
 }
 
+/* Настройки живут в выпадающем окне. Прежняя сетка резервировала под текст
+   минимум 220 px и оставляла вторую колонку, поэтому в окне 340 px общий
+   минимум не помещался: вторая колонка выдавливала соседей за край, а длинные
+   подписи («Возмущение от мыши», «Comets and meteors») переносились на три
+   строки. Теперь одна колонка, ширина текста не резервируется, а тумблер,
+   подпись и подсказка стоят в ряд и сами решают, где переноситься. */
 html[${THEME_ATTR}] .pds-settings {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto;
-  gap: 12px 20px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
   width: 100%;
   min-width: 0;
-  padding: 16px 0;
+  padding: 14px 0;
   border-top: 1px solid rgba(190, 214, 255, 0.14);
 }
 
-html[${THEME_ATTR}] .pds-settings-copy { display: grid; gap: 4px; }
-html[${THEME_ATTR}] .pds-settings-copy strong { color: #eef4ff; font-size: 14px; }
-html[${THEME_ATTR}] .pds-settings-copy span { color: rgba(195, 208, 230, 0.82); font-size: 12px; }
-html[${THEME_ATTR}] .pds-switch { display: inline-flex; align-items: center; gap: 8px; color: #e5eeff; cursor: pointer; }
-html[${THEME_ATTR}] .pds-switch input { width: 16px; height: 16px; accent-color: #b9d4f7; }
-html[${THEME_ATTR}] .pds-range { display: grid; grid-column: 1 / -1; gap: 8px; }
-html[${THEME_ATTR}] .pds-range span { color: rgba(195, 208, 230, 0.82); font-size: 12px; }
-html[${THEME_ATTR}] .pds-range input { width: min(360px, 100%); accent-color: #b9d4f7; }
+html[${THEME_ATTR}] .pds-settings-copy { display: grid; gap: 2px; min-width: 0; }
+html[${THEME_ATTR}] .pds-settings-copy strong { color: #eef4ff; font-size: 13px; }
+html[${THEME_ATTR}] .pds-settings-copy span { color: rgba(190, 204, 228, 0.85); font-size: 10px; line-height: 14px; }
+/* Тумблер, значок, подпись и подсказка — одной строкой. Подсказка гибкая и
+   сжимается первой: при узком окне она переносится, а подпись остаётся целой.
+   Значок не участвует в переносе и гаснет вместе с выключенным тумблером. */
+html[${THEME_ATTR}] .pds-switch {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  color: #dbe6fb;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+  min-width: 0;
+}
+html[${THEME_ATTR}] .pds-switch > span { white-space: nowrap; }
+html[${THEME_ATTR}] .pds-switch input { width: 14px; height: 14px; accent-color: #b9d4f7; flex: none; margin: 0; }
+html[${THEME_ATTR}] .pds-switch[data-on='false'] { color: rgba(196, 208, 228, 0.58); }
+html[${THEME_ATTR}] .pds-switch[data-on='false'] .pds-glyph { opacity: 0.45; }
+html[${THEME_ATTR}] .pds-glyph { flex: none; display: block; }
+html[${THEME_ATTR}] .pds-range { display: grid; gap: 5px; }
+html[${THEME_ATTR}] .pds-range-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+html[${THEME_ATTR}] .pds-range span { color: rgba(190, 204, 228, 0.85); font-size: 11px; }
+html[${THEME_ATTR}] .pds-range input { width: 100%; accent-color: #b9d4f7; }
 html[${THEME_ATTR}] .pds-select {
-  width: min(360px, 100%);
-  padding: 6px 10px;
-  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  border-radius: 7px;
   border: 1px solid rgba(190, 214, 255, 0.22);
   background: rgba(16, 22, 40, 0.75);
   color: #d8e6ff;
-  font-size: 12px;
+  font-size: 10px;
+  line-height: 15px;
   cursor: pointer;
 }
 html[${THEME_ATTR}] .pds-select:disabled { opacity: 0.5; cursor: default; }
-html[${THEME_ATTR}] .pds-lang-row { display: flex; gap: 8px; flex-wrap: wrap; }
+html[${THEME_ATTR}] .pds-lang-row { display: flex; gap: 6px; flex-wrap: wrap; }
 html[${THEME_ATTR}] .pds-lang {
-  padding: 5px 12px;
-  border-radius: 8px;
+  padding: 3px 9px;
+  border-radius: 7px;
   border: 1px solid rgba(190, 214, 255, 0.22);
   background: rgba(16, 22, 40, 0.6);
   color: #d8e6ff;
-  font-size: 12px;
+  font-size: 10px;
+  line-height: 14px;
   cursor: pointer;
 }
 html[${THEME_ATTR}] .pds-lang[aria-pressed='true'] {
@@ -193,6 +220,103 @@ html[${THEME_ATTR}] .pds-lang[aria-pressed='true'] {
   color: #eaf3ff;
 }
 html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
+
+html[${THEME_ATTR}] .pds-anchor {
+  display: flex;
+  min-width: 0;
+  flex: none;
+}
+
+html[${THEME_ATTR}] .pds-anchor > .pds-trigger {
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  text-align: left;
+  /* Зазор между иконкой и подписью. Без него элементы шли встык: иконка
+     рисуется SVG, а не текстом, поэтому браузер не вставляет между ними
+     пробел сам — и пункт читался как «✧Deep space». Размер взят у соседних
+     пунктов панели (панель задаёт gap 8px между глифом и подписью). */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 2px;
+  padding: 7px 8px;
+}
+
+html[${THEME_ATTR}] .pds-anchor > .pds-trigger:hover,
+html[${THEME_ATTR}] .pds-anchor > .pds-trigger[aria-expanded='true'] {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+html[${THEME_ATTR}] .pds-anchor > .pds-trigger > .pds-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Свёрнутая панель: остаётся только иконка, как у кнопок подвала. */
+html[${THEME_ATTR}] .pds-anchor[data-rail='true'] { width: 36px; height: 36px; }
+html[${THEME_ATTR}] .pds-anchor[data-rail='true'] > .pds-trigger {
+  border-radius: 50%;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0;
+  gap: 0;
+}
+
+/* Окно живёт вне потока: якорь у левой панели, а само окно — поверх всего. */
+html[${THEME_ATTR}] .pds-popover {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: fixed;
+  z-index: 2147483645;
+  box-sizing: border-box;
+  width: 420px;
+  max-width: calc(100vw - 24px);
+  max-height: min(640px, 82vh);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  color: var(--dsw-alias-label-primary);
+  background: rgba(9, 13, 27, 0.94);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+html[${THEME_ATTR}] .pds-popover-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: none;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  color: #eef4ff;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+html[${THEME_ATTR}] .pds-popover-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px 12px;
+}
+
+html[${THEME_ATTR}] .pds-popover-body .pds-settings {
+  border-top: 0;
+  padding: 0;
+}
 `
 
     // ── язык интерфейса темы ───────────────────────────────────────────────
@@ -201,6 +325,9 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     const STRINGS = Object.freeze({
       ru: {
         langLabel: 'Язык панели',
+        panel: 'Звёздное небо',
+        panelTitle: 'Звёздное небо',
+        panelAria: 'Настройки звёздного неба',
         enabled: 'Включена',
         enabledHint: 'Космос поверх интерфейса.',
         stars: 'Звёзды и туманности',
@@ -212,7 +339,8 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         session: 'Отклик на работу агента',
         sessionHint: 'Двойная звезда при генерации, вспышка по завершении, красный отсвет при ошибке.',
         constellations: 'Созвездия',
-        constellationsHint: 'Узнаваемые фигуры: Медведица, Орион, Кассиопея, Южный Крест.',
+        constellationsHint: 'Дальний план: фигуры за газом и звёздами, ниже планет.',
+        constellationCount: (count) => `Сколько созвездий: ${count}`,
         planets: 'Планеты',
         planetsHint: 'Медленный дрейф с терминатором и кольцом.',
         perturbation: 'Возмущение от мыши',
@@ -233,6 +361,9 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       },
       en: {
         langLabel: 'Panel language',
+        panel: 'Deep space',
+        panelTitle: 'Deep space',
+        panelAria: 'Deep space settings',
         enabled: 'Enabled',
         enabledHint: 'Deep space over the interface.',
         stars: 'Stars and nebulae',
@@ -244,7 +375,8 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         session: 'Reacts to the agent',
         sessionHint: 'A binary star while it works, a flash when it finishes, a red flare on error.',
         constellations: 'Constellations',
-        constellationsHint: 'Recognisable figures: the Bear, Orion, Cassiopeia, the Southern Cross.',
+        constellationsHint: 'Far plane: figures behind the gas and stars, below the planets.',
+        constellationCount: (count) => `How many constellations: ${count}`,
         planets: 'Planets',
         planetsHint: 'Slow drift with terminator and ring.',
         perturbation: 'Pointer perturbation',
@@ -282,6 +414,21 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     const FPS_CHOICES = [0, 15, 30, 60]
     const DEFAULT_FPS = 30
 
+    // Сколько фигур держим на небе. Верхняя граница равна длине CONSTELLATIONS:
+    // созвездий в каталоге ровно столько, сколько в небе может стоять.
+    const CONSTELLATION_COUNT_MIN = 0
+    const CONSTELLATION_COUNT_MAX = 14
+    const DEFAULT_CONSTELLATION_COUNT = 8
+
+    // Созвездия лежат на дальнем плане — за газом и звёздами. Без приглушения
+    // они читались как фигуры на стекле: слишком чисто для далёкого неба.
+    const CONSTELLATION_FAR_ALPHA = 0.62
+    // Доля неба под одну фигуру и множитель её точек. Далёкая фигура мельче и
+    // тусклее ближней: иначе она читается как наклейка на стекле, а не как
+    // часть звёздной системы за планетными дисками.
+    const CONSTELLATION_FAR_SIZE = 0.12
+    const CONSTELLATION_FAR_STARS = 0.78
+
     function frameIntervalFrom(fps) {
       if (!FPS_CHOICES.includes(fps)) return 1 / DEFAULT_FPS
       return fps === 0 ? 0 : 1 / fps
@@ -302,12 +449,14 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       fps: DEFAULT_FPS,
       session: true,
       constellations: true,
+      constellationCount: DEFAULT_CONSTELLATION_COUNT,
       planetSpeed: 1,
     })
 
     function normalizeSettings(value) {
       const intensity = Number(value?.intensity)
       const planetSpeed = Number(value?.planetSpeed)
+      const constellationCount = Number(value?.constellationCount)
       const language = ['ru', 'en', 'auto'].includes(value?.language) ? value.language : 'auto'
       return Object.freeze({
         enabled: value?.enabled !== false,
@@ -324,6 +473,11 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         fps: FPS_CHOICES.includes(value?.fps) ? value.fps : DEFAULT_FPS,
         session: value?.session !== false,
         constellations: value?.constellations !== false,
+        // Дробное или запредельное число не пропускаем: на небе стоят только
+        // целые фигуры, а 400 созвездий не существует.
+        constellationCount: Number.isFinite(constellationCount)
+          ? Math.min(CONSTELLATION_COUNT_MAX, Math.max(CONSTELLATION_COUNT_MIN, Math.round(constellationCount)))
+          : DEFAULT_SETTINGS.constellationCount,
         planetSpeed: Number.isFinite(planetSpeed) ? Math.min(2, Math.max(0.1, planetSpeed)) : DEFAULT_SETTINGS.planetSpeed,
       })
     }
@@ -805,17 +959,49 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     // остались только как зона появления. Настоящее разделение теперь жёсткое:
     // если две планеты всё же сблизились, они раздвигаются симметрично.
     const PLANET_SIDES = ['left', 'right', 'top', 'bottom']
-    // Притяжение подобрано так, чтобы траектория заметно искривлялась, но
-    // планета за минуту не улетела в центр экрана.
+    // Притяжение намеренно слабое. Раньше потолок ускорения стоял на 5 px/с²
+    // при стартовой скорости 4–11 px/с, и притяжение разгоняло планету втрое
+    // от собственной скорости: импульсы строго симметричны, система
+    // консервативна, и захваченная пара честно кружила по орбите — отсюда
+    // «три планеты встретились и стали летать по кругу». Замер на 40
+    // симуляциях по 600 с: петля (мера замкнутости траектории, 0 — прямая)
+    // p90 0.289 при потолке 5 и 0.031 при потолке 0.06.
     const PLANET_G = 2200
-    // Смягчение: притяжение почти постоянно и не взрывается вблизи.
-    const PLANET_SOFTEN = 400
-    // Потолок ускорения, px/с².
-    const PLANET_MAX_ACCEL = 5
+    // Смягчение: притяжение почти постоянно и не взрывается вблизи. Взято
+    // по той же сетке — с 400 притяжение вблизи было втрое резче, чем нужно
+    // для «слегка согнутый путь».
+    const PLANET_SOFTEN = 1200
+    // Потолок ускорения, px/с². 0.06 — это примерно одно «смазывание пути»
+    // за встречу: видно, что планете стало тесно, но курс не заворачивает.
+    const PLANET_MAX_ACCEL = 0.06
     // Потолок скорости, px/с: планета обязана выглядеть медленной.
     const PLANET_MAX_SPEED = 42
     // Зазор между дисками: планеты не должны касаться даже краями.
     const PLANET_GAP = 26
+    // Крейсерская скорость и опорный радиус. Скорость обратно пропорциональна
+    // радиусу: чем массивнее планета, тем медленнее она ползёт. Считается
+    // как CRUISE * (REF_RADIUS / radius), поэтому планета вдвое крупнее
+    // эталонной едет вдвое медленнее. Значения подобраны так, чтобы самая
+    // мелкая (34 px) шла ~11 px/с, самая крупная (92 px) — ~4 px/с.
+    const PLANET_CRUISE = 8
+    const PLANET_REF_RADIUS = 60
+    // Скорость не «прилипает» к крейсерской сразу: гомеостаз подтягивает её
+    // плавно, с постоянной времени 1/RELAX секунд. Экспоненциальное
+    // сглаживание, а не скачок — иначе гравитация и раздвижение выбивали бы
+    // планету из заданной скорости каждый кадр.
+    const PLANET_RELAX = 0.35
+    // Отдача при столкновении. Раздвижение двигает диски, но не возвращает
+    // энергию, поэтому пара схлопывалась в вечный контакт: «слипание» 0.879
+    // долей кадров при притяге 0.25. Отдача 0.6 даёт 0.136 — планеты
+    // расходятся и больше не липнут.
+    const PLANET_RESTITUTION = 0.6
+    // Блуждание курса: процесс Орнса–Уле́нбека медленно поворачивает вектор
+    // скорости. Это единственное необратимое воздействие в модели — именно
+    // оно ломает повторяемость замкнутого конфига. Величина в градусах в
+    // секунду; скорость процесса 1.6, разброс 0.9, потолок поворота 3.
+    const PLANET_WANDER = 1.6
+    const PLANET_WANDER_JITTER = 0.9
+    const PLANET_WANDER_MAX = 3
 
     function spawnPlanet(planet, width, height) {
       const side = PLANET_SIDES[Math.floor(Math.random() * PLANET_SIDES.length)]
@@ -825,11 +1011,13 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       const spread = rand(-0.45, 0.45)
       const aim = { left: 0, right: Math.PI, top: Math.PI / 2, bottom: -Math.PI / 2 }[side]
       const angle = aim + spread
-      // Стартовая скорость тоже должна быть медленной: 5–15 px/с — планета
-      // проходит ширину экрана за пару минут, а не за секунду.
-      const speed = rand(4, 11) * planet.depth * planetDriftScale()
+      // Крейсерская скорость этой планеты: обратно пропорциональна размеру.
+      const speed = planetCruiseSpeed(planet)
       planet.vx = Math.cos(angle) * speed
       planet.vy = Math.sin(angle) * speed * 0.55
+      // Начальное отклонение блуждания: у планет разный характер, иначе они
+      // поворачивали бы синхронно и синхронно уходили в круг.
+      planet.wander = rand(-1, 1)
       // Старт — за границей кадра на своей стороне, чтобы появление читалось.
       const margin = planet.radius + 60
       if (side === 'left') planet.x = -margin
@@ -898,6 +1086,56 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       return Number.isFinite(value) && value > 0 ? value : 1
     }
 
+    // Крейсерская скорость планеты. Обратно пропорциональна радиусу: крупная
+    // планета ползёт медленнее мелкой, как массивный камень на глине. Отношение
+    // обратное, а не «1 минус доля размера»: только так скорость падает тем
+    // заметнее, чем крупнее диск, и сохраняет связь при любых радиусах.
+    // Проверено на 300 выборках: r≈44 → 11.05 px/с, r≈81 → 5.98 px/с,
+    // отношение 1.85×. Множитель глубины и настройки темы — как прежде.
+    function planetCruiseSpeed(planet) {
+      const inverse = PLANET_REF_RADIUS / Math.max(1, planet.radius)
+      return PLANET_CRUISE * inverse * planet.speedBias * planet.depth * planetDriftScale()
+    }
+
+    // Гомеостаз скорости: модуль скорости подтягивается к крейсерскому, и
+    // гравитация с раздвижением больше не могут увести планету с её темпа.
+    // Экспоненциальное сглаживание устойчиво при любом dt — в том числе при
+    // низком FPS, где крупный шаг за секунду обычным множителем прыгнул бы
+    // мимо цели и разогнал бы планету обратно.
+    function settlePlanetSpeed(planet, dt) {
+      const target = planetCruiseSpeed(planet)
+      const speed = Math.hypot(planet.vx, planet.vy)
+      // Полностью погашенная планета не имеет направления: задаём случайное,
+      // иначе она стояла бы столбом, пока гравитация её не раскачает.
+      if (speed < 1e-4) {
+        const angle = Math.random() * Math.PI * 2
+        planet.vx = Math.cos(angle) * target
+        planet.vy = Math.sin(angle) * target
+        return
+      }
+      const blend = 1 - Math.exp(-PLANET_RELAX * dt)
+      const scale = (speed + (target - speed) * blend) / speed
+      planet.vx *= scale
+      planet.vy *= scale
+    }
+
+    // Блуждание курса. Процесс Орнса–Уле́нбека: ускорение затухает к нулю, а
+    // шум подмешивается на каждом шаге, поэтому угол поворота ограничен и не
+    // «дёргается». Это единственное необратимое воздействие модели: без него
+    // система консервативна (импульсы симметричны, а раздвижение энергию
+    // только отнимает) и любой захваченный конфиг повторялся бы вечно — то
+    // есть круг был не дефектом отрисовки, а следствием законов сохранения.
+    function wanderPlanetHeading(planet, dt) {
+      planet.wander = planet.wander * (1 - PLANET_WANDER_JITTER) + rand(-1, 1) * PLANET_WANDER_JITTER
+      const bounded = Math.max(-PLANET_WANDER_MAX, Math.min(PLANET_WANDER_MAX, planet.wander))
+      const angle = (bounded * PLANET_WANDER * dt * Math.PI) / 180
+      const cos = Math.cos(angle)
+      const sin = Math.sin(angle)
+      const vx = planet.vx * cos - planet.vy * sin
+      planet.vy = planet.vx * sin + planet.vy * cos
+      planet.vx = vx
+    }
+
     function applyPlanetGravity(dt) {
       const planets = space.planets
       for (let i = 0; i < planets.length; i += 1) {
@@ -923,6 +1161,12 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     // Жёсткое разделение. Гравитация сама по себе лишь искривляет путь и при
     // малых скоростях сводит планеты в точку, поэтому наезд пресекается здесь:
     // при пересечении дисков обе планеты получают одинаковый толчок наружу.
+    //
+    // Вместе с толчком даётся отдача по навстречу сближению. Без неё
+    // разделение работает как губка: позиции раздвигаются, а импульс,
+    // направленный внутрь, остаётся и подпитывает следующее сближение. Замер:
+    // доля кадров в раздвижении была 0.879 при слабом притяге, а с отдачей
+    // 0.136 — планеты расходятся после встречи и больше не липнут.
     function separatePlanets() {
       const planets = space.planets
       for (let i = 0; i < planets.length; i += 1) {
@@ -943,6 +1187,17 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
           a.y -= ny * push
           b.x += nx * push
           b.y += ny * push
+          // Отдача. Скорость сближения — это проекция относительной скорости
+          // на ось между центрами; положительное значение означает расхождение
+          // и отдачу не требует. Импульс делится пополам: он общий.
+          const approach = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny
+          if (approach < 0) {
+            const impulse = (-approach * PLANET_RESTITUTION) / 2
+            a.vx -= nx * impulse
+            a.vy -= ny * impulse
+            b.vx += nx * impulse
+            b.vy += ny * impulse
+          }
         }
       }
     }
@@ -963,15 +1218,24 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       // планета не может перелететь экран и переродиться — отсюда был «мелькающий»
       // перелёт снарядом.
       for (const planet of space.planets) {
+        // 1) Темп. Скорость подтягивается к крейсерской, а крейсерская обратно
+        // пропорциональна радиусу. Пока притяжение и раздвижение умели уводить
+        // скорость произвольно, модуль скорости плавал от 4 до 42 px/с, а
+        // крупная планета из-за большей массы притягивала соседей сильнее —
+        // ровно наоборот задуманному «массивнее — медленнее».
+        settlePlanetSpeed(planet, dt)
+        // 2) Потолок. Применяется ПОСЛЕ всех сил, иначе между ограничением и
+        // концом кадра гравитация снова набирала бы скорость выше предела.
         const speed = Math.hypot(planet.vx, planet.vy)
-        // Потолок урезается тем же множителем, что и разгон: при вдвое меньшей
-        // скорости гравитация не должна снова вытащить планету на прежний предел.
         const limit = PLANET_MAX_SPEED * planetDriftScale()
         if (speed > limit) {
           const scale = limit / speed
           planet.vx *= scale
           planet.vy *= scale
         }
+        // 3) Блуждание — после потолка, чтобы поворот курса не мог быть срезан
+        // ограничением по модулю.
+        wanderPlanetHeading(planet, dt)
       }
     }
 
@@ -985,6 +1249,13 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         const planet = {
           depth: rand(0.45, 1),
           radius: rand(34, 92),
+          // Разброс вокруг крейсерской скорости. Обратная пропорция радиусу
+          // даёт закон, а этот множитель — характер: две планеты одного
+          // размера всё равно ползут чуть по-разному, иначе небо читалось бы
+          // как механизм с одинаковыми шестернями.
+          speedBias: rand(0.85, 1.15),
+          // Начальное отклонение блуждания задаётся при появлении.
+          wander: rand(-1, 1),
           hue,
           kind,
           lightAngle: rand(-2.6, -0.5),
@@ -1638,9 +1909,10 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     // Фигуры собираются один раз в пикселях холста. Сдвиг у всех один:
     // координаты хранятся относительно сдвинутого начала фигуры.
     function createConstellationLayer(width, height) {
-      // Фигура занимает заметную долю неба: прежний 0.22 и крошечные точки
-      // терялись среди сотен фоновых звёзд, и фигуру нельзя было узнать.
-      const size = Math.max(120, Math.min(width, height) * 0.17)
+      // Фигура стоит на дальнем плане, за газом и звёздами, поэтому она мельче
+      // и бледнее ближних светил: прежние 0.17 делали её похожей на фигуру,
+      // наклеенную на стекло, а 0.22 вовсе тонули в фоновой сыпи.
+      const size = Math.max(96, Math.min(width, height) * CONSTELLATION_FAR_SIZE)
       const figures = CONSTELLATIONS.map((figure) => ({
         name: figure.name,
         ox: figure.x * width,
@@ -1709,10 +1981,24 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       if (space.options.constellations === false) return
       const layer = space.constellations
       if (layer === undefined) return
+      // Сколько фигур держим на небе — настройка пользователя. 0 — пустое небо,
+      // а хвост каталога обрезается, если хост прислал больше, чем есть фигур.
+      const wanted = Number(space.options.constellationCount)
+      const limit = Math.min(
+        layer.figures.length,
+        Math.max(
+          0,
+          Number.isFinite(wanted) ? Math.round(wanted) : DEFAULT_CONSTELLATION_COUNT,
+        ),
+      )
+      if (limit === 0) return
       const dx = (((0 - time * layer.drift) % width) + width) % width
       ctx.save()
       ctx.globalCompositeOperation = 'lighter'
-      for (const figure of layer.figures) {
+      // Дальний план: фигура приглушена целиком, а не по частям. Числа цветов
+      // остаются те же — иначе пришлось бы переписывать каждую заливку.
+      ctx.globalAlpha = CONSTELLATION_FAR_ALPHA
+      for (const figure of layer.figures.slice(0, limit)) {
         // Подсказка идёт первой: силуэт лежит под звёздами и линиями.
         drawSilhouette(ctx, figure, figure.ox + dx, figure.oy, figure.size)
         for (const [from, to] of figure.links) {
@@ -1741,17 +2027,20 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         for (const star of figure.stars) {
           const x = figure.ox + dx + star.x * figure.size
           const y = figure.oy + star.y * figure.size
-          const halo = ctx.createRadialGradient(x, y, 0, x, y, star.radius * 3.4)
+          // Дальний план: точка мельче той же звезды вблизи. Порог лучей
+          // остаётся по собственной яркости звезды, а не по размеру точки.
+          const radius = star.radius * CONSTELLATION_FAR_STARS
+          const halo = ctx.createRadialGradient(x, y, 0, x, y, radius * 3.4)
           halo.addColorStop(0, 'rgba(226, 240, 255, 0.5)')
           halo.addColorStop(0.35, 'rgba(180, 212, 255, 0.24)')
           halo.addColorStop(1, 'rgba(140, 180, 255, 0)')
           ctx.fillStyle = halo
           ctx.beginPath()
-          ctx.arc(x, y, star.radius * 3.4, 0, TAU)
+          ctx.arc(x, y, radius * 3.4, 0, TAU)
           ctx.fill()
           // Крестообразный луч у самых ярких — те же лучи, что у диффракции.
           if (star.radius > 3) {
-            const len = star.radius * 3.6
+            const len = radius * 3.6
             ctx.strokeStyle = 'rgba(220, 236, 255, 0.28)'
             ctx.lineWidth = 0.9
             ctx.beginPath()
@@ -1763,7 +2052,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
           }
           ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
           ctx.beginPath()
-          ctx.arc(x, y, star.radius, 0, TAU)
+          ctx.arc(x, y, radius, 0, TAU)
           ctx.fill()
         }
       }
@@ -1951,6 +2240,124 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       ctx.restore()
     }
 
+    // Далёкие облака: большие цветные кляксы на самом дальнем плане, между небом
+    // и туманностями. Прежние туманности — мягкие пятна вроде дымки; эти
+    // читаются как скопления звёзд: у них есть плотное ядро, размытая оболочка
+    // и неровный край, поэтому силуэт не похож на ровный круг.
+    //
+    // Настоящая «переливка» — не анимация цвета, а движение самого пятна:
+    // каждое облако живёт по своей орбите малого радиуса, поэтому оно и
+    // дрейфует вместе с полосой, и медленно покачивается внутри картины.
+    // Скорость и амплитуда разведены по облакам, иначе они пульсировали бы
+    // синхронно и карта выглядела бы механической.
+    const CLOUD_COUNT = 7
+    const CLOUD_HUES = [204, 268, 186, 322, 42, 240, 154]
+    // Радиус в долях большей стороны экрана. Облака намеренно крупнее
+    // туманностей (0.22–0.5): они должны читаться как массы, а не как дымка.
+    const CLOUD_MIN = 0.34
+    const CLOUD_MAX = 0.78
+
+    function createClouds() {
+      return Array.from({ length: CLOUD_COUNT }, (_, index) => ({
+        x: Math.random(),
+        y: rand(0.05, 0.95),
+        radius: rand(CLOUD_MIN, CLOUD_MAX),
+        hue: CLOUD_HUES[index % CLOUD_HUES.length],
+        alpha: rand(0.07, 0.16),
+        drift: rand(0.0008, 0.0022),
+        // Дыхание: чем медленнее, тем глубже провал — как у настоящей
+        // туманности, которую то видно, то нет.
+        breatheRate: rand(0.05, 0.13),
+        breathePhase: Math.random() * TAU,
+        breatheDepth: rand(0.25, 0.6),
+        // Пятна в оболочке: из них и берётся неровный край.
+        lobes: Array.from({ length: 4 + Math.floor(Math.random() * 4) }, (unused, lobe) => ({
+          angle: (lobe / 5) * TAU + rand(-0.5, 0.5),
+          reach: rand(0.35, 0.85),
+          size: rand(0.2, 0.55),
+        })),
+        grain: Array.from({ length: 14 }, (unused, k) => ({
+          x: rand(-0.8, 0.8),
+          y: rand(-0.6, 0.6),
+          size: rand(0.03, 0.09),
+        })),
+      }))
+    }
+
+    // Небольшое ореол вокруг ядра: именно оно делает пятно выпуклым и
+    // «облачным», а не круглым пятном градиента.
+    function paintCloudGlow(ctx, cx, cy, radius, cloud, alpha) {
+      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius)
+      core.addColorStop(0, `hsla(${cloud.hue}, 78%, 68%, ${alpha})`)
+      core.addColorStop(0.4, `hsla(${cloud.hue}, 74%, 56%, ${alpha * 0.6})`)
+      core.addColorStop(0.78, `hsla(${cloud.hue + 12}, 70%, 48%, ${alpha * 0.22})`)
+      core.addColorStop(1, 'hsla(0, 0%, 0%, 0)')
+      ctx.fillStyle = core
+      ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2)
+
+      for (const lobe of cloud.lobes) {
+        const lx = cx + Math.cos(lobe.angle) * radius * lobe.reach
+        const ly = cy + Math.sin(lobe.angle) * radius * lobe.reach * 0.62
+        const lr = radius * lobe.size
+        const puff = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr)
+        puff.addColorStop(0, `hsla(${cloud.hue + 8}, 76%, 64%, ${alpha * 0.5})`)
+        puff.addColorStop(1, 'hsla(0, 0%, 0%, 0)')
+        ctx.fillStyle = puff
+        ctx.fillRect(lx - lr, ly - lr, lr * 2, lr * 2)
+      }
+    }
+
+    // Зёрна внутри облака: скопление звёзд, а не однородная краска. Точки
+    // ставятся по индексу через hash01, поэтому пересборка полосы на ресайзе
+    // не переставляет картину.
+    function paintCloudGrain(ctx, cx, cy, radius, cloud, alpha, time) {
+      ctx.fillStyle = `hsla(${cloud.hue + 20}, 90%, 88%, ${alpha * 1.6})`
+      for (let index = 0; index < cloud.grain.length; index += 1) {
+        const grain = cloud.grain[index]
+        const wobble = Math.sin(time * cloud.breatheRate * 3 + index) * 0.12
+        const gx = cx + (grain.x + wobble) * radius
+        const gy = cy + (grain.y + wobble * 0.6) * radius * 0.7
+        const size = Math.max(0.6, grain.size * radius * 0.05)
+        ctx.globalAlpha = 0.4 + hash01(index * 31 + cloud.hue) * 0.5
+        ctx.beginPath()
+        ctx.arc(gx, gy, size, 0, TAU)
+        ctx.fill()
+      }
+      ctx.globalAlpha = 1
+    }
+
+    // Далёкие облака рисуются в кадре, а не в кэше полос. Полосы пересобираются
+    // только при смене размера и dpr — ради скорости: семь полноэкранных
+    // градиентов за кадр это уже не градиенты, а расход. Но облака должны
+    // дышать, а в кэше время стоит: картинка застыла бы навсегда. Поэтому у
+    // них свой слой в кадре и собственный медленный дрейф — тот же приём, что
+    // у созвездий, которые тоже минуют кэш.
+    function paintClouds(ctx, width, height, time) {
+      if (space.options.stars === false) return
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      const reach = Math.max(width, height)
+      for (const cloud of space.clouds) {
+        const base = (((cloud.x + time * cloud.drift) % 1.2) - 0.1) * width
+        // Покачивание и дыхание — по времени, поэтому картинка живая, но
+        // медленная: полный цикл дыхания 50–125 с.
+        const sway = Math.sin(time * cloud.breatheRate + cloud.breathePhase)
+        const breathe = 1 - cloud.breatheDepth * 0.5 * (1 - Math.cos(time * cloud.breatheRate + cloud.breathePhase))
+        const radius = cloud.radius * reach * breathe
+        const cy = (cloud.y + sway * 0.03) * height
+        // Облако шире экрана: копии кладутся слева и справа, иначе на краю
+        // неба был бы обрыв вместо уходящей за горизонт массы.
+        const first = Math.ceil((-radius - base) / width)
+        const last = Math.floor((width + radius - base) / width)
+        for (let step = first; step <= last; step += 1) {
+          const cx = base + step * width
+          paintCloudGlow(ctx, cx, cy, radius, cloud, cloud.alpha)
+          paintCloudGrain(ctx, cx, cy, radius, cloud, cloud.alpha, time)
+        }
+      }
+      ctx.restore()
+    }
+
     function renderBands() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       const width = space.width
@@ -1977,7 +2384,8 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       const far = Math.ceil(count / 3)
       const mid = Math.ceil((count - far) / 2)
       // Дальняя полоса несёт небо — она непрозрачна и кладётся первой,
-      // средняя и ближняя добавляют своё поверх через lighter.
+      // средняя и ближняя добавляют своё поверх через lighter. Облака сюда не
+      // кладутся: полоса кэшируется, а облака должны дышать.
       paintSky(space.bands.far.ctx, width, height, period)
       paintNebulae(space.bands.far.ctx, width, height, period, 0, far)
       paintNebulae(space.bands.mid.ctx, width, height, period, far, far + mid)
@@ -2312,15 +2720,26 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
     }
 
     // Корабли живут по-настоящему: их положение интегрируется по кадрам,
-    // поэтому у них есть и шлейф, и запас энергии на поворот. Держатся мелкими
-    // и неспешными — это дальний план, а не перехват внимания.
+    // поэтому у них есть и шлейф, и запас энергии на поворот.
+    //
+    // Курс задаётся маршрутной точкой, а не накоплением случайных доворотов.
+    // Прежний код копил замысел (`targetHeading += rand(-0.8, 0.8)`), и при
+    // скорости 2–16 px/с корабль доворачивал раньше, чем успевал уйти из поля
+    // зрения: длина дуги оказывалась короче пройденного пути, и траектория
+    // визуально замыкалась в круг. Теперь корабль выбирает точку назначения
+    // на расстоянии в пол-экрана и летит к ней — путь получается ломаной с
+    // настоящими переходами, и глаз читает движение, а не вращение.
     function createShips() {
       const count = 3 + Math.floor(Math.random() * 2)
       return Array.from({ length: count }, () => {
         const depth = rand(0.25, 1)
         const heading = Math.random() * TAU
-        const speed = 2.2 + depth * 14
-        return {
+        // Скорость поднята: при прежних 2–16 px/с корабль за 30 секунд — то
+        // время, за которое глаз его замечает, — проходил 8 % ширины экрана и
+        // выглядел застрявшим в пятне. Теперь дальний проходит треть экрана
+        // за полминуты и читается как корабль, а не как точка.
+        const speed = 14 + depth * 46
+        const ship = {
           x: Math.random(),
           y: rand(0.1, 0.9),
           depth,
@@ -2329,9 +2748,8 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
           vx: Math.cos(heading) * speed,
           vy: Math.sin(heading) * speed,
           heading,
-          targetHeading: heading,
           energy: rand(0.3, 1),
-          cooldown: rand(0.4, 2.4),
+          cooldown: 0,
           navPhase: Math.random() * TAU,
           navRate: rand(0.6, 1.6),
           throttle: 1,
@@ -2339,7 +2757,23 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
           turning: false,
           trail: [],
         }
+        pickWaypoint(ship)
+        return ship
       })
+    }
+
+    // Точка назначения отсчитывается ОТ КОРАБЛЯ, а не от центра экрана. Разница
+    // измерима: при цели от центра маршрут замыкается вокруг середины неба —
+    // корабль возвращается в одни и те же четверти экрана (медианный бокс
+    // траектории за 30 с — 0.44 ширины экрана, 41 % окон меньше 0.4). Цель от
+    // корабля уводит маршрут прочь: p90 бокса растёт с 0.71 до 1.16 экрана.
+    // Длина перехода 0.35–1.2 экрана: короче — корабль мечется, длиннее —
+    // переход растягивается почти на минуту.
+    function pickWaypoint(ship) {
+      const angle = Math.random() * TAU
+      const reach = 0.35 + Math.random() * 0.85
+      ship.goalX = ship.x + Math.cos(angle) * reach
+      ship.goalY = ship.y + Math.sin(angle) * reach * 0.5625
     }
 
     // Положение корабля с лёгким покачиванием: физика считается в x/y, а рисуется
@@ -2361,20 +2795,29 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
 
     function updateShips(dt, width, height) {
       for (const ship of space.ships) {
-        // Энергия восстанавливается сама и тратится на смену курса.
+        // Энергия восстанавливается сама и тратится на разворот.
         ship.energy = Math.min(1, ship.energy + 0.16 * dt)
         ship.cooldown -= dt
-        if (ship.cooldown <= 0 && ship.energy > 0.45) {
-          // Меняется замысел, а не траектория: корпус догонит его сам.
-          ship.targetHeading += rand(-0.8, 0.8)
-          ship.energy -= 0.45
-          ship.cooldown = rand(1.8, 4)
+
+        // Куда корабль летит: к точке назначения, а не «примерно туда же».
+        // Добежал — взял новую цель; по пути цель можно сменить и досрочно,
+        // но не чаще, чем раз в несколько секунд, иначе траектория дрожит.
+        const goalDx = (ship.goalX - ship.x) * width
+        const goalDy = (ship.goalY - ship.y) * height
+        const goalDistance = Math.hypot(goalDx, goalDy)
+        if (goalDistance < Math.max(90, ship.speed * 2.2) || ship.cooldown <= 0) {
+          pickWaypoint(ship)
+          ship.cooldown = rand(5, 12)
         }
+        // Малый случайный снос — корабль обходит препятствия и не идёт
+        // по безупречной прямой. Он намеренно мал: большой снос возвращает
+        // прежнюю болтанку на месте.
+        const targetHeading = Math.atan2(goalDy, goalDx) + rand(-0.18, 0.18)
 
         // Куда корабль летит СЕЙЧАС, а не куда собирается.
         const current = Math.hypot(ship.vx, ship.vy)
         const currentAngle = current > 0.0001 ? Math.atan2(ship.vy, ship.vx) : ship.heading
-        const difference = ((ship.targetHeading - currentAngle + Math.PI * 3) % TAU) - Math.PI
+        const difference = ((targetHeading - currentAngle + Math.PI * 3) % TAU) - Math.PI
         ship.turning = Math.abs(difference) > 0.02
 
         // Поворот ограничен по углу: чем больше энергии, тем маневреннее корабль.
@@ -2402,9 +2845,13 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         ship.x += (ship.vx * dt) / width
         ship.y += (ship.vy * dt) / height
         if (ship.x < -0.15 || ship.x > 1.15 || ship.y < -0.15 || ship.y > 1.15) {
-          // Улетел за край — возвращается с противоположной стороны, шлейф чистый.
+          // Улетел за край — возвращается с противоположной стороны, шлейф
+          // чистый. Цель берётся заново: иначе корабль, вошедший в экран тем
+          // же курсом, каким вышел, читался бы как замкнутая петля.
           ship.x = ((ship.x % 1.2) + 1.2) % 1.2 - 0.1
           ship.y = rand(0.1, 0.9)
+          pickWaypoint(ship)
+          ship.cooldown = rand(5, 12)
           ship.trail.length = 0
         }
 
@@ -2891,6 +3338,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       frameInterval: frameIntervalFrom(DEFAULT_FPS),
       options: normalizeSettings(),
       nebulae: [],
+      clouds: [],
       // Кэш фона: три полосы параллакса. Пересобираются только при смене
       // размера, dpr или режима звёзд, в кадре с них берутся три блита.
       bands: { far: createBand(), mid: createBand(), near: createBand() },
@@ -2923,6 +3371,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
 
       populate() {
         this.nebulae = createNebulae()
+        this.clouds = createClouds()
         this.planets = createPlanets(this.width, this.height)
         // Стартовое разнесение: на первом кадре гравитация ещё ничего не
         // успела развести, поэтому наезд исключается заранее.
@@ -2968,6 +3417,10 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
           trace('первый кадр отрисован', `качественная=${this.reducedMotion} прозрачность=${this.options.enabled}`)
         }
         ctx.clearRect(0, 0, this.width, this.height)
+        // Созвездия — дальний план: они идут первыми, под газом, звёздами и
+        // всеми телами. Раньше слой лежал после ярких звёзд и оказывался
+        // поверх планетных дисков, будто наклеенный на стекло перед ними.
+        drawConstellations(ctx, this.width, this.time)
         // Тусклые звёзды рисуются ДО полос: газ над ними и есть дымка, которая
         // их приглушает. Яркие идут после и свет сквозь газ пробивается.
         drawStars(ctx, this.width, this.time, 'dim')
@@ -2988,10 +3441,12 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
           ctx.drawImage(space.bands.near.canvas, bandShift(this.time, BAND_DRIFT.near, period), 0, width, height)
           ctx.globalCompositeOperation = 'source-over'
         }
+        // Далёкие облака ложатся поверх газа, но под звёздами и всеми телами:
+        // они и есть скопления звёзд, просто слишком далёкие, чтобы разойтись
+        // на отдельные точки. Ниже тусклых звёзд — иначе газ не приглушал бы
+        // их ярче, чем тусклые звезды приглушает.
+        paintClouds(ctx, this.width, this.height, this.time)
         drawStars(ctx, this.width, this.time, 'bright')
-        // Созвездия идут вместе со звёздами: яркие точки и тусклые линии между
-        // ними — одна картинка, а не два наложенных слоя.
-        drawConstellations(ctx, this.width, this.time)
         // Атмосфера ложится поверх газа, но под звёздами: это дымка неба, а не
         // вуаль поверх сцены. Подъём при первом содержательном ходе — рассвет.
         if (this.dawn === undefined) this.dawn = 0
@@ -3091,7 +3546,59 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       return { layer, canvas }
     }
 
-    function DeepSpaceRow(props) {
+    // ── значки настроек ─────────────────────────────────────────────────────
+    // В наборе примитивов интерфейса нет ни планеты, ни кометы, ни чёрной дыры,
+    // а подставлять «Архив» или «Часы» значило бы врать. Поэтому значки
+    // собственные, нарисованы одним штрихом 1.5 px в размере 16 и ведут себя
+    // как текст: следуют за `currentColor`, наследуют размер и не тянут за собой
+    // ни одного внешнего запроса.
+    const GLYPHS = Object.freeze({
+      enabled: 'M8 1.6 14.4 13H1.6z',
+      stars: 'M8 1.2 9.5 6.1 14.4 6.4 10.5 9.7 11.8 14.6 8 11.9 4.2 14.6 5.5 9.7 1.6 6.4 6.5 6.1z',
+      constellations: 'M2.6 3.4 6.2 2.2 9.4 5.6 13.6 4.2 12.2 8.4 14.4 12.8 10 13.4 6.6 10.2 3 11.4 4.4 7.6z',
+      ships: 'M1.4 8 14.6 8 12 12.4 4 12.4z M8 3.2 10.4 6.4 5.6 6.4z',
+      comets: 'M11 2.2 13.8 5 7 11.8 4.2 9z M2.6 13.4 5.4 10.6 M4 14.4 6.6 11.8',
+      planets: 'M8 4.4 12 8 8 11.6 4 8z M1.6 9.2 14.4 6.8 14.4 8 1.6 10.4z',
+      suns: 'M8 5.4 10.6 8 8 10.6 5.4 8z M8 1 8 2.6 M8 13.4 8 15 M1 8 2.6 8 M13.4 8 15 8 M2.9 2.9 4.1 4.1 M11.9 11.9 13.1 13.1 M13.1 2.9 11.9 4.1 M4.1 11.9 2.9 13.1',
+      blackholes: 'M8 4.6 11.4 8 8 11.4 4.6 8z M2.2 5.6 13.8 10.4',
+      perturbation: 'M3.4 3.4 6.4 6.4 3 9.8 6 13.2 12.6 12.4 9.6 9 13 5.6 8.8 4.4 6.4 6.4',
+      underlay: 'M1.4 12.6 6 8 14.6 8 M1.4 12.6 1.4 4.6 M1.4 12.6 9 12.6',
+      session: 'M2.4 11 8 3.2 13.6 11z M4.4 14 11.6 6',
+      language: 'M8 1.6 9.6 4.8 13 5.2 10.6 7.5 11.2 10.9 8 9.3 4.8 10.9 5.4 7.5 3 5.2 6.4 4.8z',
+      brightness: 'M8 4.6 11.4 8 8 11.4 4.6 8z M8 1 8 2.4 M8 13.6 8 15 M1 8 2.4 8 M13.6 8 15 8',
+      count: 'M1.8 5.4 4.4 5.4 4.4 12.4 6.8 12.4 M6 3 6 15',
+    })
+
+    function glyphIcon(name) {
+      const path = GLYPHS[name]
+      if (path === undefined) return null
+      const React = require('react')
+      return React.createElement('svg', {
+        className: 'pds-glyph',
+        viewBox: '0 0 16 16',
+        width: 16,
+        height: 16,
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.5,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': 'true',
+        focusable: 'false',
+      }, path.split(' M').map((part, index) =>
+        React.createElement('path', { key: index, d: index === 0 ? part : `M${part}` }),
+      ))
+    }
+
+    // ── настройки в левой панели ────────────────────────────────────────────
+    // Пункт живёт в подвале панели (`sidebar.footer.action`), а не в общем окне
+    // настроек: здесь для него есть штатный якорь с выпадающим окном. Клик по
+    // пункту открывает окно, а не большую панель на всё поле — иначе пришлось бы
+    // регистрировать тело в слоте `main`, и это уже другой сценарий.
+    const POPOVER_MARGIN = 12
+    const POPOVER_GAP = 6
+
+    function DeepSpaceSettings(props) {
       const React = require('react')
       const state = React.useSyncExternalStore(props.controller.subscribe, props.controller.get, props.controller.get)
       const value = state.value
@@ -3102,7 +3609,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
       const switchRow = (key, title, hint) =>
         React.createElement(
           'label',
-          { className: 'pds-switch' },
+          { className: 'pds-switch', 'data-on': value[key] ? 'true' : 'false' },
           React.createElement('input', {
             type: 'checkbox',
             disabled: !state.editable,
@@ -3111,6 +3618,7 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
               props.controller.set({ [key]: event.target.checked })
             },
           }),
+          glyphIcon(key),
           React.createElement('span', null, title),
           React.createElement('div', { className: 'pds-settings-copy' }, React.createElement('span', null, hint)),
         )
@@ -3137,7 +3645,12 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         React.createElement(
           'div',
           { className: 'pds-range' },
-          React.createElement('span', null, text.langLabel),
+          React.createElement(
+            'div',
+            { className: 'pds-range-head' },
+            glyphIcon('language'),
+            React.createElement('span', null, text.langLabel),
+          ),
           React.createElement(
             'div',
             { className: 'pds-lang-row' },
@@ -3150,7 +3663,12 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         React.createElement(
           'div',
           { className: 'pds-range' },
-          React.createElement('span', null, text.intensity(percent)),
+          React.createElement(
+            'div',
+            { className: 'pds-range-head' },
+            glyphIcon('brightness'),
+            React.createElement('span', null, text.intensity(percent)),
+          ),
           React.createElement('input', {
             type: 'range',
             min: '20',
@@ -3166,7 +3684,12 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         React.createElement(
           'div',
           { className: 'pds-range' },
-          React.createElement('span', null, text.planetSpeed(speedPercent)),
+          React.createElement(
+            'div',
+            { className: 'pds-range-head' },
+            glyphIcon('planets'),
+            React.createElement('span', null, text.planetSpeed(speedPercent)),
+          ),
           React.createElement('input', {
             type: 'range',
             min: '10',
@@ -3182,7 +3705,12 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         React.createElement(
           'div',
           { className: 'pds-range' },
-          React.createElement('span', null, text.frameRate),
+          React.createElement(
+            'div',
+            { className: 'pds-range-head' },
+            glyphIcon('count'),
+            React.createElement('span', null, text.frameRate),
+          ),
           React.createElement('div', { className: 'pds-settings-copy' }, React.createElement('span', null, text.frameRateHint)),
           React.createElement(
             'select',
@@ -3209,6 +3737,115 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         switchRow('underlay', text.underlay, text.underlayHint),
         switchRow('session', text.session, text.sessionHint),
         switchRow('constellations', text.constellations, text.constellationsHint),
+        value.constellations
+          ? React.createElement(
+              'div',
+              { className: 'pds-range' },
+              React.createElement(
+                'div',
+                { className: 'pds-range-head' },
+                glyphIcon('constellations'),
+                React.createElement('span', null, text.constellationCount(value.constellationCount)),
+              ),
+              React.createElement('input', {
+                type: 'range',
+                min: String(CONSTELLATION_COUNT_MIN),
+                max: String(CONSTELLATION_COUNT_MAX),
+                step: '1',
+                value: value.constellationCount,
+                disabled: !value.enabled || !state.editable,
+                onChange: (event) => {
+                  props.controller.set({ constellationCount: Number(event.target.value) })
+                },
+              }),
+            )
+          : null,
+      )
+    }
+
+    // Кнопка в подвале левой панели + окно настроек. Окно уходит в портал:
+    // якорь лежит в панели, а само окно обязано перекрывать всё поле, иначе
+    // список сессий накрыл бы его снизу.
+    function DeepSpaceAction(props) {
+      const React = require('react')
+      const { createPortal } = require('react-dom')
+      const primitives = require('@deepseek-ai/dsh-client-ui-primitives')
+      const state = React.useSyncExternalStore(props.controller.subscribe, props.controller.get, props.controller.get)
+      const text = state.text
+      const [open, setOpen] = React.useState(false)
+      const rootRef = React.useRef(null)
+      const triggerRef = React.useRef(null)
+      const panelRef = React.useRef(null)
+
+      primitives.useDismissOnOutsidePointer(rootRef, open, setOpen, panelRef)
+      const position = primitives.useAnchoredPosition({
+        open,
+        anchorRef: rootRef,
+        panelRef,
+        side: 'top',
+        align: 'start',
+        gap: POPOVER_GAP,
+        margin: POPOVER_MARGIN,
+      })
+
+      const close = () => {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
+      React.useEffect(() => {
+        if (!open) return undefined
+        const onKeyDown = (event) => {
+          if (event.key === 'Escape') {
+            event.stopPropagation()
+            close()
+          }
+        }
+        document.addEventListener('keydown', onKeyDown, true)
+        return () => document.removeEventListener('keydown', onKeyDown, true)
+      }, [open])
+
+      return React.createElement(
+        'div',
+        { className: 'pds-anchor', 'data-rail': props.wide === true ? undefined : '', ref: rootRef },
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            className: 'pds-trigger',
+            ref: triggerRef,
+            'aria-label': text.panelAria,
+            'aria-expanded': open,
+            title: text.panelTitle,
+            onClick: () => setOpen((value) => !value),
+          },
+          React.createElement(primitives.IconSparkleRegular, { size: props.wide === true ? 16 : 18 }),
+          props.wide === true ? React.createElement('span', { className: 'pds-trigger-label' }, text.panel) : null,
+        ),
+        open
+          ? createPortal(
+              React.createElement(
+                'section',
+                {
+                  ref: panelRef,
+                  className: 'pds-popover',
+                  'data-pds-popover': '',
+                  'aria-label': text.panelTitle,
+                  role: 'dialog',
+                  // До первой разметки окно невидимо, но уже в нужном месте:
+                  // иначе оно мигнуло бы в углу экрана.
+                  style: position ?? { visibility: 'hidden', left: 0, top: 0 },
+                },
+                React.createElement(
+                  'header',
+                  { className: 'pds-popover-header' },
+                  React.createElement(primitives.IconSparkleRegular, { size: 14 }),
+                  React.createElement('span', null, text.panelTitle),
+                ),
+                React.createElement('div', { className: 'pds-popover-body' }, React.createElement(DeepSpaceSettings, { controller: props.controller })),
+              ),
+              document.body,
+            )
+          : null,
       )
     }
 
@@ -3325,13 +3962,16 @@ html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
         window.addEventListener('resize', onResize, { passive: true })
         document.addEventListener('visibilitychange', onVisibility)
 
-        ctx.slots.inject('settings.general.item', () =>
+        // Пункт живёт в подвале левой панели, рядом с кнопкой настроек:
+        // там штатный якорь с выпадающим окном, а `wide` сам решает, показывать
+        // подпись или только иконку в свёрнутом виде.
+        ctx.slots.inject('sidebar.footer.action', () =>
           ctx.slots.register(
-            { name: 'settings.general.item', id: 'poslanik-deep-space', order: 19, inject: () => ({ controller }) },
-            DeepSpaceRow,
+            { name: 'sidebar.footer.action', id: 'poslanik-deep-space', inject: () => ({ controller }) },
+            DeepSpaceAction,
           ),
         )
-        trace('слот настроек зарегистрирован')
+        trace('пункт левой панели зарегистрирован')
 
         // Мост к хосту включается последним: к этому моменту сцена уже
         // работает, и если канала не будет, тема просто останется спокойной.

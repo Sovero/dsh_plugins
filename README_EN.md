@@ -6,7 +6,7 @@ command.
 
 | Plugin | What it does | Version |
 | --- | --- | --- |
-| [`dsh-poslanik-deep-space`](dsh-poslanik-deep-space) | Deep space theme: stars, nebulae, dwarfs, suns, black holes, planets, ships with trails, comets, meteors. Pointer movement applies an electromagnetic perturbation to space. Bilingual settings panel. | 1.1.0 |
+| [`dsh-poslanik-deep-space`](dsh-poslanik-deep-space) | Deep space theme: stars, nebulae, dwarfs, suns, black holes, planets, ships with trails, comets, meteors. Pointer movement applies an electromagnetic perturbation to space. Bilingual settings panel. | 1.4.0 |
 
 ## Install
 

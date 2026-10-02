@@ -27,6 +27,10 @@ export const Config = z.object({
   // погасить одним переключателем, не снимая тему.
   session: z.boolean().default(true).description('Отклик на работу агента').volatile(),
   constellations: z.boolean().default(true).description('Созвездия').volatile(),
+  // Сколько фигур держим на небе. Созвездия лежат на дальнем плане, за газом и
+  // звёздами, поэтому их чтение зависит от числа: 0 — пустое небо, 14 — весь
+  // каталог. Верхняя граница совпадает с длиной CONSTELLATIONS в клиенте.
+  constellationCount: z.number().min(0).max(14).default(8).description('Сколько созвездий · How many').volatile(),
   intensity: z.number().min(0.2).max(1.4).default(0.85).description('Яркость · Brightness').volatile(),
   // Множитель дрейфа планет: 1 — как задумано, 0.5 — вдвое медленнее.
   // Вращение дисков и орбиты спутников не затрагиваются.
@@ -206,6 +210,7 @@ export function apply(ctx) {
           fps: Fps().default(30),
           session: z.boolean().default(true),
           constellations: z.boolean().default(true),
+          constellationCount: z.number().min(0).max(14).default(8),
         }),
       )
     }
