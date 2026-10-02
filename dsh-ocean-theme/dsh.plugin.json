@@ -1,0 +1,16 @@
+{
+  "id": "dsh-ocean-theme",
+  "version": "1.0.1",
+  "main": "./lib/index.js",
+  "description": "Тема «Океан» для DSH / Ocean theme for DSH: animated ocean under the interface, fish schools, whales, sharks, jellyfish, kelp and a wrecked ship; pointer movement disturbs the water surface.",
+  "client": {
+    "main": "./lib/client.js"
+  },
+  "engines": {
+    "dsh": ">=0.1.7-rc.2"
+  },
+  "contributes": {
+    "tools": [],
+    "skills": []
+  }
+}
