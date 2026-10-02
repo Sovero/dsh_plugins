@@ -20,10 +20,27 @@ switcher of its own.
 | Stars | 3 depth layers, density 160/100/50k per screen, twinkle `sin(t·f+φ)` |
 | Constellations | far plane: 14 figures with faint lines and silhouette hints; count is a setting |
 | Planets | 2–3 spheres, one ringed; speed is inversely proportional to radius (≈12 px/s small, ≈3 px/s large) |
-| Comets | 1–2, gradient tail, sine wobble |
+| Comets | 4–6 of three sizes: dust, ion and plasma tails, a core and a coma; shallow course in any direction, entering from the frame edge |
 | Meteors | spawn every 2.5–9 s, 700–1300 px/s, 12 % trail |
 | Ships | 3–4, waypoint routing, inertia, banked turns, fading trail, navigation light |
 | Field | glow, force arcs and rings around the cursor |
+
+## Where comets fly
+
+The course is full: a comet goes left or right, up or down, and its entry is
+picked together with the course. The sign of the vertical speed used to be
+nobody's job — the line `vy: rand(2, 7) * spec.speed` was always positive — so
+every comet fell from top to bottom, and `x` at spawn was random, so some
+appeared in the middle of the frame. Nothing in the docs or the code ever
+promised that: it just happened, and the sky looked one-sided.
+
+Measured on the real `launchComet`, 4000 launches: up 49.7 %, down 50.3 %,
+left 50.2 %, right 49.8 %, entry from the edge in 100 % of cases. The slope stayed
+shallow — median |vy/vx| = 0.31, so comets still sweep across the frame instead
+of falling steeply.
+
+Entry is by the dominant axis: for a shallow comet that is a side edge, so it is
+visible at once instead of after a long run above the frame.
 
 ## Why planets no longer gather into a trio
 
@@ -207,9 +224,23 @@ power.
 
 Constellations sit on the **far plane**: their layer is drawn first, right after
 the canvas is cleared, so the gas, the stars and every body — planets included —
-are in front of the figures. They are also smaller and dimmer than near lights
-(sky share 0.12, stars × 0.78, overall alpha 0.62), because a distant figure read
-like a sticker on the glass. Below the «Constellations» switch a slider
+are in front of the figures. Their points are smaller than near lights (sky share
+0.16, stars × 0.78), because a distant figure read like a sticker on the glass.
+
+The far plane used to cost the figure almost all of its brightness, twice over: the
+layer glows at 40 % in the default mode (so it cannot wash out the interface),
+and on top of that the thread was 0.34 under an overall dimming of 0.62 — 0.07 on
+screen. No lines were visible at all, only a few pale dots, and a figure without
+lines does not read as a constellation. The numbers now live in
+`CONSTELLATION_STYLE` and are split by mode: in the default mode the thread is
+0.95, the glow 0.35, a star 1 and the silhouette 0.19; in «under the text» mode
+the numbers stay as they were, because there the layer moves behind the interface
+and extra brightness would fight the text. The sky share went from 0.12 to 0.16 —
+at 1080p it was 130 px, and the lines did not fold into a recognisable drawing
+even at good brightness. Measured on screen: thread 0.071 → **0.319**, star
+0.198 → 0.336.
+
+Below the «Constellations» switch a slider
 «How many constellations» sets the figure count, shown in its own column to the
 right: 0…14, 8 by default. The host
 stores the value; the slider appears only while constellations are on.

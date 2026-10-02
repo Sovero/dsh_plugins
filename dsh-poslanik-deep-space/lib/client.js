@@ -551,10 +551,47 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
     // Созвездия лежат на дальнем плане — за газом и звёздами. Без приглушения
     // они читались как фигуры на стекле: слишком чисто для далёкого неба.
     const CONSTELLATION_FAR_ALPHA = 0.62
+    // Слой по умолчанию светится на 40 % от «Яркости» (см. applySettings), и всё
+    // нарисованное в нём гаснет почти вчетверо. Созвездия — единственное, что
+    // обязано читаться и в этом режиме: линии и есть опознавательный признак
+    // фигуры. При прежних числах нить 0.34 доходила до экрана с эффективной
+    // яркостью 0.07, и на тёмном небе фигура превращалась в несколько бледных
+    // точек: созвездий «не было видно».
+    //
+    // В режиме «под текстом» слой уходит ЗА интерфейс, и там числа прежние:
+    // фигура должна остаться тихой, чтобы текст читался.
+    const CONSTELLATION_STYLE = Object.freeze({
+      over: Object.freeze({
+        glow: 0.35, glowWidth: 4.5,
+        thread: 0.95, threadWidth: 1.3,
+        halo: 0.75, haloMid: 0.34,
+        ray: 0.6,
+        core: 1,
+        shape: 0.19, shapeLine: 0.26,
+      }),
+      under: Object.freeze({
+        glow: 0.09, glowWidth: 3.2,
+        thread: 0.34, threadWidth: 1,
+        halo: 0.5, haloMid: 0.24,
+        ray: 0.28,
+        core: 0.95,
+        shape: 0.075, shapeLine: 0.1,
+      }),
+    })
+
+    // Дальний план: приглушение целиком, а не по частям. Числа цветов остаются
+    // те же — иначе пришлось бы переписывать каждую заливку.
+    function constellationStyle() {
+      return space.options.underlay === true ? CONSTELLATION_STYLE.under : CONSTELLATION_STYLE.over
+    }
     // Доля неба под одну фигуру и множитель её точек. Далёкая фигура мельче и
     // тусклее ближней: иначе она читается как наклейка на стекле, а не как
     // часть звёздной системы за планетными дисками.
-    const CONSTELLATION_FAR_SIZE = 0.12
+    //
+    // Доля поднята с 0.12: на 1080p это было 130 px, и на фоне поля фигура
+    // терялась не только по яркости, но и по размеру — линии не складывались в
+    // узнаваемый рисунок. 0.16 даёт ~173 px, и это всё ещё дальний план.
+    const CONSTELLATION_FAR_SIZE = 0.16
     const CONSTELLATION_FAR_STARS = 0.78
 
     function frameIntervalFrom(fps) {
@@ -1515,6 +1552,33 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
     // plasma — двуцветный с коротким противотоком.
     const COMET_VARIANTS = Object.freeze(['dust', 'ion', 'plasma'])
 
+    // Появление кометы: курс полный — и вверх, и вниз, — а голова входит в кадр
+    // с края, а не возникает посреди неба.
+    //
+    // Раньше знак ставила сама строка `vy: rand(2, 7) * spec.speed`: положительный
+    // всегда, поэтому кометы летели только сверху вниз, а `y` при появлении
+    // брался из верхних двух третей кадра. Ни документ, ни код это не обещали —
+    // просто так сложилось, и небо смотрелось односторонним.
+    const COMET_MARGIN = 0.1
+    function launchComet(comet) {
+      const spec = COMET_CLASSES[comet.className]
+      const right = Math.random() < 0.5
+      const down = Math.random() < 0.5
+      comet.vx = rand(9, 20) * spec.speed * (right ? 1 : -1)
+      comet.vy = rand(2, 7) * spec.speed * (down ? 1 : -1)
+      comet.wobble = Math.random() * TAU
+      // Вход по преобладающей оси: у пологой кометы это боковой край, и она
+      // появляется сразу, а не после долгого пути над кадром.
+      if (Math.abs(comet.vx) >= Math.abs(comet.vy)) {
+        comet.x = right ? -COMET_MARGIN : 1 + COMET_MARGIN
+        comet.y = rand(0.15, 0.85)
+      } else {
+        comet.x = rand(0.15, 0.85)
+        comet.y = down ? -COMET_MARGIN : 1 + COMET_MARGIN
+      }
+      return comet
+    }
+
     function createComets() {
       const names = Object.keys(COMET_CLASSES)
       const count = 4 + Math.floor(Math.random() * 3)
@@ -1522,20 +1586,15 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         const name = names[index % names.length]
         const spec = COMET_CLASSES[name]
         const depth = rand(0.4, 1)
-        return {
+        return launchComet({
           className: name,
           variant: COMET_VARIANTS[index % COMET_VARIANTS.length],
           depth,
           head: spec.head * depth,
           lineWidth: spec.width * depth,
           length: rand(160, 320) * spec.length,
-          x: Math.random(),
-          y: rand(0.1, 0.7),
-          vx: rand(9, 20) * spec.speed * (Math.random() < 0.5 ? -1 : 1),
-          vy: rand(2, 7) * spec.speed,
           alpha: rand(0.35, 0.6),
-          wobble: Math.random() * TAU,
-        }
+        })
       })
     }
 
@@ -1911,8 +1970,9 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
     //   stroke — линия переменной толщины (лапы, хвост, шея),
     //   disc   — круг (голова, глаз).
     // Все координаты — в той же системе 0…1, что и звёзды фигуры.
-    const SILHOUETTE_ALPHA = 0.075
-    const SILHOUETTE_LINE = 0.1
+    // Бледность самого силуэта задаёт CONSTELLATION_STYLE: shape и shapeLine.
+    // Отдельных констант больше нет, чтобы число нельзя было прочитать в одном
+    // месте, а рисовать по другому.
 
     const CONSTELLATION_SILHOUETTES = Object.freeze({
       'Большая Медведица': Object.freeze({
@@ -2089,7 +2149,7 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
 
     // Силуэт рисуется первым, под звёздами и линиями. Он настолько бледный,
     // что виден только тем, кто уже знает, что это за фигура.
-    function drawSilhouette(ctx, figure, ox, oy, size) {
+    function drawSilhouette(ctx, figure, ox, oy, size, style) {
       const shape = CONSTELLATION_SILHOUETTES[figure.name]
       if (shape === undefined) return
       ctx.save()
@@ -2106,12 +2166,12 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
             else ctx.lineTo(ox + px * size, oy + py * size)
           }
           ctx.closePath()
-          ctx.fillStyle = `rgba(126, 168, 235, ${SILHOUETTE_ALPHA * weight})`
+          ctx.fillStyle = `rgba(126, 168, 235, ${style.shape * weight})`
           ctx.fill()
         } else if (mark.kind === 'disc') {
           ctx.beginPath()
           ctx.arc(ox + mark.x * size, oy + mark.y * size, Math.max(0.5, mark.r * size), 0, TAU)
-          ctx.fillStyle = `rgba(126, 168, 235, ${SILHOUETTE_ALPHA * weight})`
+          ctx.fillStyle = `rgba(126, 168, 235, ${style.shape * weight})`
           ctx.fill()
         } else {
           ctx.beginPath()
@@ -2120,7 +2180,7 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
             if (index === 0) ctx.moveTo(ox + px * size, oy + py * size)
             else ctx.lineTo(ox + px * size, oy + py * size)
           }
-          ctx.strokeStyle = `rgba(150, 190, 250, ${SILHOUETTE_LINE * weight})`
+          ctx.strokeStyle = `rgba(150, 190, 250, ${style.shapeLine * weight})`
           ctx.lineWidth = Math.max(0.6, mark.width * size)
           ctx.stroke()
         }
@@ -2146,14 +2206,17 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
       )
       if (limit === 0) return
       const dx = (((0 - time * layer.drift) % width) + width) % width
+      const style = constellationStyle()
       ctx.save()
       ctx.globalCompositeOperation = 'lighter'
-      // Дальний план: фигура приглушена целиком, а не по частям. Числа цветов
-      // остаются те же — иначе пришлось бы переписывать каждую заливку.
-      ctx.globalAlpha = CONSTELLATION_FAR_ALPHA
+      // Дальний план: фигура приглушена целиком, а не по частям. В режиме «под
+      // текстом» приглушение прежнее, а в обычном режиме его съедает ещё и слой
+      // на 40 % — поэтому там линии и точки идут со своими числами, а общий
+      // множитель снят.
+      ctx.globalAlpha = space.options.underlay === true ? CONSTELLATION_FAR_ALPHA : 1
       for (const figure of layer.figures.slice(0, limit)) {
         // Подсказка идёт первой: силуэт лежит под звёздами и линиями.
-        drawSilhouette(ctx, figure, figure.ox + dx, figure.oy, figure.size)
+        drawSilhouette(ctx, figure, figure.ox + dx, figure.oy, figure.size, style)
         for (const [from, to] of figure.links) {
           const a = figure.stars[from]
           const b = figure.stars[to]
@@ -2164,14 +2227,14 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
           const y2 = figure.oy + b.y * figure.size
           // Два прохода: широкое бледное свечение и тонкая яркая нить поверх.
           // Одной нити на тёмном небе почти не видно.
-          ctx.strokeStyle = 'rgba(140, 178, 240, 0.09)'
-          ctx.lineWidth = 3.2
+          ctx.strokeStyle = `rgba(140, 178, 240, ${style.glow})`
+          ctx.lineWidth = style.glowWidth
           ctx.beginPath()
           ctx.moveTo(x1, y1)
           ctx.lineTo(x2, y2)
           ctx.stroke()
-          ctx.strokeStyle = 'rgba(186, 214, 255, 0.34)'
-          ctx.lineWidth = 1
+          ctx.strokeStyle = `rgba(186, 214, 255, ${style.thread})`
+          ctx.lineWidth = style.threadWidth
           ctx.beginPath()
           ctx.moveTo(x1, y1)
           ctx.lineTo(x2, y2)
@@ -2184,8 +2247,8 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
           // остаётся по собственной яркости звезды, а не по размеру точки.
           const radius = star.radius * CONSTELLATION_FAR_STARS
           const halo = ctx.createRadialGradient(x, y, 0, x, y, radius * 3.4)
-          halo.addColorStop(0, 'rgba(226, 240, 255, 0.5)')
-          halo.addColorStop(0.35, 'rgba(180, 212, 255, 0.24)')
+          halo.addColorStop(0, `rgba(226, 240, 255, ${style.halo})`)
+          halo.addColorStop(0.35, `rgba(180, 212, 255, ${style.haloMid})`)
           halo.addColorStop(1, 'rgba(140, 180, 255, 0)')
           ctx.fillStyle = halo
           ctx.beginPath()
@@ -2194,7 +2257,7 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
           // Крестообразный луч у самых ярких — те же лучи, что у диффракции.
           if (star.radius > 3) {
             const len = radius * 3.6
-            ctx.strokeStyle = 'rgba(220, 236, 255, 0.28)'
+            ctx.strokeStyle = `rgba(220, 236, 255, ${style.ray})`
             ctx.lineWidth = 0.9
             ctx.beginPath()
             ctx.moveTo(x - len, y)
@@ -2203,7 +2266,7 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
             ctx.lineTo(x, y + len)
             ctx.stroke()
           }
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+          ctx.fillStyle = `rgba(255, 255, 255, ${style.core})`
           ctx.beginPath()
           ctx.arc(x, y, radius, 0, TAU)
           ctx.fill()
@@ -3187,13 +3250,7 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         comet.x += (comet.vx * dt) / width
         comet.y += (comet.vy * dt) / height
         comet.wobble += dt * 0.6
-        if (comet.x < -0.25 || comet.x > 1.25 || comet.y < -0.3 || comet.y > 1.3) {
-          comet.x = Math.random()
-          comet.y = rand(0.1, 0.7)
-          const spec = COMET_CLASSES[comet.className]
-          comet.vx = rand(9, 20) * spec.speed * (Math.random() < 0.5 ? -1 : 1)
-          comet.vy = rand(2, 7) * spec.speed
-        }
+        if (comet.x < -0.25 || comet.x > 1.25 || comet.y < -0.3 || comet.y > 1.3) launchComet(comet)
 
         const headX = comet.x * width
         const headY = comet.y * height + Math.sin(comet.wobble) * 6

@@ -1514,6 +1514,50 @@ test('кометы трёх размеров и трёх хвостов, с яд
   assert.match(client, /const count = 4 \+ Math\.floor\(Math\.random\(\) \* 3\)/u)
 })
 
+test('кометы летят во все стороны, а не только сверху вниз', () => {
+  // Жалоба была точной: знак вертикальной скорости никто не выбирал, строка
+  // `vy: rand(2, 7) * spec.speed` давала положительный всегда, и всё небо
+  // смотрелось односторонним. Ни документ, ни код этого не обещали.
+  assert.match(client, /function launchComet\(comet\)/u)
+  assert.match(client, /comet\.vx = rand\(9, 20\) \* spec\.speed \* \(right \? 1 : -1\)/u)
+  assert.match(client, /comet\.vy = rand\(2, 7\) \* spec\.speed \* \(down \? 1 : -1\)/u)
+  assert.equal(
+    /vy: rand\(2, 7\) \* spec\.speed,/mu.test(client),
+    false,
+    'прежний vy без знака вернулся: кометы снова полетят только вниз',
+  )
+  // Появление с края: раньше x был случайным, и комета возникала посреди кадра.
+  assert.match(client, /const COMET_MARGIN = 0\.1/u)
+  assert.match(client, /comet\.x = right \? -COMET_MARGIN : 1 \+ COMET_MARGIN/u)
+  assert.match(client, /comet\.y = down \? -COMET_MARGIN : 1 \+ COMET_MARGIN/u)
+  assert.match(client, /comet\.y < -0\.3 \|\| comet\.y > 1\.3\) launchComet\(comet\)/u)
+
+  // Поведение на настоящей функции: курс распределён и вверх, и вниз, голова
+  // всегда за пределами кадра. Модель собирается из кода плагина, не из копии.
+  const prelude = ['COMET_CLASSES', 'COMET_MARGIN', 'TAU'].map((name) => extractConst(name))
+  assert.equal(prelude.every((text) => text !== null), true, 'нет констант комет')
+  const randSrc = client.match(/^ {4}const rand = [^\n]*$/mu)
+  assert.ok(randSrc, 'нет хелпера rand')
+  const source = client.slice(client.indexOf('function launchComet'), client.indexOf('function createComets'))
+  const launch = new Function('Math', `${prelude.join('\n')}\n${randSrc[0]}\n${source}\nreturn launchComet`)(Math)
+  let up = 0
+  let down = 0
+  let inside = 0
+  const runs = 3000
+  for (let i = 0; i < runs; i += 1) {
+    const comet = launch({ className: 'bearer' })
+    if (comet.vy > 0) down += 1
+    else up += 1
+    if (comet.x >= 0 && comet.x <= 1 && comet.y >= 0 && comet.y <= 1) inside += 1
+  }
+  // Равные доли ±5 % от половины: разброс курса настоящий, а не «иногда вверх».
+  assert.ok(
+    Math.abs(up - down) < runs * 0.05,
+    `курс не симметричен: вверх ${up}, вниз ${down} из ${runs}`,
+  )
+  assert.equal(inside, 0, 'комета не должна появляться посреди кадра')
+})
+
 test('созвездия узнаваемы по фигуре, а не по подписи', () => {
   assert.match(client, /const CONSTELLATIONS = Object\.freeze\(\[/u)
   for (const name of ['Большая Медведица', 'Орион', 'Кассиопея', 'Южный Крест']) {
@@ -1553,9 +1597,12 @@ test('созвездия узнаваемы по фигуре, а не по по
   assert.equal((draw.match(/ctx\.lineTo\(x2, y2\)/gu) || []).length, 2, 'два прохода по ребру')
   assert.match(client, /const dx = \(\(\(0 - time \* layer\.drift\) % width\) \+ width\) % width/u)
   // Линии заметные: это и есть опознавательный признак фигуры. Прежние
-  // 0.11 при толщине 0.7 тонули в фоновой сыпи, и созвездий не было видно.
-  assert.match(client, /rgba\(186, 214, 255, 0\.34\)/u)
-  assert.match(client, /rgba\(140, 178, 240, 0\.09\)/u, 'под нитью должно быть мягкое свечение')
+  // 0.11 при толщине 0.7 тонули в фоновой сыпи, а 0.34 при толщине 1 — в
+  // слое, который светится на 40 %: на экране оставалось ~0.07. Числа теперь
+  // берутся из CONSTELLATION_STYLE по режиму, и в обычном режиме нить яркая.
+  assert.match(client, /rgba\(186, 214, 255, \$\{style\.thread\}\)/u)
+  assert.match(client, /rgba\(140, 178, 240, \$\{style\.glow\}\)/u, 'под нитью должно быть мягкое свечение')
+  assert.match(client, /thread: 0\.95, threadWidth: 1\.3/u, 'нить в обычном режиме должна быть заметной')
   // Именованные звёзды крупнее фоновых, с ореолом и лучами.
   assert.match(client, /radius: Math\.max\(1\.5, 4\.4 - mag \* 0\.72\)/u)
   assert.match(client, /if \(star\.radius > 3\) \{/u)
@@ -1583,8 +1630,8 @@ test('созвездия узнаваемы по фигуре, а не по по
     'есть фигуры без силуэта-подсказки',
   )
   // Подсказка бледная: её замечают только те, кто знает, что это за фигура.
-  assert.match(client, /const SILHOUETTE_ALPHA = 0\.075/u)
-  assert.match(client, /const SILHOUETTE_LINE = 0\.1/u)
+  // Числа живут в CONSTELLATION_STYLE — по режиму, а не в разных константах.
+  assert.match(client, /shape: 0\.075, shapeLine: 0\.1/u, 'бледные числа силуэта должны остаться прежними в тихом режиме')
   // Силуэт идёт ПЕРВЫМ в фигуре, то есть под звёздами и линиями.
   const body = client.slice(
     client.indexOf('function drawConstellations'),
@@ -1594,7 +1641,7 @@ test('созвездия узнаваемы по фигуре, а не по по
     body.indexOf('drawSilhouette(') < body.indexOf('const x1 ='),
     'силуэт должен рисоваться раньше линий',
   )
-  assert.match(client, /function drawSilhouette\(ctx, figure, ox, oy, size\)/u)
+  assert.match(client, /function drawSilhouette\(ctx, figure, ox, oy, size, style\)/u)
   // Три примитива, а не картинки: своих файлов тема не тянет.
   assert.equal(/kind: 'poly'/u.test(shapes), true)
   assert.equal(/kind: 'disc'/u.test(shapes), true)
@@ -1637,13 +1684,23 @@ test('созвездия держат дальний план, а их коли�
     'слой созвездий должен рисоваться ровно один раз за кадр',
   )
   // Приглушение и уменьшение — обязательная часть дальнего плана: без них
-  // фигура остаётся ближней по ощущению, даже нарисованная первой.
+  // фигура остаётся ближней по ощущению, даже нарисованная первой. В ТИХОМ
+  // режиме («под текстом») приглушение прежнее.
   assert.match(client, /const CONSTELLATION_FAR_ALPHA = 0\.62/u)
-  assert.match(client, /const CONSTELLATION_FAR_SIZE = 0\.12/u)
   assert.match(client, /const CONSTELLATION_FAR_STARS = 0\.78/u)
   assert.match(client, /const size = Math\.max\(96, Math\.min\(width, height\) \* CONSTELLATION_FAR_SIZE\)/u)
-  assert.match(client, /ctx\.globalAlpha = CONSTELLATION_FAR_ALPHA/u)
+  assert.match(client, /ctx\.globalAlpha = space\.options\.underlay === true \? CONSTELLATION_FAR_ALPHA : 1/u)
   assert.match(client, /const radius = star\.radius \* CONSTELLATION_FAR_STARS/u)
+  // РАЗМЕР ФИГУРЫ. Доля неба поднята с 0.12: на 1080p это было 130 px, и линии
+  // не складывались в узнаваемый рисунок. Проверяем, что доля не уползла обратно
+  // и осталась заметно крупнее доли одного звездного слоя.
+  const farSize = client.match(/const CONSTELLATION_FAR_SIZE = ([\d.]+)/u)
+  assert.ok(farSize, 'нет доли неба под фигуру')
+  assert.equal(Number(farSize[1]) >= 0.15, true, `доля неба ${farSize[1]} снова слишком мала`)
+  assert.ok(
+    new RegExp(`const CONSTELLATION_FAR_SIZE = ${farSize[1].replace('.', '\\.')}`, 'u').test(client),
+    'размер задан не тем числом, которое проверяется',
+  )
   // Количество — настройка плагина, а не константа в коде.
   assert.match(client, /const CONSTELLATION_COUNT_MIN = 0/u)
   assert.match(client, /const CONSTELLATION_COUNT_MAX = 14/u)
@@ -1673,4 +1730,38 @@ test('созвездия держат дальний план, а их коли�
   // Подписи на обоих языках: панель переключается между ними по языку хоста.
   assert.match(client, /constellationCount: 'Сколько созвездий'/u)
   assert.match(client, /constellationCount: 'How many constellations'/u)
+})
+
+test('созвездия видно: слой гаснет вчетверо, и фигура возвращает себе эту потерю', () => {
+  // Жалоба: «созвездий не видно». Причина не в каталоге и не в количестве, а в
+  // двух множителях подряд: слой в обычном режиме светится на 40 % (applySettings),
+  // и поверх этого нить фигуры была 0.34 при общем приглушении 0.62. На экране
+  // это ~0.07 — линии не видно, остаются только точки, а фигура без линий не
+  // читается как созвездие.
+  assert.match(client, /const CONSTELLATION_STYLE = Object\.freeze\(\{/u)
+  assert.match(client, /function constellationStyle\(\)/u)
+  assert.match(client, /return space\.options\.underlay === true \? CONSTELLATION_STYLE\.under : CONSTELLATION_STYLE\.over/u)
+  // В обычном режиме линия и точка ярче тихих чисел — иначе прибавки нет.
+  const over = client.match(/over: Object\.freeze\(\{([\s\S]*?)\}\),/u)
+  const under = client.match(/under: Object\.freeze\(\{([\s\S]*?)\}\),/u)
+  assert.ok(over && under, 'нет двух режимов стиля')
+  const numberIn = (block, key) => Number(block[1].match(new RegExp(`${key}: ([\\d.]+)`, 'u'))[1])
+  for (const key of ['glow', 'thread', 'halo', 'ray', 'core', 'shape']) {
+    assert.ok(
+      numberIn(over, key) > numberIn(under, key),
+      `в обычном режиме ${key} должен быть ярче тихого, а не наоборот`,
+    )
+  }
+  // Нить — опознавательный признак, она обязана быть заметной: при 0.34 и
+  // слое 0.34 её не было видно, при 0.95 её читается.
+  assert.ok(numberIn(over, 'thread') >= 0.9, 'нить фигуры должна быть заметной')
+  // Тихое сохранено: под текстом слой уходит за интерфейс, и лишняя яркость
+  // мешала бы читать текст.
+  assert.ok(numberIn(under, 'thread') <= 0.35, 'в режиме «под текстом» нить должна остаться тихой')
+  // Числа читаются из кода, а не из двух мест: отдельных констант силуэта нет.
+  assert.equal(/SILHOUETTE_ALPHA|SILHOUETTE_LINE/u.test(client), false, 'числа силуэта должны жить в стиле')
+  assert.match(client, /\$\{style\.shape \* weight\}/u)
+  assert.match(client, /\$\{style\.shapeLine \* weight\}/u)
+  assert.match(client, /rgba\(186, 214, 255, \$\{style\.thread\}\)/u)
+  assert.match(client, /rgba\(255, 255, 255, \$\{style\.core\}\)/u)
 })
