@@ -48,6 +48,7 @@
   ],
   "scripts": {
     "check": "node scripts/check.mjs",
+    "check:installed": "node scripts/check-installed.mjs",
     "test": "node --experimental-test-isolation=none --test tests/theme.test.mjs",
     "version:set": "node scripts/version-set.mjs"
   },
