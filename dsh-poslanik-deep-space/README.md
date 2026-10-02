@@ -51,7 +51,7 @@
 Из GitHub:
 
 ```bash
-dsh plugin --profile web add github:<владелец>/dsh-poslanik-deep-space
+dsh plugin --profile web add github:Sovero/dsh_plugins#path:dsh-poslanik-deep-space
 ```
 
 Из локального пути (при разработке):

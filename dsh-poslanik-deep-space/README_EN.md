@@ -94,7 +94,7 @@ the pace without breaking the rule.
 From GitHub:
 
 ```bash
-dsh plugin --profile web add github:<owner>/dsh-poslanik-deep-space
+dsh plugin --profile web add github:Sovero/dsh_plugins#path:dsh-poslanik-deep-space
 ```
 
 From a local path (development):
