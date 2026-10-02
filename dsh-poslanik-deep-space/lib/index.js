@@ -1,9 +1,5 @@
 import z from '@deepseek-ai/schemastery'
 
-// schemastery не знает z.enum: перечисление собирается через z.union из z.const.
-// Проверено на 3.18.4 — z.enum здесь отсутствует и роняет загрузку хоста.
-const Language = () => z.union([z.const('auto'), z.const('ru'), z.const('en')])
-
 // Потолок кадров: 0 — без ограничения, остальное — частота отрисовки.
 // Число, а не строка, чтобы клиент сразу считал интервал кадра; посторонние
 // значения (7, 144) отвергаются, а не проходят молча, как при z.number().
@@ -21,7 +17,8 @@ export const Config = z.object({
   underlay: z.boolean().default(false).description('Картина под текстом · Under the text').volatile(),
   suns: z.boolean().default(true).description('Солнца · Suns').volatile(),
   blackholes: z.boolean().default(true).description('Чёрные дыры · Black holes').volatile(),
-  language: Language().default('auto').description('Язык панели · Panel language').volatile(),
+  // Языка панели в настройках нет: он следует за языком интерфейса хоста
+  // (@deepseek-ai/dsh-client-locale), поэтому расходиться с ним негде.
   // Космос откликается на работу агента. Выключатель здесь, а не только в
   // клиенте, потому что мост живёт на хосте: если он начнёт мешать, его можно
   // погасить одним переключателем, не снимая тему.
@@ -204,7 +201,6 @@ export function apply(ctx) {
           underlay: z.boolean().default(false),
           suns: z.boolean().default(true),
           blackholes: z.boolean().default(true),
-          language: Language().default('auto'),
           intensity: z.number().min(0.2).max(1.4).default(0.85),
           planetSpeed: z.number().min(0.1).max(2).default(1),
           fps: Fps().default(30),

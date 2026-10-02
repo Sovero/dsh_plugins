@@ -280,33 +280,51 @@ test('настройки переехали из окна настроек в л
   assert.match(popoverCss, /width: 420px/u, 'окно должно быть шире прежних 340 px')
   assert.match(popoverCss, /max-width: calc\(100vw - 24px\)/u, 'окно обязано уступать узкому экрану')
   assert.match(popoverCss, /max-height: min\(640px, 82vh\)/u)
+  // Строка настройки — по образцу панели «Океан»: значок и подпись слева,
+  // управление сразу за подписью, значение прижато вправо.
   const settingsCss = client.slice(
     client.indexOf('.pds-settings {'),
     client.indexOf('.pds-select {'),
   )
-  assert.match(settingsCss, /grid-template-columns: minmax\(0, 1fr\)/u, 'настройки идут в одну колонку')
+  assert.match(settingsCss, /flex-direction: column/u, 'настройки идут в одну колонку')
+  assert.match(settingsCss, /\.pds-row \{[\s\S]*?display: flex/u, 'строка настройки должна быть рядом')
+  assert.match(settingsCss, /align-items: center/u)
+  assert.match(settingsCss, /\.pds-name \{[\s\S]*?flex: 0 0 148px/u, 'подпись занимает свою колонку, как в панели «Океан»')
+  assert.match(settingsCss, /text-overflow: ellipsis/u, 'длинная подпись гаснет многоточием, а не рвётся')
+  assert.match(settingsCss, /\.pds-control \{[\s\S]*?flex: 1 1 auto/u, 'управление занимает середину строки, а значение — правый край')
   assert.equal(
     /minmax\(220px, 1fr\)/u.test(client),
     false,
     'прежняя сетка резервировала 220 px и выдавливала вторую колонку за окно',
   )
-  // Тумблер, подпись и подсказка стоят в ряд: подпись не переносится, а
-  // подсказка гибкая и сжимается первой.
-  const switchCss = client.slice(
-    client.indexOf('.pds-switch {'),
-    client.indexOf('.pds-range {'),
+  assert.equal(
+    /pds-switch|pds-range|pds-settings-copy/u.test(client),
+    false,
+    'старые строки с подсказкой в ряд должны быть убраны',
   )
-  assert.match(
-    switchCss,
-    /grid-template-columns: auto auto minmax\(0, auto\) minmax\(0, 1fr\)/u,
-    'в строке тумблера должны быть чекбокс, значок, подпись и подсказка',
-  )
-  assert.match(switchCss, /font-size: 12px/u, 'подпись в окне должна быть меньше')
-  assert.match(client, /\.pds-switch > span \{ white-space: nowrap; \}/u, 'подпись не должна рваться по словам')
-  // Шрифт внутри окна уменьшен: подсказки 10 px, язык и поле выбора 10 px.
-  assert.match(client, /\.pds-settings-copy span \{[^}]*font-size: 10px/u)
-  assert.match(client, /\.pds-lang \{[^}]*font-size: 10px/u)
-  assert.match(client, /\.pds-select \{[^}]*font-size: 10px/u)
+  // Значение ползунка — своей колонкой, чтобы проценты не прыгали.
+  assert.match(client, /\.pds-value \{[\s\S]*?font-variant-numeric: tabular-nums/u)
+  assert.match(client, /'pds-value'/u, 'в строке ползунка должно быть значение')
+  // Подсказки ушли из строк в тултип: кнопка «?» и карточка в портале.
+  assert.match(client, /function HintButton\(props\)/u)
+  assert.match(client, /className: 'pds-hint'/u)
+  assert.match(client, /className: 'pds-tip'/u)
+  assert.match(client, /role: 'tooltip'/u)
+  assert.match(client, /createPortal\([\s\S]*?document\.body/u, 'карточка подсказки обязана уйти в портал')
+  // Панель прижата к краю окна: карточка встаёт слева от кнопки, а если не
+  // поместилась — под строкой, и никогда не выходит за поле.
+  assert.match(client, /const beside = rect\.left - size\.width - 8 >= TIP_MARGIN/u)
+  assert.match(client, /pointer-events: none/u, 'подсказка не должна ловить мышь')
+  // Кнопка подсказки лежит рядом с меткой, но не внутри `<label>`: внутри
+  // нажатие на «?» переключало бы тумблер вместо показа подсказки.
+  assert.match(client, /React\.createElement\('label', \{ className: 'pds-name', htmlFor: `pds-\$\{key\}` \}, title\)/u)
+  assert.equal(/React\.createElement\(\s*\n\s*'label',\s*\n\s*\{ className: 'pds-switch'/u.test(client), false)
+  // Шрифт внутри окна: подпись 12 px, значение и выбор 11 px. Мелких 10 px в
+  // строках больше нет — из-за них окно и читалось как простыня.
+  assert.match(client, /\.pds-row \{[\s\S]*?font-size: 12px/u)
+  assert.match(client, /\.pds-value \{[\s\S]*?font-size: 11px/u)
+  assert.match(client, /\.pds-select \{[^}]*font-size: 11px/u)
+  assert.match(client, /\.pds-tip \{[\s\S]*?font-size: 11px/u)
   // Значки по контексту. В примитивах интерфейса нет ни планеты, ни кометы, ни
   // чёрной дыры, а «Архив» или «Часы» соврали бы, поэтому значки свои: один
   // штрих, currentColor, ноль внешних запросов.
@@ -321,22 +339,31 @@ test('настройки переехали из окна настроек в л
   // Значок не должен тянуть за собой ничего извне: ни картинки, ни шрифта.
   assert.equal(/pds-glyph[^}]*url\(/u.test(client), false, 'значок не должен ссылаться на внешний ресурс')
   // Выключенный тумблер гасит и значок — иначе строка выглядит включённой.
-  assert.match(client, /\.pds-switch\[data-on='false'\] \.pds-glyph \{ opacity: 0\.45; \}/u)
-  assert.match(client, /'data-on': value\[key\] \? 'true' : 'false'/u)
-  // Подписи ползунков тоже с значком: язык, яркость, скорость, кадры, число фигур.
-  assert.ok(client.includes("className: 'pds-range-head'"), 'у ползунков нет строки с значком')
-  for (const key of ['language', 'brightness', 'count']) {
-    assert.ok(client.includes(`glyphIcon('${key}')`), `нет значка ${key} у ползунка`)
+  assert.match(client, /\.pds-row\[data-on='false'\] > \.pds-glyph \{ opacity: 0\.4; \}/u)
+  assert.match(client, /'data-on': on === undefined \? undefined : on \? 'true' : 'false'/u)
+  // Подписи ползунков и выбора тоже с значком: яркость, скорость, кадры, число
+  // фигур. Значок берётся по ключу настройки, поэтому у каждой строки он свой.
+  for (const key of ['brightness', 'planets', 'constellationCount']) {
+    assert.ok(client.includes(`'${key}',`), `нет строки ${key}`)
   }
+  assert.match(client, /shell\(\n {10}'frameRate',/u, 'нет строки выбора частоты кадров')
+  assert.match(client, /glyphIcon\(key\)/u, 'строка берёт значок по своему ключу')
 })
 
-test('панель настроек двуязычная, язык живёт в хосте', () => {
+test('панель двуязычная, а язык следует за языком интерфейса хоста', () => {
   assert.match(client, /const STRINGS = Object\.freeze\(\{/u)
   assert.match(client, /en: \{/u)
-  assert.match(client, /function translator\(preference\)/u)
-  assert.match(client, /language: 'auto'/u)
-  assert.match(client, /pds-lang/u)
-  assert.match(host, /Language\(\)\.default\('auto'\)/u)
+  // Переключателя в панели нет: язык задаёт хост (@deepseek-ai/dsh-client-locale)
+  // и кладёт выбор в атрибут `lang` корневого элемента документа.
+  assert.equal(/pds-lang/u.test(client), false, 'переключатель языка должен быть убран')
+  assert.equal(/langLabel/u.test(client), false, 'строки «Язык панели» больше нет')
+  assert.match(client, /const host = \(document\.documentElement\.lang \|\| ''\)\.toLowerCase\(\)/u)
+  assert.match(client, /if \(host\.startsWith\('en'\)\) return 'en'/u, 'английский интерфейс даёт английскую панель')
+  assert.match(client, /navigator\.language/u, 'незнакомый хост уходит на язык браузера, а не на русский молча')
+  assert.match(client, /attributeFilter: \['lang'\]/u, 'смена языка хоста должна переводить открытую панель')
+  assert.match(client, /const text = translator\(hostLanguage\.get\(\)\)/u)
+  assert.match(client, /langNote/u, 'в окне должно быть видно, откуда берётся язык')
+  assert.equal(/language: Language\(\)/u.test(host), false, 'язык панели больше не настройка хоста')
   assert.equal(/localStorage/u.test(client), false, 'настройки принадлежат хосту, не браузеру')
 })
 
@@ -350,11 +377,9 @@ test('потолок кадров живёт в движке и в панели 
   assert.match(client, /space\.frameInterval = frameIntervalFrom\(value\.fps\)/u)
   assert.match(client, /props\.controller\.set\(\{ fps: Number\(event\.target\.value\) \}\)/u)
   // Скорость планет крутится в панели рядом с яркостью: 10–200 %, шаг 5.
-  assert.match(client, /text\.planetSpeed\(speedPercent\)/u)
-  assert.match(client, /props\.controller\.set\(\{ planetSpeed: Number\(event\.target\.value\) \/ 100 \}\)/u)
-  for (const bound of ["min: '10'", "max: '200'", "step: '5'"]) {
-    assert.ok(client.includes(bound), `в ползунке скорости планет нет ${bound}`)
-  }
+  assert.match(client, /sliderRow\('planets', text\.planetSpeed, text\.planetSpeedHint/u)
+  assert.match(client, /\{ min: 10, max: 200, step: 5 \}, speedPercent/u)
+  assert.match(client, /props\.controller\.set\(\{ planetSpeed: next \/ 100 \}\)/u)
   assert.match(host, /planetSpeed: z\.number\(\)\.min\(0\.1\)\.max\(2\)\.default\(1\)/u)
 })
 
@@ -488,14 +513,16 @@ test('светила: карлики, солнца и чёрные дыры', ()
   assert.match(client, /drawBlackHoles\(ctx, this\.width, this\.height\)/u)
   assert.match(client, /features: Object\.freeze\(\{/u)
   assert.match(host, /z\.boolean\(\)\.default\(true\)\.description\('Чёрные дыры/u)
-  assert.match(host, /z\.union\(\[z\.const\('auto'\), z\.const\('ru'\), z\.const\('en'\)\]\)/u)
+  // Перечисления языка в схеме больше нет: язык панели следует за языком
+  // интерфейса хоста, а не выбирается в настройках темы.
+  assert.equal(/z\.const\('auto'\)/u.test(host), false, 'язык панели больше не перечисление в схеме')
 })
 
 test('host-половина грузится с настоящим schemastery', async (t) => {
   // Статическая проверка всегда: в schemastery 3.18.4 нет z.enum, такое поле
   // роняет загрузку хоста, и плагин пропадает с экрана без единой ошибки в UI.
   assert.equal(/z\.enum\(/u.test(host), false, 'z.enum в schemastery отсутствует — используйте z.union из z.const')
-  assert.match(host, /const Language = \(\) => z\.union/u)
+  assert.match(host, /const Fps = \(\) => z\.union/u)
 
   let module
   try {
@@ -510,12 +537,12 @@ test('host-половина грузится с настоящим schemastery',
   assert.equal(typeof module.apply, 'function')
   assert.equal(typeof module.Config, 'function')
 
-  // Перечисление собирается через z.union из z.const: значения из панели
-  // принимаются, а посторонние отвергаются с внятным сообщением.
+  // Языка панели в схеме больше нет: он следует за языком интерфейса хоста,
+  // и держать его ещё и здесь было бы вторым местом, где язык расходится с
+  // интерфейсом. Старое значение из cordis-патча не должно ломать загрузку.
   assert.doesNotThrow(() => module.Config({}))
-  assert.doesNotThrow(() => module.Config({ language: 'en', underlay: true, intensity: 1.2 }))
-  assert.doesNotThrow(() => module.Config({ language: 'ru' }))
-  assert.throws(() => module.Config({ language: 'xx' }), /expected .*auto.*ru.*en/su)
+  assert.doesNotThrow(() => module.Config({ underlay: true, intensity: 1.2 }))
+  assert.doesNotThrow(() => module.Config({ language: 'auto' }))
 
   // Потолок кадров — то же перечисление через z.union из z.const: значения из
   // панели принимаются, посторонние отвергаются. Проверено на 3.18.4: union
@@ -528,7 +555,7 @@ test('host-половина грузится с настоящим schemastery',
   assert.throws(() => module.Config({ fps: 7 }), /expected .*0.*15.*30.*60/su)
   assert.throws(() => module.Config({ fps: 999 }), /expected .*0.*15.*30.*60/su)
 
-  for (const field of ['enabled', 'stars', 'ships', 'comets', 'planets', 'perturbation', 'underlay', 'suns', 'blackholes', 'language', 'intensity', 'fps']) {
+  for (const field of ['enabled', 'stars', 'ships', 'comets', 'planets', 'perturbation', 'underlay', 'suns', 'blackholes', 'intensity', 'fps']) {
     assert.ok(Object.hasOwn(module.Config({}), field), `в схеме нет поля ${field}`)
   }
   // Поле volatile: Config отдаёт обёртку записи, а не значение, поэтому
@@ -757,6 +784,22 @@ test('планеты не наезжают: гравитация тянет, р�
   assert.match(client, /\(d \+ PLANET_SOFTEN\)/u)
   assert.match(client, /const PLANET_SOFTEN = 1200/u)
   assert.match(client, /const d = Math\.max\(1, Math\.hypot\(dx, dy\)\)/u)
+  // МЯГКОЕ ЯДРО. Симметричная гравитация без него допускает устойчивую тройку:
+  // у связанной группы есть форма, которая не распадается, и планеты стояли
+  // рядом минутами — это и читалось как «все планеты в одной тройке». Внутри
+  // личного пространства притяжение сменяется отталкиванием, на краю зоны
+  // толчок ровно нулевой, поэтому снаружи закон прежний.
+  assert.match(client, /const PLANET_PERSONAL = /u)
+  assert.match(client, /const PLANET_REPEL = /u)
+  assert.match(client, /const reach = contact \* PLANET_PERSONAL/u)
+  assert.match(client, /const contact = a\.radius \+ b\.radius/u)
+  assert.match(client, /d < reach/u, 'внутри личного пространства должно быть отталкивание')
+  assert.match(client, /-PLANET_REPEL \* \(\(reach - d\) \/ Math\.max\(1, reach - contact\)\)/u)
+  // Притяжение тянется тем же множителем, что и дрейф. Раньше оно от настройки
+  // не зависело, и низкая «Скорость планет» делала обратное задуманному:
+  // планеты еле ползли, а стягивало их полной силой.
+  assert.match(client, /const drift = planetDriftScale\(\)/u)
+  assert.match(client, /PLANET_SOFTEN\)\) \* drift/u)
   // Разделение — жёсткая гарантия, которой не даёт гравитация.
   assert.match(client, /function separatePlanets\(\)/u)
   assert.match(client, /const need = a\.radius \+ b\.radius \+ PLANET_GAP/u)
@@ -842,6 +885,7 @@ test('планеты не наезжают: гравитация тянет, р�
 test('планета не разгоняется: минута движения не ломает потолок', () => {
   // Константы берём из самого файла, а дублировать числа в тесте не будем.
   const prelude = ['PLANET_G', 'PLANET_SOFTEN', 'PLANET_MAX_ACCEL', 'PLANET_MAX_SPEED', 'PLANET_GAP',
+    'PLANET_PERSONAL', 'PLANET_REPEL',
     'PLANET_CRUISE', 'PLANET_REF_RADIUS', 'PLANET_RELAX', 'PLANET_RESTITUTION',
     'PLANET_WANDER', 'PLANET_WANDER_JITTER', 'PLANET_WANDER_MAX']
     .map((name) => extractConst(name))
@@ -914,7 +958,8 @@ test('планета не разгоняется: минута движения 
 // прогону, и тест мигал.
 function planetMechanics() {
   const names = ['PLANET_SIDES', 'PLANET_G', 'PLANET_SOFTEN', 'PLANET_MAX_ACCEL', 'PLANET_MAX_SPEED',
-    'PLANET_GAP', 'PLANET_CRUISE', 'PLANET_REF_RADIUS', 'PLANET_RELAX', 'PLANET_RESTITUTION',
+    'PLANET_GAP', 'PLANET_PERSONAL', 'PLANET_REPEL',
+    'PLANET_CRUISE', 'PLANET_REF_RADIUS', 'PLANET_RELAX', 'PLANET_RESTITUTION',
     'PLANET_WANDER', 'PLANET_WANDER_JITTER', 'PLANET_WANDER_MAX']
   const prelude = names.map((name) => extractConst(name))
   assert.equal(prelude.every((text) => text !== null), true, 'нет констант механики планет')
@@ -1040,8 +1085,122 @@ function worstRecurrence(bind, seed, seconds = 400) {
   return { worst, share: windows === 0 ? 0 : returned / windows }
 }
 
-test('планеты не кружат: траектория не возвращается в ту же точку', () => {
-  // Круг был не дефектом отрисовки, а следствием законов сохранения: импульсы
+// ── мера «планеты в одной кучке» ────────────────────────────────────────────
+//
+// Наезд дисков ловит разделение, а жалоба была не в нём: планеты не
+// перекрывались, они просто ЖИЛИ РЯДОМ — тройка держалась минутами и читалась
+// как «все планеты собрались в кучу». Меряем именно это: сколько времени все
+// три стоят рядом, и какую долю кадров это занимает.
+//
+// КУЧКА: крайние центры ближе, чем (r_max + r_min) · 3.5. Порог взят замером по
+// жалобе и по кадру: на экране 1440×1080 это примерно треть ширины, то есть
+// ровно то расстояние, на котором группа видна глазом как группа.
+function longestCluster(bind, seed, planetSpeed, seconds = 400) {
+  const W = 1440
+  const H = 1080
+  const dt = 1 / 30
+  const next = mulberry32(seed)
+  const random = (from, to) => from + next() * (to - from)
+  const space = { options: { planetSpeed }, planets: [] }
+  // Тройка — строгий случай: с двумя планетами кучка и не собирается.
+  for (let i = 0; i < 3; i += 1) {
+    space.planets.push({
+      x: 0, y: 0, vx: 0, vy: 0,
+      radius: random(34, 92),
+      depth: random(0.45, 1),
+      speedBias: random(0.85, 1.15),
+      wander: random(-1, 1),
+      laneTop: i / 3,
+      laneBottom: (i + 1) / 3,
+    })
+  }
+  const api = bind(space, W, H, seededMath(mulberry32(seed ^ 0x9e3779b9)))
+  for (const planet of space.planets) api.spawnPlanet(planet, W, H)
+  let streak = 0
+  let longest = 0
+  let tight = 0
+  let frames = 0
+  for (let f = 0; f < Math.round(seconds * 30); f += 1) {
+    api.updatePlanets(dt, W, H)
+    frames += 1
+    const radii = space.planets.map((planet) => planet.radius)
+    let spread = 0
+    for (const planet of space.planets) {
+      for (const other of space.planets) {
+        if (other === planet) continue
+        spread = Math.max(spread, Math.hypot(other.x - planet.x, other.y - planet.y))
+      }
+    }
+    if (spread < (Math.max(...radii) + Math.min(...radii)) * 3.5) {
+      tight += 1
+      streak += 1
+      if (streak * dt > longest) longest = streak * dt
+    } else {
+      streak = 0
+    }
+  }
+  return { longest, share: tight / frames }
+}
+
+test('планеты не сбиваются в тройку: группа не живёт рядом минутами', () => {
+  // Сценарий пользователя: «Скорость планет» на 15 %, и три планеты всё время
+  // стоят кучей. Порог ставится по замеру на healthy-модели, а не на глаз, и
+  // проверяется агрегатом по семенам — одиночное семя кучу не ловит.
+  const { bind } = planetMechanics()
+  const slow = bind()
+  let worstSlow = 0
+  let totalSlow = 0
+  for (const seed of PLANET_CLUSTER_SEEDS) {
+    const result = longestCluster(slow, seed, 0.15)
+    worstSlow = Math.max(worstSlow, result.longest)
+    totalSlow += result.share
+  }
+  assert.equal(
+    worstSlow <= 60,
+    true,
+    `на 15 % три планеты держались рядом ${worstSlow.toFixed(0)} с подряд — это и есть куча`,
+  )
+  assert.equal(
+    totalSlow <= 0.06,
+    true,
+    `на 15 % кучка занимает ${(totalSlow * 100).toFixed(1)} % кадров по всем семенам`,
+  )
+  // На обычной скорости кучка допустима минутами, но не должна становиться
+  // постоянной: она скорее совпадение, а не группа.
+  const normal = bind()
+  let worstNormal = 0
+  for (const seed of PLANET_CLUSTER_SEEDS) {
+    worstNormal = Math.max(worstNormal, longestCluster(normal, seed, 1).longest)
+  }
+  assert.equal(worstNormal <= 120, true, `на 100 % кучка держалась ${worstNormal.toFixed(0)} с подряд`)
+})
+
+// Контрольная проверка: тест выше защищает от отката только если мера
+// различает модели. Откат — мягкое ядро выключено (PLANET_PERSONAL = 0), то
+// есть ровно прежняя физика: только притяжение плюс разделение. Замер на тех
+// же семенах: 98.6 % кадров в кучке и худшая кучка 219 с против 0 % и 0 с у
+// здоровой модели. Мера «возврат» этот откат не видит вовсе (0.0000), поэтому
+// защита от ядра лежит именно здесь.
+test('мера кучки ловит откат к прежней физике', () => {
+  const { bind } = planetMechanics()
+  const broken = bind({ PLANET_PERSONAL: '0' })
+  let worst = 0
+  let total = 0
+  for (const seed of PLANET_CLUSTER_SEEDS) {
+    const result = longestCluster(broken, seed, 0.15)
+    worst = Math.max(worst, result.longest)
+    total += result.share
+  }
+  assert.equal(
+    worst > 60 || total > 0.06,
+    true,
+    `прежняя физика не отличилась: самая долгая кучка ${worst.toFixed(0)} с, доля кадров ${(total * 100).toFixed(1)} %`,
+  )
+})
+
+const PLANET_CLUSTER_SEEDS = Array.from({ length: 12 }, (unused, trial) => 3237998080 + trial * 7919)
+
+test('планеты не кружат: траектория не возвращается в ту же точку', () => {  // Круг был не дефектом отрисовки, а следствием законов сохранения: импульсы
   // притяжения строго симметричны, система консервативна, и захваченная пара
   // честно повторяла орбиту вечно. Проверяем это поведением, а не разбором
   // Проверяем это поведением, а не разбором исходника: гоняем настоящий
@@ -1085,6 +1244,13 @@ test('мера петли не годилась: сломанная модель
   // 5, 0.450 у потолка 1, 0.417 у потолка 0.5, 0.045 у смягчения 400. Потолок
   // 0.12 сюда не входит: он даёт около 0.02 — на грани порога, и такой
   // «почти круг» надёжно отличить от нуля нельзя.
+  //
+  // Смягчение 400 из списка ушло после мягкого ядра: при ядре даже сильная
+  // дальняя тяга больше не замыкает петлю (замер 0.0149 на тех же 40 семенах),
+  // то есть это уже не откат. Само ядро на этой мере не ловится вовсе: с
+  // выключенным ядром возврат остаётся 0.0000, а вот кучка схлопывается в
+  // 98.6 % кадров. Поэтому ядро защищает другая мера, «кучка», и её контроль
+  // стоит рядом.
   const { bind } = planetMechanics()
   const good = bind()
   let goodTotal = 0
@@ -1094,7 +1260,6 @@ test('мера петли не годилась: сломанная модель
     { label: 'потолок 5 при смягчении 1200', overrides: { PLANET_MAX_ACCEL: '5' } },
     { label: 'потолок 1', overrides: { PLANET_MAX_ACCEL: '1' } },
     { label: 'потолок 0.5', overrides: { PLANET_MAX_ACCEL: '0.5' } },
-    { label: 'смягчение 400 при потолке 0.06', overrides: { PLANET_SOFTEN: '400' } },
   ]
   for (const regression of regressions) {
     const broken = bind(regression.overrides)
@@ -1501,12 +1666,11 @@ test('созвездия держат дальний план, а их коли�
   assert.match(draw, /if \(limit === 0\) return/u, 'ноль созвездий — пустое небо, а не весь каталог')
   assert.match(draw, /layer\.figures\.length/u, 'больше, чем есть в каталоге, показать нельзя')
   const panel = client.slice(client.indexOf('function DeepSpaceSettings'), client.indexOf('function DeepSpaceAction'))
-  assert.match(panel, /text\.constellationCount\(value\.constellationCount\)/u)
-  assert.match(panel, /min: String\(CONSTELLATION_COUNT_MIN\)/u)
-  assert.match(panel, /max: String\(CONSTELLATION_COUNT_MAX\)/u)
-  assert.match(panel, /props\.controller\.set\(\{ constellationCount: Number\(event\.target\.value\) \}\)/u)
-  assert.match(panel, /value\.constellations\s*\n?\s*\?\s*React\.createElement\(/u, 'ползунок только при включённых созвездиях')
-  // Подписи на обоих языках: панель переключается между ними.
-  assert.match(client, /constellationCount: \(count\) => `Сколько созвездий: \$\{count\}`/u)
-  assert.match(client, /constellationCount: \(count\) => `How many constellations: \$\{count\}`/u)
+  assert.match(panel, /'constellationCount',\n\s*text\.constellationCount/u)
+  assert.match(panel, /\{ min: CONSTELLATION_COUNT_MIN, max: CONSTELLATION_COUNT_MAX, step: 1 \}/u)
+  assert.match(panel, /value\.constellationCount,\n\s*\(next\) => \{\n\s*props\.controller\.set\(\{ constellationCount: next \}\)/u)
+  assert.match(panel, /value\.constellations\s*\n\s*\? sliderRow\(/u, 'ползунок только при включённых созвездиях')
+  // Подписи на обоих языках: панель переключается между ними по языку хоста.
+  assert.match(client, /constellationCount: 'Сколько созвездий'/u)
+  assert.match(client, /constellationCount: 'How many constellations'/u)
 })

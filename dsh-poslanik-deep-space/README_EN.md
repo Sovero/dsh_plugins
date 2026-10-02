@@ -6,8 +6,9 @@ leave trails and change course on stored energy, comets with tails, passing
 meteors. Pointer movement applies an electromagnetic perturbation: space warps,
 glows and rings around the cursor.
 
-The panel is bilingual: **Auto / Русский / English**. The choice is stored by the
-host, so it survives restarts.
+The panel speaks the interface language: it reads the locale the host already
+publishes in the `lang` attribute and switches with it. There is no language
+switcher of its own.
 
 ## Layers
 
@@ -24,6 +25,36 @@ host, so it survives restarts.
 | Ships | 3–4, waypoint routing, inertia, banked turns, fading trail, navigation light |
 | Field | glow, force arcs and rings around the cursor |
 
+## Why planets no longer gather into a trio
+
+The report was not about overlap — separation already forbids that. Planets simply
+**lived next to each other**: the group held for minutes and read as «all the
+planets in one clump». The cause is the nature of symmetric gravity: a bound
+trio has a shape that does not fall apart, and only a dispersal or an off-screen
+exit could break it.
+
+A **soft core** (`PLANET_PERSONAL = 3.4`, `PLANET_REPEL = 0.24`) makes the clump
+unstable: closer than a personal space of 3.4 times the summed radii, planets no
+longer attract, they push apart, and the push grows towards contact while being
+exactly zero at the zone edge — outside it the law is unchanged and the path still
+bends slightly. Planet attraction is also scaled by the **same multiplier as the
+drift** now: it did not depend on the setting before, so at 15 % «Planet speed»
+did the opposite of what it says — the planets barely crawled while being pulled
+together at full strength.
+
+Measured on the real code, 12 runs of 600 s, a clump being all three closer than
+3.5 summed radii:
+
+| Planet speed | Share of frames in a clump, before → after | Longest clump, before → after |
+| --- | --- | --- |
+| 15 % (the reported case) | 13 % → **0 %** | 292 s → **0 s** |
+| 100 % | 27 % → 5 % | 402 s → 60 s |
+| 200 % | 9 % → 6 % | 188 s → 39 s |
+
+Sticking fell as a side effect: frames spent in hard separation 0.136 → 0.002
+(p90), no off-screen exits, and the paths stayed almost straight (loop metric
+p90 = 0.025).
+
 ## Why planets no longer circle
 
 With the old acceleration cap of 5 px/s², gravity accelerated a planet to
@@ -32,14 +63,15 @@ symmetric and the system conservative, so a captured pair honestly repeated its
 orbit forever. The circle was not a drawing bug but a consequence of
 conservation: such a system has no way out of a capture.
 
-The model now has three things it lacked:
+The model now has four things it lacked:
 
 - gravity is capped at 0.06 px/s² — the path visibly bends but the heading
   never turns back on itself;
 - **speed homeostasis** — the velocity magnitude eases toward its cruise
   value, so gravity and separation can no longer drag the pace anywhere;
 - **heading wander** — a slow random rotation of the velocity vector. It is
-  the only irreversible force in the model.
+  the only irreversible force in the model;
+- the **soft core** described above.
 
 What breaks the circle is the **acceleration cap**, and measurement shows it:
 homeostasis and wander barely move the recurrence figure on their own (0.944
@@ -63,12 +95,19 @@ as a real circle.
 
 The test pins 40 generator seeds, counts the share of windows whose recurrence
 falls below 0.65, and requires **exactly zero**. A control check in the same
-test requires each of five physics rollbacks to produce a non-zero share. The
+test requires each of four physics rollbacks to produce a non-zero share. The
 metric was validated by breaking the real code: cap 5 → 0.45, softening 400 →
 0.045.
 
-The metric has an honest limit: the lag window stays at 60 s or below — over a
-longer lag the recurrence falls in both models and the separation disappears.
+The metric states its limits honestly. First, the lag window stays at 60 s or
+below — over a longer lag the recurrence falls in both models and the separation
+disappears. Second, it does **not** see the soft core being switched off: the
+recurrence stays at 0.0000, because circles were born of the acceleration cap,
+not of attraction as such. The core is protected by a different metric — the
+clump (98.6 % of frames and a worst clump of 219 s on rollback, against 0 % and
+0 s for the healthy model) — and its control sits next to it. Softening 400 left
+the rollback list for the same reason: with the core, even a strong long-range
+pull no longer closes a loop (0.0149).
 
 ## Bigger planet, slower drift
 
@@ -127,26 +166,39 @@ bundler would be a needless step.
 DSH: the settings live in the **left sidebar** — a «Deep space» item with an icon
 in the sidebar footer (next to settings); clicking it opens a dropdown with every
 theme switch. When the sidebar is collapsed only the icon remains. Switches for
-the scene, the pointer perturbation, the layout mode, brightness, and the panel
-language. The host stores everything in `profiles/web/cordis.patch.yml`.
+the scene, the pointer perturbation, the layout mode, brightness and the rest. The
+host stores everything in `profiles/web/cordis.patch.yml`.
+
+**The panel language is not chosen — it follows the interface language.** The host
+picks the locale (`@deepseek-ai/dsh-client-locale`) and writes it into the `lang`
+attribute of the document element; the panel reads that attribute and switches
+language with the interface, live and without a restart. There is no second place
+where the panel language could drift away from the interface. A note at the bottom
+of the window says so.
 
 The dropdown is 420 px wide and up to 640 px tall (never more than 82 % of the
-viewport height, so it always fits). Inside it is a single column: the checkbox,
-the glyph, the label and the hint stand in a row, the label never breaks between
-words, and the flexible hint gives up width first. The font inside is smaller —
-12 px for switch labels, 11 px for slider captions, 10 px for hints, the language
-buttons and the select. The old grid reserved 220 px of minimum text width and
-kept a second column, so at 340 px the combined minimum did not fit: the second
-column pushed its neighbours past the edge and long labels wrapped onto three
-lines.
+viewport height, so it always fits). Inside it is a single column of rows built
+after the «Ocean» panel: glyph and label on the left, control on the right,
+nothing in between. The label gives up width first and ends in an ellipsis, while
+the control keeps its own width, so checkboxes, sliders and the frame-rate select
+stand in one column. The font is 12 px for labels and 11 px for values, hints and
+the select.
+
+**Hints moved out of the rows into a tooltip.** Every setting has a «?» button:
+on hover (or keyboard focus) a card with the explanation appears next to it. The
+card is rendered in a portal — the window body scrolls and clips anything outside
+the flow — and lands to the left of the button, because the panel hugs the screen
+edge; where it does not fit, it opens below the row. The card ignores the pointer,
+so it never blocks a slider sitting under it.
 
 Every setting carries its own glyph: a ringed planet, a comet, a ship, a star, a
-constellation, a rayed sun, a black hole, a mouse trail, layers, a binary star, a
-language, brightness and a frame counter. The interface icon set has no planet,
-no comet and no black hole, and «Archive» or «Clock» would have lied, so the
-glyphs are our own (`GLYPHS`): a single 1.5 px stroke on a 16 unit box, coloured
-by `currentColor`, zero external requests, excluded from tab order. A disabled
-switch dims its glyph too — otherwise the row would still look switched on.
+constellation, a rayed sun, a black hole, a mouse trail, layers, a binary star,
+brightness, a frame-rate clock and a figure counter. The interface icon set has no
+planet, no comet and no black hole, and «Archive» or «Clock» would have lied, so
+the glyphs are our own (`GLYPHS`): a single 1.5 px stroke on a 16 unit box,
+coloured by `currentColor`, zero external requests, excluded from tab order. A
+disabled switch dims its glyph too — otherwise the row would still look switched
+on.
 
 Frame rate is a dropdown next to brightness: off / 15 / 30 / 60, 30 by default.
 Leftover time accumulates and a frame is skipped whole rather than partially, so
@@ -158,7 +210,8 @@ the canvas is cleared, so the gas, the stars and every body — planets included
 are in front of the figures. They are also smaller and dimmer than near lights
 (sky share 0.12, stars × 0.78, overall alpha 0.62), because a distant figure read
 like a sticker on the glass. Below the «Constellations» switch a slider
-«How many constellations: N» sets the figure count: 0…14, 8 by default. The host
+«How many constellations» sets the figure count, shown in its own column to the
+right: 0…14, 8 by default. The host
 stores the value; the slider appears only while constellations are on.
 
 Ships no longer circle. The old build accumulated small heading nudges

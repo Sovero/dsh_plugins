@@ -147,79 +147,151 @@ html[${THEME_ATTR}] .md-code-block {
   border-radius: 14px;
 }
 
-/* Настройки живут в выпадающем окне. Прежняя сетка резервировала под текст
-   минимум 220 px и оставляла вторую колонку, поэтому в окне 340 px общий
-   минимум не помещался: вторая колонка выдавливала соседей за край, а длинные
-   подписи («Возмущение от мыши», «Comets and meteors») переносились на три
-   строки. Теперь одна колонка, ширина текста не резервируется, а тумблер,
-   подпись и подсказка стоят в ряд и сами решают, где переноситься. */
+/* Настройки живут в выпадающем окне. Строка собрана по образцу панели
+   «Океан»: слева значок и подпись, справа управление, между ними ничего.
+   Прежняя строка держала в ряд ещё и подсказку мелким шрифтом, из-за чего окно
+   читалось как простыня текста, а длинные подписи переносились на три строки.
+   Подсказки ушли в тултип за кнопкой «?»: строка осталась одноуровневой, а
+   объяснение — под рукой, по наведению. */
 html[${THEME_ATTR}] .pds-settings {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   width: 100%;
   min-width: 0;
-  padding: 14px 0;
-  border-top: 1px solid rgba(190, 214, 255, 0.14);
+  padding: 2px 0;
 }
 
-html[${THEME_ATTR}] .pds-settings-copy { display: grid; gap: 2px; min-width: 0; }
-html[${THEME_ATTR}] .pds-settings-copy strong { color: #eef4ff; font-size: 13px; }
-html[${THEME_ATTR}] .pds-settings-copy span { color: rgba(190, 204, 228, 0.85); font-size: 10px; line-height: 14px; }
-/* Тумблер, значок, подпись и подсказка — одной строкой. Подсказка гибкая и
-   сжимается первой: при узком окне она переносится, а подпись остаётся целой.
-   Значок не участвует в переносе и гаснет вместе с выключенным тумблером. */
-html[${THEME_ATTR}] .pds-switch {
-  display: grid;
-  grid-template-columns: auto auto minmax(0, auto) minmax(0, 1fr);
+html[${THEME_ATTR}] .pds-message {
+  margin: 2px 6px 6px;
+  color: #ffc9a3;
+  font-size: 11px;
+  line-height: 15px;
+}
+
+/* Строка: значок, подпись, управление, значение, кнопка подсказки. Сетка ровно
+   как в панели «Океан»: подпись занимает свою колонку, управление начинается
+   сразу за ней, значение прижато вправо. Подписи стоят друг под другом,
+   ползунки начинаются с одной вертикали, длинная подпись гаснет многоточием. */
+html[${THEME_ATTR}] .pds-row {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 28px;
+  padding: 2px 4px 2px 6px;
+  border-radius: 8px;
   color: #dbe6fb;
   font-size: 12px;
-  line-height: 16px;
-  cursor: pointer;
+  line-height: 17px;
+}
+html[${THEME_ATTR}] .pds-row:hover { background: var(--dsw-alias-interactive-bg-hover); }
+html[${THEME_ATTR}] .pds-glyph { flex: none; display: block; }
+html[${THEME_ATTR}] .pds-name {
+  flex: 0 0 148px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+html[${THEME_ATTR}] .pds-control {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
-html[${THEME_ATTR}] .pds-switch > span { white-space: nowrap; }
-html[${THEME_ATTR}] .pds-switch input { width: 14px; height: 14px; accent-color: #b9d4f7; flex: none; margin: 0; }
-html[${THEME_ATTR}] .pds-switch[data-on='false'] { color: rgba(196, 208, 228, 0.58); }
-html[${THEME_ATTR}] .pds-switch[data-on='false'] .pds-glyph { opacity: 0.45; }
-html[${THEME_ATTR}] .pds-glyph { flex: none; display: block; }
-html[${THEME_ATTR}] .pds-range { display: grid; gap: 5px; }
-html[${THEME_ATTR}] .pds-range-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
-html[${THEME_ATTR}] .pds-range span { color: rgba(190, 204, 228, 0.85); font-size: 11px; }
-html[${THEME_ATTR}] .pds-range input { width: 100%; accent-color: #b9d4f7; }
+html[${THEME_ATTR}] .pds-control input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #b9d4f7;
+  cursor: pointer;
+}
+html[${THEME_ATTR}] .pds-control input[type='range'] { width: 118px; accent-color: #b9d4f7; }
+html[${THEME_ATTR}] .pds-control input:disabled { opacity: 0.45; cursor: default; }
+/* Значение ползунка — своя колонка, чтобы проценты не прыгали при перетаскивании. */
+html[${THEME_ATTR}] .pds-value {
+  flex: 0 0 44px;
+  text-align: right;
+  color: rgba(190, 204, 228, 0.85);
+  font-size: 11px;
+  line-height: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Выключенный тумблер гасит значок и подпись — иначе строка выглядит включённой. */
+html[${THEME_ATTR}] .pds-row[data-on='false'] { color: rgba(196, 208, 228, 0.55); }
+html[${THEME_ATTR}] .pds-row[data-on='false'] > .pds-glyph { opacity: 0.4; }
+
+/* Подсказка: кнопка «?» в строке и карточка в портале. Панель прижата к краю
+   окна, поэтому карточка встаёт СЛЕВА от кнопки, а если не поместилась — под
+   строкой. Мышей она не ловится (pointer-events: none), чтобы подсказка не
+   мешала тянуть ползунок, оказавшийся под ней. */
+html[${THEME_ATTR}] .pds-hint {
+  flex: none;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: rgba(183, 196, 220, 0.42);
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  cursor: help;
+}
+html[${THEME_ATTR}] .pds-hint:hover,
+html[${THEME_ATTR}] .pds-hint:focus-visible {
+  color: #cfe0ff;
+  background: var(--dsw-alias-interactive-bg-active);
+  outline: none;
+}
+html[${THEME_ATTR}] .pds-tip {
+  position: fixed;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  max-width: 252px;
+  padding: 7px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: rgba(11, 16, 34, 0.97);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+  color: #cbd8ef;
+  font-size: 11px;
+  line-height: 15px;
+  text-align: left;
+  pointer-events: none;
+}
+/* Подпись под списком: язык панели не выбирается, он следует за интерфейсом. */
+html[${THEME_ATTR}] .pds-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 6px 2px;
+  color: rgba(160, 176, 200, 0.6);
+  font-size: 10px;
+  line-height: 14px;
+}
 html[${THEME_ATTR}] .pds-select {
-  width: 100%;
+  width: 118px;
   box-sizing: border-box;
   padding: 3px 8px;
-  border-radius: 7px;
+  border-radius: 8px;
   border: 1px solid rgba(190, 214, 255, 0.22);
   background: rgba(16, 22, 40, 0.75);
   color: #d8e6ff;
-  font-size: 10px;
-  line-height: 15px;
+  font-size: 11px;
+  line-height: 16px;
   cursor: pointer;
 }
 html[${THEME_ATTR}] .pds-select:disabled { opacity: 0.5; cursor: default; }
-html[${THEME_ATTR}] .pds-lang-row { display: flex; gap: 6px; flex-wrap: wrap; }
-html[${THEME_ATTR}] .pds-lang {
-  padding: 3px 9px;
-  border-radius: 7px;
-  border: 1px solid rgba(190, 214, 255, 0.22);
-  background: rgba(16, 22, 40, 0.6);
-  color: #d8e6ff;
-  font-size: 10px;
-  line-height: 14px;
-  cursor: pointer;
-}
-html[${THEME_ATTR}] .pds-lang[aria-pressed='true'] {
-  border-color: rgba(160, 200, 255, 0.55);
-  background: rgba(32, 48, 84, 0.85);
-  color: #eaf3ff;
-}
-html[${THEME_ATTR}] .pds-lang:disabled { opacity: 0.5; cursor: default; }
 
 html[${THEME_ATTR}] .pds-anchor {
   display: flex;
@@ -320,14 +392,17 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
 `
 
     // ── язык интерфейса темы ───────────────────────────────────────────────
-    // Русский и английский равноправны: выбор хранит хост вместе с остальными
-    // настройками, поэтому переживает перезапуск и не зависит от локали хоста.
+    // Русский и английский равноправны, а выбор между ними в панели больше не
+    // делается: язык панели следует за языком интерфейса хоста (см. hostLanguage
+    // ниже). Поэтому словари живут в памяти плагина и переживают перезапуск
+    // вместе с хостом, как и остальные настройки.
     const STRINGS = Object.freeze({
       ru: {
-        langLabel: 'Язык панели',
         panel: 'Звёздное небо',
         panelTitle: 'Звёздное небо',
         panelAria: 'Настройки звёздного неба',
+        hintLabel: 'Что это значит',
+        langNote: 'Язык панели — язык интерфейса.',
         enabled: 'Включена',
         enabledHint: 'Космос поверх интерфейса.',
         stars: 'Звёзды и туманности',
@@ -340,7 +415,7 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         sessionHint: 'Двойная звезда при генерации, вспышка по завершении, красный отсвет при ошибке.',
         constellations: 'Созвездия',
         constellationsHint: 'Дальний план: фигуры за газом и звёздами, ниже планет.',
-        constellationCount: (count) => `Сколько созвездий: ${count}`,
+        constellationCount: 'Сколько созвездий',
         planets: 'Планеты',
         planetsHint: 'Медленный дрейф с терминатором и кольцом.',
         perturbation: 'Возмущение от мыши',
@@ -351,8 +426,10 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         sunsHint: 'Светила с короной, гранулами и протуберанцами.',
         blackholes: 'Чёрные дыры',
         blackholesHint: 'Тень, фотонное кольцо и раскручивающийся диск.',
-        intensity: (percent) => `Яркость ${percent}%`,
-        planetSpeed: (percent) => `Скорость планет ${percent}%`,
+        brightness: 'Яркость',
+        brightnessHint: 'Плотность свечения картины. Меньше — тише, больше — светлее.',
+        planetSpeed: 'Скорость планет',
+        planetSpeedHint: 'Дрейф дисков по орбите. Вращение и спутники не затрагиваются.',
         frameRate: 'Частота кадров',
         frameRateHint: 'Потолок отрисовки. «Выкл» — частота экрана.',
         frameRateOff: 'Выкл',
@@ -360,10 +437,11 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         saveOffline: 'Настройка не сохранена: нет связи с хостом.',
       },
       en: {
-        langLabel: 'Panel language',
         panel: 'Deep space',
         panelTitle: 'Deep space',
         panelAria: 'Deep space settings',
+        hintLabel: 'What it means',
+        langNote: 'The panel speaks the interface language.',
         enabled: 'Enabled',
         enabledHint: 'Deep space over the interface.',
         stars: 'Stars and nebulae',
@@ -376,7 +454,7 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         sessionHint: 'A binary star while it works, a flash when it finishes, a red flare on error.',
         constellations: 'Constellations',
         constellationsHint: 'Far plane: figures behind the gas and stars, below the planets.',
-        constellationCount: (count) => `How many constellations: ${count}`,
+        constellationCount: 'How many constellations',
         planets: 'Planets',
         planetsHint: 'Slow drift with terminator and ring.',
         perturbation: 'Pointer perturbation',
@@ -387,8 +465,10 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         sunsHint: 'Stars with a corona, granulation and prominences.',
         blackholes: 'Black holes',
         blackholesHint: 'Shadow, photon ring and a spinning accretion disc.',
-        intensity: (percent) => `Brightness ${percent}%`,
-        planetSpeed: (percent) => `Planet speed ${percent}%`,
+        brightness: 'Brightness',
+        brightnessHint: 'How brightly the scene glows. Lower is calmer, higher is lighter.',
+        planetSpeed: 'Planet speed',
+        planetSpeedHint: 'Drift of the discs along their orbits. Rotation and moons are untouched.',
         frameRate: 'Frame rate',
         frameRateHint: 'Render cap. “Off” — the display refresh rate.',
         frameRateOff: 'Off',
@@ -397,15 +477,63 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
       },
     })
 
+    // ── язык панели ────────────────────────────────────────────────────────
+    // Переключателя в панели нет и не было нужды: язык интерфейса задаёт сам
+    // хост (плагин @deepseek-ai/dsh-client-locale), и тот же выбор кладёт в
+    // атрибут `lang` корневого элемента документа. Панель читает этот атрибут,
+    // поэтому английский интерфейс даёт английскую панель, а русский —
+    // русскую, без второго места, где язык можно расходиться с интерфейсом.
+    // Браузерный `navigator.language` остаётся запасным путём на случай, пока
+    // плагин локали не смонтирован.
     function detectLanguage() {
-      const lang = document.documentElement.lang || navigator.language || 'ru'
-      return lang.toLowerCase().startsWith('en') ? 'en' : 'ru'
+      const host = (document.documentElement.lang || '').toLowerCase()
+      // Русский и английский у темы есть оба, поэтому выбор хода переносится
+      // один в один: английский интерфейс — английская панель.
+      if (host.startsWith('en')) return 'en'
+      if (host.startsWith('ru')) return 'ru'
+      // Языка, которого у темы нет (у хоста их всего два: en и zh), уводим на
+      // язык браузера. Молча ставить русскую панель китайскому интерфейсу
+      // значило бы соврать в подписи «язык панели — язык интерфейса».
+      const browser = (navigator.language || '').toLowerCase()
+      return browser.startsWith('en') ? 'en' : 'ru'
     }
 
-    function translator(preference) {
-      if (preference === 'ru' || preference === 'en') return STRINGS[preference]
-      return STRINGS[detectLanguage()]
+    function translator(language) {
+      return language === 'en' ? STRINGS.en : STRINGS.ru
     }
+
+    // Наблюдатель за локалью хоста. Смена языка в настройках должна перевести
+    // уже открытую панель, поэтому одного чтения при монтаже мало: подписка
+    // пересобирает снимок настроек, а тот перерисовывает панель. Наблюдатель
+    // создаётся на первого подписчика и снимается с последним.
+    const hostLanguage = (() => {
+      const listeners = new Set()
+      let value = detectLanguage()
+      let observer = null
+      const refresh = () => {
+        const next = detectLanguage()
+        if (next === value) return
+        value = next
+        for (const listener of listeners) listener()
+      }
+      return {
+        get: () => value,
+        subscribe: (listener) => {
+          if (observer === null && typeof MutationObserver !== 'undefined') {
+            observer = new MutationObserver(refresh)
+            observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] })
+          }
+          listeners.add(listener)
+          return () => {
+            listeners.delete(listener)
+            if (listeners.size === 0 && observer !== null) {
+              observer.disconnect()
+              observer = null
+            }
+          }
+        },
+      }
+    })()
 
     // ── настройки хоста ────────────────────────────────────────────────────
     // Потолок кадров: 0 — рисовать каждый кадр монитора, остальное — потолок.
@@ -444,7 +572,6 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
       underlay: false,
       suns: true,
       blackholes: true,
-      language: 'auto',
       intensity: 0.85,
       fps: DEFAULT_FPS,
       session: true,
@@ -457,7 +584,6 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
       const intensity = Number(value?.intensity)
       const planetSpeed = Number(value?.planetSpeed)
       const constellationCount = Number(value?.constellationCount)
-      const language = ['ru', 'en', 'auto'].includes(value?.language) ? value.language : 'auto'
       return Object.freeze({
         enabled: value?.enabled !== false,
         stars: value?.stars !== false,
@@ -468,7 +594,6 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         underlay: value?.underlay === true,
         suns: value?.suns !== false,
         blackholes: value?.blackholes !== false,
-        language,
         intensity: Number.isFinite(intensity) ? Math.min(1.4, Math.max(0.2, intensity)) : DEFAULT_SETTINGS.intensity,
         fps: FPS_CHOICES.includes(value?.fps) ? value.fps : DEFAULT_FPS,
         session: value?.session !== false,
@@ -534,8 +659,9 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         const host = form.getSnapshot()
         const ready = host.status === 'ready' && host.value !== undefined
         const value = preview ?? normalizeSettings(ready ? host.value : DEFAULT_SETTINGS)
-        // Сообщения об ошибке переводим тем же языком, что выбран для панели.
-        const text = translator(value.language)
+        // Сообщения об ошибке переводим тем же языком, что и панель: он следует
+        // за языком интерфейса хоста.
+        const text = translator(hostLanguage.get())
         snapshot = Object.freeze({
           value,
           text,
@@ -553,6 +679,9 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         for (const listener of listeners) listener()
       }
       const unsubscribe = form.subscribe(sync)
+      // Смена языка интерфейса хоста пересобирает снимок: словари в панели
+      // меняются, а значения настроек при этом те же.
+      const stopLanguage = hostLanguage.subscribe(sync)
       sync()
       return {
         get: () => snapshot,
@@ -590,6 +719,7 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         destroy: () => {
           disposed = true
           unsubscribe()
+          stopLanguage()
           listeners.clear()
         },
       }
@@ -978,6 +1108,16 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
     const PLANET_MAX_SPEED = 42
     // Зазор между дисками: планеты не должны касаться даже краями.
     const PLANET_GAP = 26
+    // Личное пространство планеты: во сколько раз «сумма двух радиусов» диски
+    // держат друг друга на расстоянии. Без этого симметричная гравитация
+    // допускает устойчивую тройку: у связанной группы есть форма, которая не
+    // распадается, и планеты стояли рядом минутами — это и читалось как «все
+    // планеты в одной тройке». Внутри личного пространства притяжение
+    // сменяется отталкиванием, и куча перестаёт быть устойчивым состоянием.
+    const PLANET_PERSONAL = 3.4
+    // Потолок отталкивания, px/с². Вчетверо больше потолка притяжения: разойтись
+    // надо сильнее, чем сойтись, иначе группа снова собирается следом.
+    const PLANET_REPEL = 0.24
     // Крейсерская скорость и опорный радиус. Скорость обратно пропорциональна
     // радиусу: чем массивнее планета, тем медленнее она ползёт. Считается
     // как CRUISE * (REF_RADIUS / radius), поэтому планета вдвое крупнее
@@ -1138,6 +1278,12 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
 
     function applyPlanetGravity(dt) {
       const planets = space.planets
+      // Притяжение — часть темпа неба, поэтому тянется тем же множителем, что и
+      // дрейф. Раньше оно не зависело от настройки, и ползунок «Скорость
+      // планет» на низком значении делал ровно обратное задуманному: планеты
+      // еле ползли, а стягивало их полной силой — тройка сбивалась в кучу и
+      // жила в ней минутами.
+      const drift = planetDriftScale()
       for (let i = 0; i < planets.length; i += 1) {
         for (let j = i + 1; j < planets.length; j += 1) {
           const a = planets[i]
@@ -1145,11 +1291,18 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
           const dx = b.x - a.x
           const dy = b.y - a.y
           const d = Math.max(1, Math.hypot(dx, dy))
-          // Ограничение ускорения: притяжение может искривить путь, но не
-          // имеет права швырнуть планету за край экрана.
-          const pull = Math.min(PLANET_MAX_ACCEL, (PLANET_G * planetMass(a) * planetMass(b)) / (d + PLANET_SOFTEN))
-          const fx = (dx / d) * pull * dt
-          const fy = (dy / d) * pull * dt
+          const contact = a.radius + b.radius
+          const reach = contact * PLANET_PERSONAL
+          // Мягкое ядро. Ближе личного пространства планеты не тянутся, а
+          // отталкиваются, и толчок растёт к самому касанию. На краю зоны
+          // отталкивание ровно нулевое, поэтому снаружи закон прежний и путь
+          // по-прежнему слегка искривляется.
+          const force =
+            d < reach
+              ? -PLANET_REPEL * ((reach - d) / Math.max(1, reach - contact))
+              : Math.min(PLANET_MAX_ACCEL, (PLANET_G * planetMass(a) * planetMass(b)) / (d + PLANET_SOFTEN)) * drift
+          const fx = (dx / d) * force * dt
+          const fy = (dy / d) * force * dt
           a.vx += fx
           a.vy += fy
           b.vx -= fx
@@ -3564,9 +3717,10 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
       perturbation: 'M3.4 3.4 6.4 6.4 3 9.8 6 13.2 12.6 12.4 9.6 9 13 5.6 8.8 4.4 6.4 6.4',
       underlay: 'M1.4 12.6 6 8 14.6 8 M1.4 12.6 1.4 4.6 M1.4 12.6 9 12.6',
       session: 'M2.4 11 8 3.2 13.6 11z M4.4 14 11.6 6',
-      language: 'M8 1.6 9.6 4.8 13 5.2 10.6 7.5 11.2 10.9 8 9.3 4.8 10.9 5.4 7.5 3 5.2 6.4 4.8z',
+      frameRate: 'M8 1.8 A6.2 6.2 0 1 0 8 14.2 A6.2 6.2 0 1 0 8 1.8 M8 4.6 8 8 10.6 9.6',
       brightness: 'M8 4.6 11.4 8 8 11.4 4.6 8z M8 1 8 2.4 M8 13.6 8 15 M1 8 2.4 8 M13.6 8 15 8',
-      count: 'M1.8 5.4 4.4 5.4 4.4 12.4 6.8 12.4 M6 3 6 15',
+      constellationCount: 'M1.8 5.4 4.4 5.4 4.4 12.4 6.8 12.4 M6 3 6 15',
+      note: 'M8 1.8 A6.2 6.2 0 1 0 8 14.2 A6.2 6.2 0 1 0 8 1.8 M8 7 8 10.6 M8 5 8 5.4',
     })
 
     function glyphIcon(name) {
@@ -3598,6 +3752,95 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
     const POPOVER_MARGIN = 12
     const POPOVER_GAP = 6
 
+    // ── подсказка строки ───────────────────────────────────────────────────
+    // Объяснение настройки раньше стояло в строке вторым текстом мелким шрифтом,
+    // и окно читалось как простыня. Теперь его несёт кнопка «?»: карточка уходит
+    // в портал (тело окна прокручивается и обрезает всё, что не в потоке) и
+    // встаёт СЛЕВА от кнопки, потому что панель прижата к краю экрана.
+    const TIP_MARGIN = 10
+
+    function HintButton(props) {
+      const React = require('react')
+      const { createPortal } = require('react-dom')
+      const [open, setOpen] = React.useState(false)
+      const [at, setAt] = React.useState(null)
+      const anchorRef = React.useRef(null)
+      const tipRef = React.useRef(null)
+
+      React.useLayoutEffect(() => {
+        if (open === false) {
+          setAt(null)
+          return undefined
+        }
+        const place = () => {
+          const anchor = anchorRef.current
+          const tip = tipRef.current
+          if (anchor === null || tip === null) return
+          const rect = anchor.getBoundingClientRect()
+          const size = tip.getBoundingClientRect()
+          // Слева карточка влезает не всегда: у самого края экрана она ушла бы
+          // в поле, и тогда встаёт под строкой.
+          const beside = rect.left - size.width - 8 >= TIP_MARGIN
+          setAt({
+            left: Math.round(
+              beside
+                ? rect.left - size.width - 8
+                : Math.min(Math.max(TIP_MARGIN, rect.left - 40), window.innerWidth - size.width - TIP_MARGIN),
+            ),
+            top: Math.round(
+              beside
+                ? rect.top + rect.height / 2 - size.height / 2
+                : Math.min(rect.bottom + 6, window.innerHeight - size.height - TIP_MARGIN),
+            ),
+          })
+        }
+        place()
+        window.addEventListener('resize', place)
+        window.addEventListener('scroll', place, true)
+        return () => {
+          window.removeEventListener('resize', place)
+          window.removeEventListener('scroll', place, true)
+        }
+      }, [open, props.text])
+
+      return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(
+          'button',
+          {
+            ref: anchorRef,
+            type: 'button',
+            className: 'pds-hint',
+            'aria-label': props.label,
+            'aria-expanded': open,
+            onMouseEnter: () => setOpen(true),
+            onMouseLeave: () => setOpen(false),
+            onFocus: () => setOpen(true),
+            onBlur: () => setOpen(false),
+            onClick: () => setOpen((was) => !was),
+          },
+          '?',
+        ),
+        open === true
+          ? createPortal(
+              React.createElement(
+                'div',
+                {
+                  ref: tipRef,
+                  className: 'pds-tip',
+                  role: 'tooltip',
+                  // До замера карточка невидима: иначе она мигнула бы в углу.
+                  style: at === null ? { visibility: 'hidden', left: 0, top: 0 } : { left: at.left, top: at.top },
+                },
+                props.text,
+              ),
+              document.body,
+            )
+          : null,
+      )
+    }
+
     function DeepSpaceSettings(props) {
       const React = require('react')
       const state = React.useSyncExternalStore(props.controller.subscribe, props.controller.get, props.controller.get)
@@ -3606,11 +3849,29 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
       const message = state.error
       const percent = Math.round(value.intensity * 100)
       const speedPercent = Math.round(value.planetSpeed * 100)
-      const switchRow = (key, title, hint) =>
+
+      // Строка настройки: значок, подпись, управление справа, кнопка подсказки.
+      // Подпись — метка управления, поэтому клик по названию переключает
+      // тумблер. Кнопка подсказки стоит рядом с меткой, но не внутри неё:
+      // внутри `<label>` нажатие на «?» переключало бы тумблер вместо показа
+      // подсказки, а у ползунка — тянуло бы его.
+      const shell = (key, title, hint, control, on) =>
         React.createElement(
-          'label',
-          { className: 'pds-switch', 'data-on': value[key] ? 'true' : 'false' },
+          'div',
+          { className: 'pds-row', 'data-on': on === undefined ? undefined : on ? 'true' : 'false' },
+          glyphIcon(key),
+          React.createElement('label', { className: 'pds-name', htmlFor: `pds-${key}` }, title),
+          React.createElement('div', { className: 'pds-control' }, control),
+          React.createElement(HintButton, { text: hint, label: text.hintLabel }),
+        )
+
+      const switchRow = (key, title, hint) =>
+        shell(
+          key,
+          title,
+          hint,
           React.createElement('input', {
+            id: `pds-${key}`,
             type: 'checkbox',
             disabled: !state.editable,
             checked: value[key],
@@ -3618,103 +3879,45 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
               props.controller.set({ [key]: event.target.checked })
             },
           }),
-          glyphIcon(key),
-          React.createElement('span', null, title),
-          React.createElement('div', { className: 'pds-settings-copy' }, React.createElement('span', null, hint)),
+          value[key],
         )
-      const languageButton = (code, label) =>
-        React.createElement(
-          'button',
-          {
-            type: 'button',
-            className: 'pds-lang',
-            'aria-pressed': value.language === code,
-            disabled: !state.editable,
-            onClick: () => {
-              props.controller.set({ language: code })
+
+      const sliderRow = (key, title, hint, bounds, readout, onInput) =>
+        shell(key, title, hint, [
+          React.createElement('input', {
+            id: `pds-${key}`,
+            key: 'range',
+            type: 'range',
+            min: String(bounds.min),
+            max: String(bounds.max),
+            step: String(bounds.step),
+            value: readout,
+            disabled: !value.enabled || !state.editable,
+            onChange: (event) => {
+              onInput(Number(event.target.value))
             },
-          },
-          label,
-        )
+          }),
+          React.createElement('span', { key: 'value', className: 'pds-value' }, readout),
+        ])
       return React.createElement(
         'section',
         { className: 'pds-settings', 'data-pds-settings': '' },
-        message
-          ? React.createElement('div', { role: 'alert', style: { gridColumn: '1 / -1' } }, message)
-          : null,
-        React.createElement(
-          'div',
-          { className: 'pds-range' },
-          React.createElement(
-            'div',
-            { className: 'pds-range-head' },
-            glyphIcon('language'),
-            React.createElement('span', null, text.langLabel),
-          ),
-          React.createElement(
-            'div',
-            { className: 'pds-lang-row' },
-            languageButton('auto', 'Auto'),
-            languageButton('ru', 'Русский'),
-            languageButton('en', 'English'),
-          ),
-        ),
+        message ? React.createElement('div', { className: 'pds-message', role: 'alert' }, message) : null,
         switchRow('enabled', text.enabled, text.enabledHint),
-        React.createElement(
-          'div',
-          { className: 'pds-range' },
-          React.createElement(
-            'div',
-            { className: 'pds-range-head' },
-            glyphIcon('brightness'),
-            React.createElement('span', null, text.intensity(percent)),
-          ),
-          React.createElement('input', {
-            type: 'range',
-            min: '20',
-            max: '140',
-            step: '1',
-            value: percent,
-            disabled: !value.enabled || !state.editable,
-            onChange: (event) => {
-              props.controller.set({ intensity: Number(event.target.value) / 100 })
-            },
-          }),
-        ),
-        React.createElement(
-          'div',
-          { className: 'pds-range' },
-          React.createElement(
-            'div',
-            { className: 'pds-range-head' },
-            glyphIcon('planets'),
-            React.createElement('span', null, text.planetSpeed(speedPercent)),
-          ),
-          React.createElement('input', {
-            type: 'range',
-            min: '10',
-            max: '200',
-            step: '5',
-            value: speedPercent,
-            disabled: !value.enabled || !state.editable,
-            onChange: (event) => {
-              props.controller.set({ planetSpeed: Number(event.target.value) / 100 })
-            },
-          }),
-        ),
-        React.createElement(
-          'div',
-          { className: 'pds-range' },
-          React.createElement(
-            'div',
-            { className: 'pds-range-head' },
-            glyphIcon('count'),
-            React.createElement('span', null, text.frameRate),
-          ),
-          React.createElement('div', { className: 'pds-settings-copy' }, React.createElement('span', null, text.frameRateHint)),
+        sliderRow('brightness', text.brightness, text.brightnessHint, { min: 20, max: 140, step: 1 }, percent, (next) => {
+          props.controller.set({ intensity: next / 100 })
+        }),
+        sliderRow('planets', text.planetSpeed, text.planetSpeedHint, { min: 10, max: 200, step: 5 }, speedPercent, (next) => {
+          props.controller.set({ planetSpeed: next / 100 })
+        }),
+        shell(
+          'frameRate',
+          text.frameRate,
+          text.frameRateHint,
           React.createElement(
             'select',
             {
+              id: 'pds-frameRate',
               className: 'pds-select',
               disabled: !value.enabled || !state.editable,
               value: String(value.fps),
@@ -3738,28 +3941,23 @@ html[${THEME_ATTR}] .pds-popover-body .pds-settings {
         switchRow('session', text.session, text.sessionHint),
         switchRow('constellations', text.constellations, text.constellationsHint),
         value.constellations
-          ? React.createElement(
-              'div',
-              { className: 'pds-range' },
-              React.createElement(
-                'div',
-                { className: 'pds-range-head' },
-                glyphIcon('constellations'),
-                React.createElement('span', null, text.constellationCount(value.constellationCount)),
-              ),
-              React.createElement('input', {
-                type: 'range',
-                min: String(CONSTELLATION_COUNT_MIN),
-                max: String(CONSTELLATION_COUNT_MAX),
-                step: '1',
-                value: value.constellationCount,
-                disabled: !value.enabled || !state.editable,
-                onChange: (event) => {
-                  props.controller.set({ constellationCount: Number(event.target.value) })
-                },
-              }),
+          ? sliderRow(
+              'constellationCount',
+              text.constellationCount,
+              text.constellationsHint,
+              { min: CONSTELLATION_COUNT_MIN, max: CONSTELLATION_COUNT_MAX, step: 1 },
+              value.constellationCount,
+              (next) => {
+                props.controller.set({ constellationCount: next })
+              },
             )
           : null,
+        React.createElement(
+          'div',
+          { className: 'pds-note' },
+          glyphIcon('note'),
+          React.createElement('span', null, text.langNote),
+        ),
       )
     }
 
