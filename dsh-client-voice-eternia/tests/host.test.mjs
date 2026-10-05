@@ -139,10 +139,15 @@ test('настройки сохраняются и переживают пере
   const saved = readSettings(home)
   assert.equal(saved.polish.enabled, true)
   assert.equal(saved.asr.language, 'ru')
-  // В файле остаётся плоская форма: её читает код, запущенный без карточки.
   const raw = JSON.parse(readFileSync(join(home, 'voice-eternia.json'), 'utf8'))
-  assert.equal(raw.polish, true)
-  assert.equal(raw.language, 'ru')
+  // Группа остаётся объектом, а плоские ключи старого формата пишутся рядом под
+  // своими именами. Раньше на месте группы стоял флаг `polish: true`, и объект
+  // с этим же именем затирался — настройки выживали только потому, что рядом
+  // лежал `polishPrompt`, который восстанавливал значение при чтении.
+  assert.equal(typeof raw.polish, 'object', 'группа polish обязана остаться объектом')
+  assert.equal(raw.polish.enabled, true)
+  assert.equal(raw.language, 'ru', 'плоский ключ старого формата по-прежнему пишется')
+  assert.equal(raw.asr.language, 'ru')
 })
 
 test('битые настройки откатываются к значениям по умолчанию', () => {
@@ -580,4 +585,36 @@ test('маршруты, читающие тело, не падают на раз
   const voices = await callRoute('GET', '/voice-eternia/voices')
   assert.equal(voices.status, 200, 'список голосов обязан отвечать')
   assert.equal(voices.payload?.ok, true)
+})
+
+test('настройки сохраняются и читаются целиком, а не шестью полями', async () => {
+  // Файл настроек хранил только плоский список из шести полей: усиление
+  // микрофона, подавление шума, разговор, голос ответа и вставка в него не
+  // попадали. Карточка показывала новое значение, хост применял прежнее — и это
+  // выглядело как «настройка не работает».
+  const home = makeHome()
+  const { readSettings, writeSettings, DEFAULT_SETTINGS } = await import('../src/index.js')
+  const before = readSettings(home)
+  const patch = JSON.parse(JSON.stringify(before))
+  // Меняем по одному полю в каждой группе: если какая-то группа не пишется,
+  // тест назовёт именно её.
+  Object.assign(patch.recording, { inputGain: 8, noiseSuppress: false })
+  Object.assign(patch.conversation, { silenceMs: 500 })
+  Object.assign(patch.speech, { rate: 2, voice: 'Microsoft Irina Desktop' })
+  Object.assign(patch.polish, { enabled: true, prompt: 'тест' })
+  Object.assign(patch.insert, { mode: 'replace' })
+  Object.assign(patch.ui, { confirmOnInsert: true })
+  writeSettings(home, patch)
+  const after = readSettings(home)
+  for (const group of Object.keys(DEFAULT_SETTINGS)) {
+    for (const key of Object.keys(DEFAULT_SETTINGS[group])) {
+      assert.deepEqual(after[group][key], patch[group][key],
+        `поле ${group}.${key} не пережило запись и чтение`)
+    }
+  }
+  // Плоский ключ старого формата не должен затирать одноимённую группу.
+  const file = JSON.parse(readFileSync(join(home, 'voice-eternia.json'), 'utf8'))
+  assert.equal(typeof file.polish, 'object', 'группа polish обязана остаться объектом')
+  assert.equal(file.polish.enabled, true)
+  assert.equal(file.polishPrompt, 'тест', 'плоский ключ старого формата тоже пишется')
 })

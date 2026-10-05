@@ -315,7 +315,16 @@ export async function transcribeViaProvider({ apiKey, provider, audioBase64, mod
       }],
       // Температура 0: распознавание — не творческая задача.
       temperature: 0,
-      max_tokens: 2048,
+      // Предел ответа 256, а не 2048. Расшифровка короткой фразы длиннее и не
+      // бывает, а вот «размышления» модели в этот предел упираются: у gemini
+      // рассуждения обязательны и отключению не поддаются («Reasoning is
+      // mandatory for this endpoint and cannot be disabled»), но их объём
+      // растёт вместе с лимитом. Замеры на одном аудио: 2048 → 4.7 с и 276
+      // токенов размышлений, 256 → 2.5 с, 128 → уже мусор вместо русского
+      // текста, 64 → пусто. 256 — наименьшее значение, где качество держится:
+      // два прогона из двух дали верную фразу, а на 192 модель срывалась на
+      // транслитерацию латиницей.
+      max_tokens: 256,
     }),
     signal,
   })
@@ -448,6 +457,23 @@ function pick(target, path) {
 }
 
 /**
+ * Записывает значение по пути-сегментам, создавая группы по дороге.
+ *
+ * @param {object} target - куда писать.
+ * @param {string[]} path - путь-сегменты.
+ * @param {unknown} value - значение.
+ * @returns {void}
+ */
+function put(target, path, value) {
+  let node = target
+  for (const segment of path.slice(0, -1)) {
+    if (node[segment] === null || typeof node[segment] !== 'object') node[segment] = {}
+    node = node[segment]
+  }
+  node[path[path.length - 1]] = value
+}
+
+/**
  * Собирает рабочие настройки из конфига плагина и старого файла.
  *
  * Приоритет такой: конфиг из карточки настроек, затем файл
@@ -480,10 +506,26 @@ export function readSettings(dshHome, config = {}) {
   // файла — человек менял чувствительность микрофона, а она не применялась.
   for (const [group, defaults] of Object.entries(DEFAULT_SETTINGS)) {
     result[group] = { ...defaults }
+    // Значения из файла читаются по той же форме, по которой записаны. Без
+    // этого запись работала бы «в одну сторону»: файл обновляется, а хост
+    // продолжает применять умолчания, и настройка выглядит нерабочей.
+    const stored = legacy[group]
+    if (stored === null || typeof stored !== 'object') continue
+    for (const key of Object.keys(defaults)) {
+      const value = stored[key]
+      if (value === undefined) continue
+      if (typeof value !== typeof defaults[key]) continue
+      result[group][key] = value
+    }
   }
 
   for (const [key, path] of Object.entries(LEGACY_FIELDS)) {
     if (has(path)) continue
+    // Плоский ключ читается, только если в файле нет группы с тем же именем:
+    // иначе объект группы и флаг старого формата спорили бы за одно имя, и
+    // побеждал тот, кто записан позже, а не тот, кто свежее.
+    const storedGroup = legacy[path[0]]
+    if (storedGroup !== null && typeof storedGroup === 'object') continue
     const value = legacy[key]
     if (value === undefined) continue
     const group = result[path[0]]
@@ -531,9 +573,31 @@ export function writeSettings(dshHome, patch) {
   const next = { ...current, ...patch }
   const file = settingsPath(dshHome)
   mkdirSync(dirname(file), { recursive: true })
+  // Сохраняется ВСЯ форма настроек, а не шесть полей из плоского списка.
+  // Раньше запись шла по фиксированному перечню `LEGACY_FIELDS`, и всё, чего в
+  // нём не было — усиление микрофона, подавление шума, разговор, голос ответа, —
+  // молча не попадало в файл. Карточка показывала значение, хост применял
+  // прежнее, и выглядело это как «настройка не работает».
   const flat = {}
+  for (const [group, defaults] of Object.entries(DEFAULT_SETTINGS)) {
+    for (const key of Object.keys(defaults)) {
+      const value = pick(next, [group, key])
+      if (value === undefined) continue
+      put(flat, [group, key], value)
+    }
+  }
+  // Плоские ключи старого файла пишутся рядом: иначе после первого сохранения
+  // человек потерял бы настройки, сделанные в прежней версии плагина.
+  //
+  // Но только те, чьё имя не занято группой. Ключ `polish` (булево) и группа
+  // `polish` (объект) — разные вещи с одинаковым именем в одном JSON, и объект
+  // побеждал: значение группы затиралось флагом, а восстанавливалось уже из
+  // соседнего `polishPrompt`. Работало это по счастливой случайности, а не по
+  // устройству.
   for (const [key, path] of Object.entries(LEGACY_FIELDS)) {
-    flat[key] = pick(next, path)
+    if (Object.hasOwn(flat, key)) continue
+    const value = pick(next, path)
+    if (value !== undefined) flat[key] = value
   }
   writeFileSync(file, JSON.stringify(flat, null, 2), 'utf8')
   return next

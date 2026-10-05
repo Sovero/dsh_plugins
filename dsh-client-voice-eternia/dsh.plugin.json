@@ -1,6 +1,6 @@
 {
   "id": "dsh-client-voice-eternia",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "main": "./lib/index.js",
   "description": "Voice input for DSH: microphone button, Russian speech recognition, text inserted at the caret; conversation mode with spoken replies.",
   "client": {

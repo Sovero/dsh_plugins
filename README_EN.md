@@ -8,7 +8,7 @@ command.
 | --- | --- | --- |
 | [`dsh-poslanik-deep-space`](dsh-poslanik-deep-space) | Deep space theme: stars, nebulae, dwarfs, suns, black holes, planets, ships with trails, comets, meteors. Pointer movement applies an electromagnetic perturbation to space. Bilingual settings panel. | 1.4.0 |
 | [`dsh-ocean-theme`](dsh-ocean-theme) | Ocean theme: small-fish schools, whales, sharks, jellyfish, kelp, corals and a shipwreck on the seabed. Pointer movement breaks the surface into ripples. Dark and light schemes. | 1.0.1 |
-| [`dsh-client-voice-eternia`](dsh-client-voice-eternia) | "Voice of Eternia" voice input: a microphone button, Russian speech recognition and text inserted at the caret. The host captures the audio, so dictation works inside the DSH Desktop window. Polishing runs on the same model as the conversation, with ready-made tasks. Three interface languages. | 0.1.0 |
+| [`dsh-client-voice-eternia`](dsh-client-voice-eternia) | "Voice of Eternia" voice input: two buttons in the composer — a microphone for dictation and a conversation button for talking out loud. Russian speech recognition, phrases sent without Enter, spoken replies with a local voice, voice histogram. Three interface languages. | 0.2.1 |
 
 ## Install
 
