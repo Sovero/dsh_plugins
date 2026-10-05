@@ -498,14 +498,19 @@ test('в шаблонной строке стилей нет обратных к
   assert.equal(/\$\{/.test(body), false, 'подстановка внутри стилей подменит правило значением')
 })
 
-test('группы настроек разложены двумя колонками', () => {
-  // Настроек стало много, и один узкий столбец заставлял прокручивать страницу
-  // ради пары переключателей. Колонок ровно ДВЕ: auto-fit на широком окне
-  // разворачивал все пять групп в один ряд, и карточки сжимались в полосу.
+test('настройки разделены на две колонки: диктовка и разговор', () => {
+  // Не украшение: человек приходит либо надиктовать, либо поговорить, и обе
+  // задачи требуют разного. Смешанный список из семи групп заставлял искать
+  // нужное среди всех.
+  const source = readFileSync(bundlePath, 'utf8')
+  assert.match(source, /settings\.columnDictation/, 'нужен заголовок колонки диктовки')
+  assert.match(source, /settings\.columnTalk/, 'нужен заголовок колонки разговора')
+  assert.match(source, /vet-page__column/, 'колонки должны быть размечены')
+  assert.match(source, /column: 'dictation'/, 'группы диктовки помечены колонкой')
+  assert.match(source, /column: 'talk'/, 'группы разговора помечены колонкой')
+
   const css = readFileSync(new URL('../src/client/theme.css.js', import.meta.url), 'utf8')
-  assert.match(css, /\.vet-page__groups\s*\{/, 'нужен контейнер групп')
   assert.match(css, /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/, 'колонок ровно две')
-  assert.match(css, /@media \(max-width: 760px\)/, 'узкое окно сводится в одну колонку')
   // Старая одноколоночная ширина не должна вернуться: именно она держала форму
   // в один узкий столбец.
   assert.equal(/\.vet-page__group\s*\{[^}]*max-width:\s*640px/.test(css), false,
@@ -558,4 +563,107 @@ test('инструкции задач лежат в словарях, а не в
   const form = source.slice(source.indexOf("id: 'plain'"), source.indexOf("id: 'clean'") + 70)
   assert.equal(/Ты — /.test(form), false, 'в наборе задач текстов быть не должно, только ключи')
   assert.match(form, /prompt: 'settings\.prompt\./, 'задача ссылается на ключ словаря')
+})
+
+test('кнопка сохранения стоит вверху и остаётся видимой при прокрутке', () => {
+  // Внизу она была недостижима: настройки занимают два экрана, и человек
+  // закрывал окно, не нажав «Сохранить», а изменения уходили молча.
+  const source = readFileSync(bundlePath, 'utf8')
+  const head = source.indexOf("className: 'vet-page__head'")
+  const save = source.indexOf("className: 'vet-page__save'")
+  assert.ok(head > 0 && save > head, 'кнопка должна идти после шапки в разметке')
+  assert.equal(source.includes('vet-page__foot'), false, 'подвал с кнопкой удалён')
+
+  const css = readFileSync(new URL('../src/client/theme.css.js', import.meta.url), 'utf8')
+  // Шапка липкая, иначе кнопка уехала бы с глаз ровно на первом же экране.
+  assert.match(css, /\.vet-page__head\s*\{[^}]*position:\s*sticky/, 'шапка повторяется при прокрутке')
+  assert.match(css, /\.vet-page__head\s*\{[^}]*background:/, 'фон обязателен, иначе просвечивают заголовки групп')
+})
+
+test('шапка настроек не накрывает кнопки управления окном', () => {
+  // В правом верхнем углу окна живут свернуть/развернуть/закрыть, и липкая
+  // шапка с фоном накрывала их. Отступ именно margin: внутренний отступ
+  // окрашивается фоном элемента, и визуально пустой угол всё равно перехватывал
+  // бы щелчки по системным кнопкам.
+  const css = readFileSync(new URL('../src/client/theme.css.js', import.meta.url), 'utf8')
+  const head = /\.vet-page__head\s*\{([^}]*)\}/.exec(css)
+  assert.notEqual(head, null, 'нужно правило шапки')
+  assert.match(head[1], /margin-right:\s*\d+px/, 'шапка должна освобождать правый верхний угол')
+  assert.equal(/padding-right/.test(head[1]), false,
+    'padding окрашивается фоном и не освобождает угол')
+  // Кнопка сохранения не должна быть в самом углу: она прижата к краю шапки,
+  // а шапка уже отодвинута от системных кнопок.
+  assert.match(css, /\.vet-page__save\s*\{[^}]*\}/, 'стиль кнопки сохранения на месте')
+})
+
+
+test('описание плагина английское и одинаковое в манифесте и в package.json', () => {
+  // Список плагинов показывает description и version ИЗ package.json, а не из
+  // dsh.plugin.json: правил только манифест — и интерфейс продолжал показывать
+  // старую версию с русским описанием при английском языке. Русская часть в
+  // описании тоже лишняя: интерфейс у человека английский, и двуязычная строка
+  // выглядит там чужеродно.
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+  const man = JSON.parse(readFileSync(new URL('../dsh.plugin.json', import.meta.url), 'utf8'))
+  assert.equal(pkg.version, man.version, `версии разошлись: ${pkg.version} и ${man.version}`)
+  assert.equal(pkg.description, man.description, 'описания разошлись между файлами')
+  assert.equal(/[а-яА-Я]/.test(pkg.description), false, 'в описании не должно остаться русского')
+  assert.match(pkg.description, /Voice input for DSH/, 'описание должно быть английским')
+})
+
+test('плагин переезжает вместе с языком интерфейса', () => {
+  // Снимок локали читается верно, но меняется только у того, кто на него
+  // подписан. Без подписки на locale/change подписи слотов и страница настроек
+  // оставались на старом языке: человек переключал DSH, а плагин — нет.
+  const source = readFileSync(bundlePath, 'utf8')
+  assert.match(source, /ctx\.on\('locale\/change'/, 'нужна подписка на смену локали')
+  assert.match(source, /function watchLocale/, 'язык должен отслеживаться')
+  assert.match(source, /useActiveLocale/, 'компоненты должны перерисовываться при смене языка')
+  assert.equal(/useActiveLocale\(\)/.test(source), true, 'хук обязан зваться в компонентах')
+  // Подписка снимается при выгрузке: иначе она остаётся жить после выгрузки
+  // плагина и держит его файлы в памяти.
+  assert.match(source, /stopWatching/, 'уборчик подписки обязателен')
+})
+
+test('панели обеих кнопок висят над ними и не перекрывают соседей', () => {
+  // Панель в потоке растягивает ячейку слота на всю ширину панели ввода и
+  // накрывает соседнюю кнопку: клик по микрофону попадал в чужую панель, и
+  // кнопка «не нажималась повторно». Обе панели обязаны быть absolute и висеть
+  // НАД своей кнопкой.
+  const source = readFileSync(bundlePath, 'utf8')
+  const panels = source.match(/position: 'absolute'[^}]*bottom: '100%'/g) || []
+  assert.ok(panels.length >= 2, `обе панели должны быть absolute над кнопкой, найдено ${panels.length}`)
+  // Контейнер каждой кнопки обязан быть relative: иначе absolute-панель
+  // отсчитывается от чужого предка и уезжает в случайное место.
+  const anchors = source.match(/position: 'relative', display: 'inline-flex'/g) || []
+  assert.ok(anchors.length >= 2, 'у каждой кнопки свой relative-контейнер')
+  // CLASSES.wrap не существует: обращение к нему давало className: undefined,
+  // то есть невидимую обёртку без стилей.
+  assert.equal(/CLASSES\.wrap/.test(source), false, 'CLASSES.wrap не существует — ключа нет в таблице')
+})
+
+test('в модулях бандла нет обращений к необъявленным именам', () => {
+  // После переезда разговора в отдельную кнопку в dictate.js остались ссылки на
+  // удалённые \`talk\` и \`watcher\`. Полдюжины тестов этого не заметили:
+  // \`node --check\` грамматику пропускает, а тесты текста искали ключевые слова,
+  // а не исполняли код. Человек увидел это как «кнопка не нажимается повторно» —
+  // \`finish\` падал на первой строке, до остановки записи.
+  //
+  // Проверяем по собранному тексту: каждое обращение вида `имя.current` обязано
+  // иметь объявление на верхнем уровне бандла.
+  const source = readFileSync(bundlePath, 'utf8')
+  const factory = source.slice(source.indexOf('factory: (require, styleSeat) => {') + 'factory: (require, styleSeat) => {'.length)
+  const body = factory.slice(0, factory.lastIndexOf('} });'))
+  // Объявленные в бандле имена верхнего уровня — то, что вообще может быть
+  // использовано. Ищем упоминания вида \`talk.current\`, которых нет в этом списке.
+  const declared = new Set()
+  for (const m of body.matchAll(/^\s*(?:var|const|let|function|class)\s+(\w+)/gm)) declared.add(m[1])
+  for (const m of body.matchAll(/^\s*var\s+\{([^}]+)\}/gm)) {
+    for (const part of m[1].split(',')) declared.add(part.trim())
+  }
+  // Имена, которые модули ждут из своих импортов, тоже объявлены выше — проверяем
+  // только те обращения, чей корень не объявлен НИГДЕ в бандле.
+  const roots = new Set([...body.matchAll(/(?<![.\w'"])([a-z][A-Za-z0-9_]*)\.current/g)].map((m) => m[1]))
+  const orphan = [...roots].filter((name) => declared.has(name) === false)
+  assert.deepEqual(orphan, [], `обращения к необъявленным ссылкам: ${orphan.join(', ')}`)
 })

@@ -17,6 +17,8 @@ export const CLASSES = {
   dot: 'vet-dot',
   meter: 'vet-meter',
   meterFill: 'vet-meter__fill',
+  histo: 'vet-histo',
+  histoBar: 'vet-histo__bar',
   error: 'vet-error',
   hint: 'vet-hint',
   address: 'vet-address',
@@ -87,6 +89,29 @@ export const VOICE_ETERNIA_CSS = `
   transition: width 80ms linear;
 }
 
+/* Гистограмма голоса: полосы растут снизу вверх, как уровень в студии.
+   Столбики без промежутков и с закруглением сверху — иначе ряд из двух
+   десятков полос читается как сплошная полка, а рисунок голоса пропадает.
+   Ширина полосы задана в em, а не в процентах: при 24 полосах процент дал бы
+   дробную ширину, которую браузер округлял по-разному на разных экранах. */
+.vet-histo {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 30px;
+  padding: 0 1px;
+}
+.vet-histo__bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  height: var(--vet-band, 0%);
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--dsw-alias-brand-primary, #4b7bec);
+  opacity: 0.85;
+  transition: height 90ms linear;
+}
+
 .vet-error { margin: 0; color: var(--dsw-alias-status-danger, #e5484d); font-size: 12px; line-height: 1.4; }
 .vet-hint { margin: 0; color: var(--dsw-alias-text-secondary, inherit); font-size: 12px; line-height: 1.4; }
 /* Адрес обязан читаться и копироваться дословно: моноширинный шрифт, рамка и
@@ -127,28 +152,76 @@ export const VOICE_ETERNIA_CSS = `
   box-sizing: border-box;
   overflow-y: auto;
 }
-/* Группы идут ДВУМЯ колонками: настроек стало много, и один узкий столбец
-   заставлял прокручивать страницу ради пары переключателей.
-   Колонок ровно две, а не «сколько влезет»: auto-fit на широком окне
-   разворачивал все пять групп в один ряд, и карточки сжимались до нечитаемой
-   полосы. Ниже 760px остаётся одна колонка — там две уже не помещаются. */
+/* Настройки разделены по смыслу на две колонки: слева диктовка, справа
+   разговор. Колонок ровно две, а не «сколько влезет»: auto-fit на широком окне
+   разворачивал все группы в один ряд, и карточки сжимались до нечитаемой полосы.
+   Ниже 900px остаётся одна колонка — там две уже не помещаются. */
 .vet-page__groups {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 18px;
   align-items: start;
+  max-width: 1200px;
 }
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .vet-page__groups { grid-template-columns: minmax(0, 1fr); }
 }
-.vet-page__groups {
-  max-width: 1100px;
+/* Колонка — это «Диктовка» или «Разговор». Заголовок заметно крупнее названий
+   групп внутри: иначе семь одинаковых подзаголовков читаются как список без
+   смысла, и человек не видит, где кончается диктовка и начинается разговор. */
+.vet-page__column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
 }
+.vet-page__columnTitle {
+  margin: 0;
+  padding: 0 2px 6px;
+  border-bottom: 1px solid var(--vet-border, rgba(128, 128, 128, 0.28));
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vet-dim, rgba(128, 128, 128, 1));
+}
+/* Шапка липкая: настройки занимают два экрана, и кнопка сохранения внизу
+   была недостижима, пока человек её не доскроллит. Здесь она всегда на виду.
+   Фон обязателен — иначе при прокрутке сквозь шапку просвечивают заголовки
+   групп, и рядом с названием появляется чужой текст.
+
+   Отступ справа — не украшение: в правом верхнем углу окна живут кнопки
+   свернуть/развернуть/закрыть, и шапка с фоном накрывала их. Именно margin,
+   а не padding: отступ внутри элемента окрашивается его фоном и до угла не
+   дотягивается — закрывать системные кнопки он перестал бы только визуально,
+   продолжая ловить на них щелчки. */
 .vet-page__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-right: 104px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--dsw-alias-border-secondary, rgba(127, 127, 127, 0.2));
+  background: var(--dsw-alias-surface-primary, Canvas);
+}
+/* Узкое окно: там зона оконных кнопок уже, но освобождать её всё равно нужно —
+   на них накладывался не только фон, но и сам клик по кнопке сохранения. */
+@media (max-width: 760px) {
+  .vet-page__head { margin-right: 84px; }
+}
+/* Подпись о сохранении живёт под шапкой: кнопка уехала наверх, и если оставить
+   подпись на прежнем месте, она оказалась бы под кнопкой, а не под полями, и
+   человек не видел бы, что изменения уже записаны. Разбор ошибки — ниже, у
+   второго правила того же класса. */
+.vet-page__saved {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.75;
+  align-self: flex-start;
 }
 .vet-page__title { margin: 0; font-size: 16px; font-weight: 600; }
 .vet-page__close {
@@ -220,9 +293,6 @@ export const VOICE_ETERNIA_CSS = `
   color: #b3261e;
   font-size: 12px;
 }
-
-/* Выбор модели: список DSH плюс своя строка ввода. Строка нужна для моделей,
-   которых в профиле нет: шлюза, локальной или ещё не добавленной. */
 .vet-page__model {
   display: flex;
   flex-direction: column;
@@ -256,9 +326,8 @@ export const VOICE_ETERNIA_CSS = `
   max-width: 34em;
 }
 
-/* Кнопка прижата вправо во всю ширину окна, а не к правому краю одной колонки:
-   в две колонки прежняя привязка оставляла её висеть посередине. */
-.vet-page__foot { display: flex; justify-content: flex-end; }
+/* Контейнера подвала больше нет: кнопка сохранения переехала в шапку, и пустое
+   правило осталось бы в коде вводящим в заблуждение — будто подвал существует. */
 .vet-page__save {
   padding: 8px 18px;
   border: 1px solid transparent;

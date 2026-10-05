@@ -140,21 +140,35 @@ function installSlot(ctx) {
       return () => {}
     }
     return slots.inject('conversation.input.right', () => {
-      const dispose = slots.register({
-        name: 'conversation.input.right',
-        id: SLOT_ID,
-        order: SLOT_ORDER,
-        // Thunk: текст перечитывается на каждой проекции, поэтому смена языка
-        // подхватывается без перерегистрации ячейки.
-        label: () => labelOf(ctx, 'dictate'),
-        locale: NAMESPACE,
-        // Модель сессии ищется тем же сервисом, что рисует селектор модели в
-        // панели ввода: одна модель — один источник правды. Полировка идёт
-        // именно ею, поэтому отдельной настройки для неё в форме нет.
-        inject: (sessionId) => ({ currentModel: () => readSessionModel(ctx, sessionId) }),
-      }, DictateButton)
-      console.log(`voice-eternia: ячейка «${SLOT_ID}» зарегистрирована в панели ввода`)
-      return () => dispose()
+      // Две ячейки — две кнопки. Раньше кнопка была одна, и её поведение
+      // зависело от настройки: человек нажимал микрофон в ожидании диктовки, а
+      // попадал в разговор — или наоборот. Теперь режим виден до нажатия:
+      // микрофон пишет и вставляет текст, вторая кнопка ведёт беседу.
+      const disposers = [
+        slots.register({
+          name: 'conversation.input.right',
+          id: SLOT_ID,
+          order: SLOT_ORDER,
+          // Thunk: текст перечитывается на каждой проекции, поэтому смена языка
+          // подхватывается без перерегистрации ячейки.
+          label: () => labelOf(ctx, 'dictate'),
+          locale: NAMESPACE,
+          // Модель сессии ищется тем же сервисом, что рисует селектор модели в
+          // панели ввода: одна модель — один источник правды. Полировка идёт
+          // именно ею, поэтому отдельной настройки для неё в форме нет.
+          inject: (sessionId) => ({ currentModel: () => readSessionModel(ctx, sessionId) }),
+        }, DictateButton),
+        slots.register({
+          name: 'conversation.input.right',
+          id: TALK_SLOT_ID,
+          order: TALK_SLOT_ORDER,
+          label: () => labelOf(ctx, 'talk'),
+          locale: NAMESPACE,
+          inject: (sessionId) => ({ currentModel: () => readSessionModel(ctx, sessionId) }),
+        }, TalkButton),
+      ]
+      console.log(`voice-eternia: ячейки «${SLOT_ID}» и «${TALK_SLOT_ID}» зарегистрированы в панели ввода`)
+      return () => { for (const dispose of disposers) dispose() }
     })
   } catch (error) {
     console.error('voice-eternia: не удалось занять место в слоте панели ввода', error)
@@ -214,6 +228,63 @@ function readSessionModel(ctx, sessionId) {
  * @param {string} key - ключ словаря.
  * @returns {string} подпись для интерфейса.
  */
+/**
+ * Активный язык интерфейса, о котором плагин знает сам.
+ *
+ * Зачем своя копия, если есть `getLocale().active`. Снимок локали читается
+ * верно, но он меняется только у того, кто на него подписан: без подписки
+ * подпись в слоте остаётся на старом языке, пока интерфейс DSH уже переключили.
+ * Человек видел бы русский пункт в английском окне — и наоборот.
+ *
+ * Сервис `locale` сам предлагает для этого событие `locale/change` (в
+ * `installLocale` есть только в будущем, в слотах его нет), поэтому подписка
+ * идёт на событие. Значение хранится здесь, а не в состоянии компонента:
+ * подписи слотов вызываются рантаймом без доступа к React.
+ *
+ * @type {string | undefined}
+ */
+let activeContext
+
+let watchedLocale
+
+/**
+ * Читает активный язык один раз и следит за его сменой.
+ *
+ * @param {object} ctx - клиентский контекст.
+ * @returns {void}
+ */
+function watchLocale(ctx) {
+  activeContext = ctx
+  watchedLocale = readActiveLocale(ctx)
+  // Клиентский контекст ОГРАНИЧЕН: из всех подписок доступен `on`. Возвращает
+  // ли он отписку — неизвестно, поэтому уборщик пробует оба способа, а при
+  // отсутствии обоих полагается на `ctx.effect`, который снимает всё сам.
+  let off
+  try {
+    off = ctx.on('locale/change', () => { watchedLocale = readActiveLocale(ctx) })
+  } catch {
+    // Событие может не поддерживаться — тогда текст просто останется на том
+    // языке, который был при загрузке. Это заметно, но не ломает ничего.
+  }
+  if (typeof off === 'function') return off
+  return undefined
+}
+
+/**
+ * Активный язык из снимка локали.
+ *
+ * @param {object} ctx - клиентский контекст.
+ * @returns {string | undefined} код языка либо undefined.
+ */
+function readActiveLocale(ctx) {
+  try {
+    const active = ctx.get('locale')?.getLocale?.()?.active
+    return typeof active === 'string' ? active : undefined
+  } catch {
+    return undefined
+  }
+}
+
 function labelOf(ctx, key) {
   // Ступень 1: язык берём из снимка локали, текст — из своих таблиц.
   //
@@ -223,7 +294,7 @@ function labelOf(ctx, key) {
   // подпись будет принята как годная, и человек увидит «Настройки голоса» в
   // английском окне.
   try {
-    const active = ctx.get('locale')?.getLocale?.()?.active
+    const active = watchedLocale ?? readActiveLocale(ctx)
     const own = active === undefined ? undefined : DICTIONARIES[active]?.[key]
     if (typeof own === 'string' && own !== '') return own
   } catch {
@@ -343,10 +414,15 @@ export function apply(ctx) {
     let removeSlot = () => {}
     let removeSettings = () => {}
     let removeLocale = () => {}
+    let stopWatching = () => {}
     try {
       // Словари идут первыми: ячейка ссылается на пространство имён, и пустая
       // подписка показала бы сырые ключи в первый же кадр.
       removeLocale = installLocale(ctx)
+      // Смена языка интерфейса ловится здесь: человек переключает DSH на
+      // русский — и плагин обязан поехать вместе с ним, а не остаться в
+      // английском окне русским текстом.
+      stopWatching = watchLocale(ctx) ?? (() => {})
       removeStyle = insertStyle(VOICE_ETERNIA_CSS)
       removeSlot = installSlot(ctx)
       removeSettings = installSettings(ctx)
@@ -358,6 +434,7 @@ export function apply(ctx) {
       try {
         removeSettings()
 
+        stopWatching()
         removeSlot()
         removeStyle()
         removeLocale()
@@ -371,3 +448,34 @@ export function apply(ctx) {
 }
 
 export { SLOT_ID, SLOT_ORDER, DictateButton }
+
+/**
+ * Активный язык интерфейса для компонентов.
+ *
+ * Подписи слотов получают язык сами (через `labelOf`), а компоненты читают его
+ * здесь: без подписки React не перерисует страницу настроек после смены языка,
+ * и человек увидит русские поля в английском окне — то есть ровно то, что
+ * требовал убрать.
+ *
+ * @returns {string | undefined} код языка либо undefined.
+ */
+export function useActiveLocale() {
+  const React = require('react')
+  const [active, setActive] = React.useState(watchedLocale)
+  React.useEffect(() => {
+    // Снимок на момент подписки: язык мог смениться между рендером и эффектом.
+    setActive(watchedLocale)
+    const ctx = activeContext
+    if (ctx === undefined) return
+    let off
+    try {
+      off = ctx.on('locale/change', () => { setActive(watchedLocale) })
+    } catch {
+      return
+    }
+    return () => {
+      if (typeof off === 'function') off()
+    }
+  }, [])
+  return active
+}

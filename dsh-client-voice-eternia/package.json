@@ -1,8 +1,8 @@
 {
   "name": "dsh-client-voice-eternia",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "Голосовой ввод для DSH: диктовка и режим беседы на русском языке с полировкой текста. Две кнопки на панели ввода.",
+  "description": "Voice input for DSH: microphone button, Russian speech recognition, text inserted at the caret; conversation mode with spoken replies.",
   "keywords": [
     "dsh",
     "deepseek-harness",
@@ -10,6 +10,7 @@
     "voice",
     "speech-to-text",
     "asr",
+    "tts",
     "russian",
     "heman"
   ],

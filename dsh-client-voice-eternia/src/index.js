@@ -22,6 +22,7 @@ import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 import z from '@deepseek-ai/schemastery'
 import * as capture from './capture.js'
+import * as speech from './speech.js'
 
 /** Префикс всех маршрутов пакета. Должен быть уникальным: повтор пути роняет строку. */
 export const API_PREFIX = '/voice-eternia'
@@ -133,6 +134,32 @@ export const Config = z.object({
       .description('Усиление входа, 1 — без изменений. Полезно для тихих микрофонов.'),
     noiseSuppress: z.boolean().default(true)
       .description('Подавить фоновый шум на записи.'),
+  }),
+
+  /** Разговорный режим: где кончилась фраза. */
+  conversation: z.object({
+    enabled: z.boolean().default(true)
+      .description('Отправлять распознанное в беседу сразу, без нажатия Enter.'),
+    threshold: z.number().default(0.008)
+      .description('Чувствительность микрофона. Ниже — слышны тихие голоса, но и фоновый шум.'),
+    silenceMs: z.number().default(700)
+      .description('Пауза, которой фраза считается законченной. Ниже — быстрее, но режет фразы.'),
+    onsetMs: z.number().default(180)
+      .description('Сколько звука нужно, чтобы началась фраза. Отсекает щелчки и скрипы.'),
+    minPhraseMs: z.number().default(400)
+      .description('Короче этой длины фраза считается шумом и не отправляется.'),
+  }),
+
+  /** Голос ответа. */
+  speech: z.object({
+    enabled: z.boolean().default(true)
+      .description('Читать ответ голосом.'),
+    voice: z.string().default('')
+      .description('Голос из списка на этой машине. Пусто — голос по умолчанию системы.'),
+    rate: z.number().default(0)
+      .description('Темп речи: от -10 (медленно) до 10 (быстро).'),
+    volume: z.number().default(100)
+      .description('Громкость, 0..100.'),
   }),
 
   /** Вставка результата в поле ввода. */
@@ -447,12 +474,12 @@ export function readSettings(dshHome, config = {}) {
     }
   }
 
-  const result = {
-    asr: { ...DEFAULT_SETTINGS.asr },
-    polish: { ...DEFAULT_SETTINGS.polish },
-    recording: { ...DEFAULT_SETTINGS.recording },
-    insert: { ...DEFAULT_SETTINGS.insert },
-    ui: { ...DEFAULT_SETTINGS.ui },
+  const result = {}
+  // Группы берутся из схемы, а не перечисляются руками: список в коде однажды
+  // разошёлся с настройками, и новые группы молча теряли значения при чтении
+  // файла — человек менял чувствительность микрофона, а она не применялась.
+  for (const [group, defaults] of Object.entries(DEFAULT_SETTINGS)) {
+    result[group] = { ...defaults }
   }
 
   for (const [key, path] of Object.entries(LEGACY_FIELDS)) {
@@ -805,6 +832,7 @@ export function apply(ctx, options = {}, config = {}) {
         }
 
         if (route === '/record/start' && request.method === 'POST') {
+          const body = await readJsonBody(request).catch(() => ({}))
           const bin = await capture.findRecorder()
           if (bin === null) {
             sendJson(response, 503, {
@@ -819,18 +847,27 @@ export function apply(ctx, options = {}, config = {}) {
             // всегда первым устройством и полной громкостью, а настройки в
             // карточке выглядели бы декорацией.
             const recording = settings.recording
+            const conversation = settings.conversation ?? {}
             const started = await capture.start({
               bin,
               device: recording.device,
               maxSeconds: recording.maxSeconds,
               inputGain: recording.inputGain,
               noiseSuppress: recording.noiseSuppress,
+              // Разговорный режим: запись непрерывная, звук режется на фразы по
+              // паузам, и каждая уходит в беседу сама.
+              streaming: body.streaming === true,
+              threshold: conversation.threshold,
+              silenceMs: conversation.silenceMs,
+              onsetMs: conversation.onsetMs,
+              minPhraseMs: conversation.minPhraseMs,
             })
             sendJson(response, 200, {
               ok: true,
               value: {
                 device: started.device,
                 maxSeconds: capture.MAX_RECORD_SECONDS,
+                bands: capture.BAND_COUNT,
               },
             })
           } catch (failure) {
@@ -862,6 +899,52 @@ export function apply(ctx, options = {}, config = {}) {
         if (route === '/record/cancel' && request.method === 'POST') {
           capture.cancel()
           sendJson(response, 200, { ok: true, value: { cancelled: true } })
+          return
+        }
+
+        // Забрать очередную нарезанную фразу. В разговорном режиме запись идёт
+        // непрерывно, и клиент сам выбирает, когда забирать: пока фраза не
+        // забрана, она лежит в очереди хоста и не занимает сеть.
+        if (route === '/record/phrase' && request.method === 'GET') {
+          const phrase = capture.takePhrase()
+          sendJson(response, 200, {
+            ok: true,
+            value: phrase === null
+              ? null
+              : {
+                  audioBase64: phrase.wav.toString('base64'),
+                  durationMs: phrase.durationMs,
+                },
+          })
+          return
+        }
+
+        // Голоса для выбора в настройках. Список приходит с машины: названия
+        // вроде «Microsoft Irina Desktop» человек не обязан знать наизусть.
+        if (route === '/voices' && request.method === 'GET') {
+          sendJson(response, 200, { ok: true, voices: await speech.listVoices() })
+          return
+        }
+
+        // Озвучка ответа. Голос, темп и громкость берутся из настроек, но тело
+        // запроса может их переопределить — иначе смена настройки требовала бы
+        // перезапуска разговора.
+        if (route === '/speak' && request.method === 'POST') {
+          const body = await readJsonBody(request).catch(() => ({}))
+          const voice = body.voice ?? settings.speech?.voice ?? ''
+          const rate = body.rate ?? settings.speech?.rate
+          const volume = body.volume ?? settings.speech?.volume
+          const text = typeof body.text === 'string' ? body.text : ''
+          const result = speech.speak({ text, voice, rate, volume })
+          sendJson(response, 200, { ok: result.ok, error: result.reason === undefined ? null : { code: result.reason, message: 'Нечего произносить.' } })
+          return
+        }
+
+        // Замолчать. В разговоре это не украшение: человек перебивает голос,
+        // чтобы ответ не заглушал его собственную фразу.
+        if (route === '/stop-speaking' && request.method === 'POST') {
+          speech.stopSpeaking()
+          sendJson(response, 200, { ok: true })
           return
         }
 

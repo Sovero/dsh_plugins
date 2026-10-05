@@ -220,7 +220,7 @@ export class Recording {
    *
    * @param {object} options - параметры.
    * @param {(kind: string, message: string) => void} [options.onFailure] - обработчик обрыва.
-   * @param {(level: number) => void} [options.onLevel] - уровень сигнала 0..1.
+   * @param {(level: number, bands?: number[]) => void} [options.onLevel] - уровень сигнала 0..1 и полосы гистограммы.
    */
   async start({ onFailure, onLevel } = {}) {
     this.onLevel = typeof onLevel === 'function' ? onLevel : null
@@ -266,7 +266,7 @@ export class Recording {
       return
     }
     this.seconds = state.seconds ?? 0
-    this.onLevel?.(state.level ?? 0)
+    this.onLevel?.(state.level ?? 0, Array.isArray(state.bands) ? state.bands : [])
   }
 
   /**

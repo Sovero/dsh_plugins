@@ -34,6 +34,8 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  dot: 'vet-dot',
 	  meter: 'vet-meter',
 	  meterFill: 'vet-meter__fill',
+	  histo: 'vet-histo',
+	  histoBar: 'vet-histo__bar',
 	  error: 'vet-error',
 	  hint: 'vet-hint',
 	  address: 'vet-address',
@@ -104,6 +106,29 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  transition: width 80ms linear;
 	}
 
+	/* Гистограмма голоса: полосы растут снизу вверх, как уровень в студии.
+	   Столбики без промежутков и с закруглением сверху — иначе ряд из двух
+	   десятков полос читается как сплошная полка, а рисунок голоса пропадает.
+	   Ширина полосы задана в em, а не в процентах: при 24 полосах процент дал бы
+	   дробную ширину, которую браузер округлял по-разному на разных экранах. */
+	.vet-histo {
+	  display: flex;
+	  align-items: flex-end;
+	  gap: 2px;
+	  height: 30px;
+	  padding: 0 1px;
+	}
+	.vet-histo__bar {
+	  flex: 1 1 0;
+	  min-width: 2px;
+	  height: var(--vet-band, 0%);
+	  min-height: 2px;
+	  border-radius: 2px 2px 0 0;
+	  background: var(--dsw-alias-brand-primary, #4b7bec);
+	  opacity: 0.85;
+	  transition: height 90ms linear;
+	}
+
 	.vet-error { margin: 0; color: var(--dsw-alias-status-danger, #e5484d); font-size: 12px; line-height: 1.4; }
 	.vet-hint { margin: 0; color: var(--dsw-alias-text-secondary, inherit); font-size: 12px; line-height: 1.4; }
 	/* Адрес обязан читаться и копироваться дословно: моноширинный шрифт, рамка и
@@ -144,28 +169,76 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  box-sizing: border-box;
 	  overflow-y: auto;
 	}
-	/* Группы идут ДВУМЯ колонками: настроек стало много, и один узкий столбец
-	   заставлял прокручивать страницу ради пары переключателей.
-	   Колонок ровно две, а не «сколько влезет»: auto-fit на широком окне
-	   разворачивал все пять групп в один ряд, и карточки сжимались до нечитаемой
-	   полосы. Ниже 760px остаётся одна колонка — там две уже не помещаются. */
+	/* Настройки разделены по смыслу на две колонки: слева диктовка, справа
+	   разговор. Колонок ровно две, а не «сколько влезет»: auto-fit на широком окне
+	   разворачивал все группы в один ряд, и карточки сжимались до нечитаемой полосы.
+	   Ниже 900px остаётся одна колонка — там две уже не помещаются. */
 	.vet-page__groups {
 	  display: grid;
 	  grid-template-columns: repeat(2, minmax(0, 1fr));
-	  gap: 14px;
+	  gap: 18px;
 	  align-items: start;
+	  max-width: 1200px;
 	}
-	@media (max-width: 760px) {
+	@media (max-width: 900px) {
 	  .vet-page__groups { grid-template-columns: minmax(0, 1fr); }
 	}
-	.vet-page__groups {
-	  max-width: 1100px;
+	/* Колонка — это «Диктовка» или «Разговор». Заголовок заметно крупнее названий
+	   групп внутри: иначе семь одинаковых подзаголовков читаются как список без
+	   смысла, и человек не видит, где кончается диктовка и начинается разговор. */
+	.vet-page__column {
+	  display: flex;
+	  flex-direction: column;
+	  gap: 12px;
+	  min-width: 0;
 	}
+	.vet-page__columnTitle {
+	  margin: 0;
+	  padding: 0 2px 6px;
+	  border-bottom: 1px solid var(--vet-border, rgba(128, 128, 128, 0.28));
+	  font-size: 13px;
+	  font-weight: 650;
+	  letter-spacing: 0.06em;
+	  text-transform: uppercase;
+	  color: var(--vet-dim, rgba(128, 128, 128, 1));
+	}
+	/* Шапка липкая: настройки занимают два экрана, и кнопка сохранения внизу
+	   была недостижима, пока человек её не доскроллит. Здесь она всегда на виду.
+	   Фон обязателен — иначе при прокрутке сквозь шапку просвечивают заголовки
+	   групп, и рядом с названием появляется чужой текст.
+
+	   Отступ справа — не украшение: в правом верхнем углу окна живут кнопки
+	   свернуть/развернуть/закрыть, и шапка с фоном накрывала их. Именно margin,
+	   а не padding: отступ внутри элемента окрашивается его фоном и до угла не
+	   дотягивается — закрывать системные кнопки он перестал бы только визуально,
+	   продолжая ловить на них щелчки. */
 	.vet-page__head {
+	  position: sticky;
+	  top: 0;
+	  z-index: 2;
 	  display: flex;
 	  align-items: center;
 	  justify-content: space-between;
 	  gap: 12px;
+	  margin-right: 104px;
+	  padding-bottom: 10px;
+	  border-bottom: 1px solid var(--dsw-alias-border-secondary, rgba(127, 127, 127, 0.2));
+	  background: var(--dsw-alias-surface-primary, Canvas);
+	}
+	/* Узкое окно: там зона оконных кнопок уже, но освобождать её всё равно нужно —
+	   на них накладывался не только фон, но и сам клик по кнопке сохранения. */
+	@media (max-width: 760px) {
+	  .vet-page__head { margin-right: 84px; }
+	}
+	/* Подпись о сохранении живёт под шапкой: кнопка уехала наверх, и если оставить
+	   подпись на прежнем месте, она оказалась бы под кнопкой, а не под полями, и
+	   человек не видел бы, что изменения уже записаны. Разбор ошибки — ниже, у
+	   второго правила того же класса. */
+	.vet-page__saved {
+	  margin: 0;
+	  font-size: 12px;
+	  opacity: 0.75;
+	  align-self: flex-start;
 	}
 	.vet-page__title { margin: 0; font-size: 16px; font-weight: 600; }
 	.vet-page__close {
@@ -237,9 +310,6 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  color: #b3261e;
 	  font-size: 12px;
 	}
-
-	/* Выбор модели: список DSH плюс своя строка ввода. Строка нужна для моделей,
-	   которых в профиле нет: шлюза, локальной или ещё не добавленной. */
 	.vet-page__model {
 	  display: flex;
 	  flex-direction: column;
@@ -273,9 +343,8 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  max-width: 34em;
 	}
 
-	/* Кнопка прижата вправо во всю ширину окна, а не к правому краю одной колонки:
-	   в две колонки прежняя привязка оставляла её висеть посередине. */
-	.vet-page__foot { display: flex; justify-content: flex-end; }
+	/* Контейнера подвала больше нет: кнопка сохранения переехала в шапку, и пустое
+	   правило осталось бы в коде вводящим в заблуждение — будто подвал существует. */
 	.vet-page__save {
 	  padding: 8px 18px;
 	  border: 1px solid transparent;
@@ -431,6 +500,41 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  'settings.prompt.code': 'Ты — редактор технической речи. Приведи расшифровку к техническому виду: имена функций, типов, команд и путей пиши так, как их принято писать в коде, английские термины не переводи. Сохрани смысл и порядок. Верни только текст.',
 	  'settings.prompt.message': 'Ты — редактор коротких сообщений. Сделай расшифровку коротким сообщением в мессенджер: без приветствий и подписи, одна мысль, живые формулировки, знаки препинания расставлены. Верни только сообщение.',
 	  'settings.prompt.clean': 'Ты — корректор. Исправь только орфографию, пунктуацию и согласование. Стиль, порядок слов и все формулировки оставь как в исходнике. Верни только исправленный текст.',
+	  'settings.groupConversation': 'Разговор',
+	  'settings.groupSpeech': 'Голос ответа',
+	  'settings.converse': 'Отправлять сразу',
+	  'settings.hintConverse': 'Показывает кнопку разговора рядом с микрофоном. Выключено — остаётся только диктовка.',
+	  'settings.threshold': 'Чувствительность',
+	  'settings.hintThreshold': 'Ниже — слышны тихие голоса, но и фоновый шум. Обычное значение 0.008.',
+	  'settings.silence': 'Пауза, конец фразы, мс',
+	  'settings.hintSilence': 'Сколько молчания считать концом фразы. Меньше — быстрее отвечает, но может разрезать фразу.',
+	  'settings.onset': 'Начало фразы, мс',
+	  'settings.hintOnset': 'Сколько звука нужно, чтобы начать фразу. Защищает от щелчков и скрипов.',
+	  'settings.minPhrase': 'Короче не отправлять, мс',
+	  'settings.hintMinPhrase': 'Слишком короткий звук считается шумом и в беседу не идёт.',
+	  'settings.speakOn': 'Читать ответ вслух',
+	  'settings.hintSpeakOn': 'Ответ агента произносится голосом по окончании.',
+	  'settings.voice': 'Голос',
+	  'settings.hintVoice': 'Голоса берутся с этой машины. Пусто — голос по умолчанию системы.',
+	  'settings.rate': 'Темп речи',
+	  'settings.hintRate': 'От -10 (медленно) до 10 (быстро). Обычно 0.',
+	  'settings.volume': 'Громкость',
+	  'settings.hintVolume': 'От 0 до 100.',
+	  'settings.noVoices': 'Голосов на машине не найдено — синтез речи недоступен.',
+	  'settings.columnDictation': 'Диктовка',
+	  'settings.columnTalk': 'Разговор',
+	  'histo.label': 'Уровень голоса',
+	  'status.waiting': 'Слушаю — говорите',
+	  'status.hearing': 'Слышу вас',
+	  'status.answering': 'Отвечаю',
+	  'status.sent': 'Отправлено',
+	  'status.closed': 'Разговор закончен',
+	  'title.listen': 'Разговор: говорите, пауза отправит фразу',
+	  'settings.voicesMissing': 'Список голосов ещё не загружен: перезапустите DSH, чтобы он подхватил новую половину плагина.',
+	  'talk': 'Разговор голосом',
+	  'title.talk': 'Разговор: говорите, пауза отправит фразу',
+	  'hint.talk': 'Нажмите ещё раз, чтобы закончить разговор.',
+	  'error.noChatRegion': 'Не нашёл область чата: откройте беседу и нажмите снова.',
 	}
 
 	/**
@@ -544,6 +648,41 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  'settings.prompt.code': 'You are a technical speech editor. Turn the transcript into technical prose: write function, type, command and path names the way code does, and do not translate English terms. Keep the meaning and the order. Return only the text.',
 	  'settings.prompt.message': 'You are a short-message editor. Turn the transcript into a brief chat message: no greetings, no signature, one thought, natural wording, punctuation in place. Return only the message.',
 	  'settings.prompt.clean': 'You are a proofreader. Fix only spelling, punctuation and agreement. Keep the style, word order and every wording as in the source. Return only the corrected text.',
+	  'settings.groupConversation': 'Conversation',
+	  'settings.groupSpeech': 'Reply voice',
+	  'settings.converse': 'Send automatically',
+	  'settings.hintConverse': 'Shows the conversation button next to the microphone. Off — only dictation remains.',
+	  'settings.threshold': 'Sensitivity',
+	  'settings.hintThreshold': 'Lower — quieter voices are caught, but so is background noise. 0.008 is usual.',
+	  'settings.silence': 'Pause ending a phrase, ms',
+	  'settings.hintSilence': 'How much silence counts as the end of a phrase. Less reacts faster but may cut a phrase.',
+	  'settings.onset': 'Phrase start, ms',
+	  'settings.hintOnset': 'How much sound starts a phrase. Keeps clicks and chair creaks out.',
+	  'settings.minPhrase': 'Shorter than this is ignored, ms',
+	  'settings.hintMinPhrase': 'A sound shorter than this is noise and never reaches the chat.',
+	  'settings.speakOn': 'Speak the reply',
+	  'settings.hintSpeakOn': 'The reply is read aloud once it is finished.',
+	  'settings.voice': 'Voice',
+	  'settings.hintVoice': 'Voices come from this machine. Empty — the system default voice.',
+	  'settings.rate': 'Speaking rate',
+	  'settings.hintRate': 'From -10 (slow) to 10 (fast). 0 is normal.',
+	  'settings.volume': 'Volume',
+	  'settings.hintVolume': 'From 0 to 100.',
+	  'settings.noVoices': 'No voices found on this machine — speech synthesis is unavailable.',
+	  'settings.columnDictation': 'Dictation',
+	  'settings.columnTalk': 'Conversation',
+	  'histo.label': 'Voice level',
+	  'status.waiting': 'Listening — speak',
+	  'status.hearing': 'I hear you',
+	  'status.answering': 'Answering',
+	  'status.sent': 'Sent',
+	  'status.closed': 'Conversation ended',
+	  'title.listen': 'Conversation: speak, a pause sends the phrase',
+	  'settings.voicesMissing': 'The voice list has not loaded yet: restart DSH so it picks up the new half of the plugin.',
+	  'talk': 'Voice conversation',
+	  'title.talk': 'Conversation: speak, a pause sends the phrase',
+	  'hint.talk': 'Press again to end the conversation.',
+	  'error.noChatRegion': 'Chat area not found: open a conversation and try again.',
 	}
 
 	/**
@@ -660,6 +799,41 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  'settings.prompt.code': '你是技术语音编辑。把转写整理成技术表达：函数名、类型名、命令和路径按代码习惯书写，英文术语不翻译。保留含义与顺序。只返回文本。',
 	  'settings.prompt.message': '你是短消息编辑。把转写整理成一条聊天消息：不要称呼和落款，只表达一个意思，措辞自然，标点齐全。只返回消息。',
 	  'settings.prompt.clean': '你是校对员。只修正拼写、标点和一致性，风格、语序和所有措辞保持原样。只返回修正后的文本。',
+	  'settings.groupConversation': '对话',
+	  'settings.groupSpeech': '回复语音',
+	  'settings.converse': '自动发送',
+	  'settings.hintConverse': '在麦克风旁显示对话按钮。关闭后仅保留听写。',
+	  'settings.threshold': '灵敏度',
+	  'settings.hintThreshold': '越低越能听到轻声，但也更容易拾取背景噪音，通常为 0.008。',
+	  'settings.silence': '断句静音（毫秒）',
+	  'settings.hintSilence': '多长的安静算一句话结束。越短反应越快，但可能切断句子。',
+	  'settings.onset': '起句时间（毫秒）',
+	  'settings.hintOnset': '需要多少声音才判定开始说话，可排除点击声和椅子响。',
+	  'settings.minPhrase': '短于此值不发送（毫秒）',
+	  'settings.hintMinPhrase': '比这更短的声音视为噪音，不发到对话中。',
+	  'settings.speakOn': '朗读回复',
+	  'settings.hintSpeakOn': '回复完成后用语音朗读。',
+	  'settings.voice': '语音',
+	  'settings.hintVoice': '语音列表来自本机。留空则使用系统默认语音。',
+	  'settings.rate': '语速',
+	  'settings.hintRate': '范围 -10（最慢）到 10（最快），通常为 0。',
+	  'settings.volume': '音量',
+	  'settings.hintVolume': '范围 0 到 100。',
+	  'settings.noVoices': '本机未找到语音 — 无法合成语音。',
+	  'settings.columnDictation': '听写',
+	  'settings.columnTalk': '对话',
+	  'histo.label': '音量',
+	  'status.waiting': '正在聆听 — 请说话',
+	  'status.hearing': '听到你了',
+	  'status.answering': '正在回答',
+	  'status.sent': '已发送',
+	  'status.closed': '对话结束',
+	  'title.listen': '对话：说话，停顿即发送',
+	  'settings.voicesMissing': '语音列表尚未加载：请重启 DSH，使其加载插件的新部分。',
+	  'talk': '语音对话',
+	  'title.talk': '对话：说话，停顿即发送',
+	  'hint.talk': '再次按下即可结束对话。',
+	  'error.noChatRegion': '未找到聊天区域：请打开对话后重试。',
 	}
 
 	/** Все словари по идентификаторам локалей. */
@@ -706,6 +880,95 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	      return value === undefined || value === null ? match : String(value)
 	    })
 	  }
+	}
+
+	// ── src/speakText.js ────────────────────────────────────────────
+	// Что есть смысл произносить вслух.
+	//
+	// Ответ агента — не только проза. В нём разметка, следы работы инструментов,
+	// ссылки, имена файлов и таблицы. Голос, который читает это вслух, мгновенно
+	// перестаёт быть разговором: он тараторит «закрывающая скобка» и «жирный» и
+	// произносит путь к файлу там, где человек ждёт ответа по делу.
+	//
+	// Функция живёт отдельно от синтеза, потому что нужна обеим половинам плагина:
+	// хосту — на случай озвучки с его стороны, клиенту — чтобы решить, стоит ли
+	// вообще будить голос. Проверять текст дважды, но по-разному, значит однажды
+	// получить разные ответы на одном и том же ответе агента.
+
+	/**
+	 * Убирает из текста то, что не нужно произносить.
+	 *
+	 * Правила намеренно грубые: лучше прочитать лишнее слово, чем молча проглотить
+	 * половину фразы. Дальше голос всё равно спотыкается о разметку, и это заметно,
+	 * — а пропущенная мысль заметно хуже.
+	 *
+	 * @param {string} text - исходный текст.
+	 * @returns {string} то, что есть смысл произнести.
+	 */
+	function speakable(text) {
+	  if (typeof text !== 'string') return ''
+	  return text
+	    // Блоки кода: их не читают, а «закрывающая скобка» вслух звучит абсурдом.
+	    .replace(/```[\s\S]*?```/g, ' ')
+	    // Ссылка и её текст: читать текст, молчаливую часть — нет.
+	    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+	    // Служебные метки инструментов вида <tool:call> и </tool:call>. Закрывающие
+	    // обязательны в том же шаблоне: с двоеточием в имени они не похожи на
+	    // обычный тег, и в голос попадали вместе с «выводом» внутри.
+	    .replace(/<\/?[a-z][\w-]*:[^>]*>/gi, ' ')
+	    // Обычные HTML-подобные теги: не читаем, но пробел сохраняем.
+	    .replace(/<\/?[a-z][\w-]*(?:\s[^>]*)?>/gi, ' ')
+	    // Таблицы читать нельзя — колонки сливаются в кашу из названий.
+	    .replace(/^\s*\|.*\|\s*$/gm, ' ')
+	    // Списки-маркеры и нумерация: голос читает «тире» вслух, а это шум.
+	    .replace(/^\s*(?:[-*+]|\d+[.)])\s+/gm, '')
+	    // Заголовки: решётки произносятся, а не смысл.
+	    .replace(/^\s*#{1,6}\s+/gm, '')
+	    // Акцент и код: жирный, курсив и кавычки.
+	    .replace(/\*\*([^*]+)\*\*/g, '$1')
+	    .replace(/(?<![A-Za-z0-9])[*_]([^*_]+)[*_](?![A-Za-z0-9])/g, '$1')
+	    .replace(/`([^`\n]+)`/g, '$1')
+	    .replace(/«([^»]*)»/g, '$1')
+	    .replace(/„([^“]*)“/g, '$1')
+	    // Горизонтальные разделители — тире вместо содержательного текста.
+	    .replace(/^\s*(?:[-*_]\s*){3,}$/gm, ' ')
+	    .replace(/\s+/g, ' ')
+	    .trim()
+	}
+
+	/**
+	 * Делит длинный ответ на части, удобные для произнесения подряд.
+	 *
+	 * SAPI и так умеет паузы, но очень длинный текст он начинает тараторить к
+	 * концу. Разбивка по концам предложений сохраняет интонацию: голос ставит
+	 * дыхание там, где человек поставил бы его сам.
+	 *
+	 * @param {string} text - подготовленный текст.
+	 * @param {number} [limit] - предел длины части в знаках.
+	 * @returns {string[]} части по порядку.
+	 */
+	function chunks(text, limit = 400) {
+	  const clean = speakable(text)
+	  if (clean === '') return []
+	  const parts = []
+	  let rest = clean
+	  while (rest.length > limit) {
+	    // Ищем последнюю точку или запятую в пределах лимита, но не в самом конце:
+	    // иначе фраза разорвётся на выдохе посреди мысли.
+	    let cut = -1
+	    for (let at = Math.min(limit, rest.length - 1); at > limit / 2; at -= 1) {
+	      const char = rest[at]
+	      if (char === '.' || char === '?' || char === '!' || char === ';') {
+	        cut = at + 1
+	        break
+	      }
+	    }
+	    if (cut === -1) cut = limit
+	    parts.push(rest.slice(0, cut).trim())
+	    rest = rest.slice(cut).trim()
+	  }
+	  if (rest !== '') parts.push(rest)
+	  return parts.filter((part) => part !== '')
 	}
 
 	// ── src/client/api.js ───────────────────────────────────────────
@@ -765,8 +1028,25 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	 *
 	 * @returns {Promise<{ ok: boolean, device?: string, maxSeconds?: number, error?: object }>}
 	 */
-	async function startRecording() {
-	  return post(`${API_PREFIX}/record/start`, {})
+	async function startRecording(options = {}) {
+	  return post(`${API_PREFIX}/record/start`, { streaming: options.streaming === true })
+	}
+
+	/**
+	 * Забирает очередную нарезанную фразу.
+	 *
+	 * Фразы режет хост: он слышит речь и сам решает, где она кончилась. Пока фраза
+	 * не забрана, она лежит на хосте и в сеть не идёт.
+	 *
+	 * @returns {Promise<{ ok: boolean, value?: { audioBase64: string, durationMs: number } | null }>}
+	 */
+	async function takePhrase() {
+	  try {
+	    const response = await fetch(`${API_PREFIX}/record/phrase`, { method: 'GET' })
+	    return await parse(response)
+	  } catch {
+	    return { ok: false }
+	  }
 	}
 
 	/**
@@ -956,6 +1236,68 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	    return payload.ok === true && Array.isArray(payload.credentials) ? payload.credentials : null
 	  } catch {
 	    return null
+	  }
+	}
+
+	/**
+	 * Читает список голосов синтеза с машины.
+	 *
+	 * Список приходит с хоста, потому что голоса — часть системы, а не плагина:
+	 * то, что стоит на этой Windows, и есть предложение. Имя голоса приходит
+	 * ровно такое, каким его знает SAPI, иначе выбрать было бы нечем.
+	 *
+	 * @returns {Promise<Array<object>|null>} голоса либо null при недоступности.
+	 */
+	async function readVoices() {
+	  try {
+	    const response = await fetch(`${API_PREFIX}/voices`, { method: 'GET' })
+	    // Отсутствие маршрута и пустой список — разные вещи, и человек должен
+	    // видеть разное: первый говорит «перезапусти DSH», второй — «на этой
+	    // машине нет голосов». null означает «не знаю», [] — «знаю, что пусто».
+	    if (response.status === 404) return 'missing'
+	    const payload = await parse(response)
+	    return payload.ok === true && Array.isArray(payload.voices) ? payload.voices : 'missing'
+	  } catch {
+	    return 'missing'
+	  }
+	}
+
+	/**
+	 * Просит хоста произнести текст.
+	 *
+	 * @param {object} options - параметры.
+	 * @param {string} options.text - что сказать.
+	 * @param {string} [options.voice] - голос.
+	 * @param {number} [options.rate] - темп.
+	 * @param {number} [options.volume] - громкость.
+	 * @returns {Promise<boolean>} получилось ли.
+	 */
+	async function speak({ text, voice, rate, volume }) {
+	  try {
+	    const response = await fetch(`${API_PREFIX}/speak`, {
+	      method: 'POST',
+	      headers: { 'content-type': 'application/json' },
+	      body: JSON.stringify({ text, voice, rate, volume }),
+	    })
+	    const payload = await parse(response)
+	    return payload.ok === true
+	  } catch {
+	    return false
+	  }
+	}
+
+	/**
+	 * Просит хоста замолчать.
+	 *
+	 * @returns {Promise<boolean>} получилось ли.
+	 */
+	async function stopSpeaking() {
+	  try {
+	    const response = await fetch(`${API_PREFIX}/stop-speaking`, { method: 'POST' })
+	    const payload = await parse(response)
+	    return payload.ok === true
+	  } catch {
+	    return false
 	  }
 	}
 
@@ -1182,7 +1524,7 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	   *
 	   * @param {object} options - параметры.
 	   * @param {(kind: string, message: string) => void} [options.onFailure] - обработчик обрыва.
-	   * @param {(level: number) => void} [options.onLevel] - уровень сигнала 0..1.
+	   * @param {(level: number, bands?: number[]) => void} [options.onLevel] - уровень сигнала 0..1 и полосы гистограммы.
 	   */
 	  async start({ onFailure, onLevel } = {}) {
 	    this.onLevel = typeof onLevel === 'function' ? onLevel : null
@@ -1228,7 +1570,7 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	      return
 	    }
 	    this.seconds = state.seconds ?? 0
-	    this.onLevel?.(state.level ?? 0)
+	    this.onLevel?.(state.level ?? 0, Array.isArray(state.bands) ? state.bands : [])
 	  }
 
 	  /**
@@ -1291,6 +1633,435 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	async function listMicrophones() {
 	  return []
 	}
+
+	// ── src/client/talk.js ──────────────────────────────────────────
+	// Разговорный режим: человек говорит, ответ приходит голосом.
+	//
+	// Отличие от диктовки. Диктовка — это «нажал, сказал, посмотрел в поле»:
+	// человек каждое предложение отправляет руками. Разговор — это когда запись
+	// идёт непрерывно, а система сама решает, где кончилась фраза, распознаёт её и
+	// отправляет в беседу. Именно здесь появляется ощущение разговора: пауза вместо
+	// кнопки.
+	//
+	// Задержка складывается из трёх частей и это важно понимать честно:
+	//   пауза до конца фразы (по умолчанию 1.2 сек) → распознавание (~1 сек) →
+	//   ответ агента (его дело) → озвучка (локальная, десятки миллисекунд).
+	// Итого цикл 2–4 секунды. Сократить можно паузой и моделью распознавания, но не
+	// ценой надёжности: нарезать фразу раньше, чем человек договорил, хуже, чем
+	// ждать.
+	//
+	// Никакого `getUserMedia` здесь нет по той же причине, что и в диктовке:
+	// окно DSH Desktop — Electron с белым списком разрешений, где нет `media`.
+	// Всё, что здесь происходит, — опрос хоста и отправка текста.
+
+
+
+
+	/** Как часто опрашиваем состояние, мс. Для гистограммы этого достаточно. */
+	const POLL_MS = 120
+
+	/**
+	 * Один разговор: запись, нарезка фраз, отправка.
+	 *
+	 * Жизненный цикл тот же, что у диктовки: `start()` → работает → `stop()`.
+	 * Отмена, сбой и выгрузка плагина ведут в один `dispose()`, поэтому повторный
+	 * вызов безопасен: освобождение обязано быть идемпотентным, иначе микрофон
+	 * остался бы открытым после выгрузки.
+	 */
+	class Talk {
+	  /**
+	   * @param {object} [options] - настройки.
+	   * @param {object} [options.settings] - настройки плагина.
+	   * @param {(text: string) => void} [options.onSend] - отправка текста в беседу.
+	   * @param {(status: object) => void} [options.onState] - смена состояния панели.
+	   * @param {(bands: number[]) => void} [options.onBands] - гистограмма голоса.
+	   * @param {(kind: string, message: string) => void} [options.onFailure] - обрыв.
+	   * @param {(text: string) => void} [options.onPartial] - услышанное текстом.
+	   */
+	  constructor(options = {}) {
+	    this.settings = options.settings ?? {}
+	    this.onSend = typeof options.onSend === 'function' ? options.onSend : null
+	    this.onState = typeof options.onState === 'function' ? options.onState : null
+	    this.onBands = typeof options.onBands === 'function' ? options.onBands : null
+	    this.onFailure = typeof options.onFailure === 'function' ? options.onFailure : null
+	    this.onPartial = typeof options.onPartial === 'function' ? options.onPartial : null
+	    this.recognizer = typeof options.recognize === 'function' ? options.recognize : null
+
+	    this.phase = 'idle'
+	    this.timer = 0
+	    this.disposed = false
+	    this.bands = []
+	    this.speaking = false
+	    this.pending = 0
+	    /** Фраза уже в работе: две одновременно нельзя, иначе ответы будут переплетаться. */
+	    this.busy = false
+	    /** Что сейчас произносится — нужно, чтобы замолчать на перебивании. */
+	    this.talking = false
+	  }
+
+	  /**
+	   * Начинает разговор.
+	   *
+	   * @returns {Promise<void>}
+	   */
+	  async start() {
+	    if (this.disposed) throw new Error('разговор уже закрыт')
+	    if (this.phase !== 'idle') throw new Error('разговор уже идёт')
+
+	    const answer = await startRecording({ streaming: true })
+	    if (this.disposed) {
+	      // Разобрали, пока шёл запрос: микрофон не должен остаться открытым.
+	      void cancelRecording()
+	      return
+	    }
+	    if (answer.ok !== true) throw classifyFailure(answer)
+
+	    this.phase = 'listening'
+	    this.emitState()
+	    this.timer = setInterval(() => { void this.poll() }, POLL_MS)
+	  }
+
+	  /**
+	   * Один опрос: гистограмма, состояние речи и забор готовых фраз.
+	   *
+	   * @returns {Promise<void>}
+	   */
+	  async poll() {
+	    if (this.phase !== 'listening') return
+	    const answer = await recordingStatus()
+	    if (this.disposed || answer.ok !== true) return
+	    const state = answer.value ?? {}
+
+	    if (state.recording !== true) {
+	      // Хост закончил запись сам. Молчать нельзя: человек будет думать, что его
+	      // слушают, а его уже не слушают.
+	      this.phase = 'ended'
+	      this.clearTimer()
+	      this.emitState()
+	      this.onFailure?.('ended', '')
+	      return
+	    }
+
+	    if (Array.isArray(state.bands) && state.bands.length > 0) {
+	      this.bands = state.bands
+	      this.onBands?.(state.bands)
+	    }
+	    this.speaking = state.speaking === true
+	    this.pending = typeof state.pending === 'number' ? state.pending : 0
+
+	    // Фраза отправляется по одной. Вторая берётся, когда первая ушла: пока
+	    // распознавание и ответ идут, человек может уже договорить следующую.
+	    if (this.pending > 0 && this.busy !== true) {
+	      this.busy = true
+	      // Пока фраза распознаётся, панель обязана это показать: молчание в
+	      // несколько секунд человек читает как зависание, хотя сеть работает.
+	      this.phase = 'recognizing'
+	      this.emitState()
+	      void this.takeAndSend()
+	    }
+	  }
+
+	  /**
+	   * Забирает фразу, распознаёт и отправляет в беседу.
+	   *
+	   * @returns {Promise<void>}
+	   */
+	  async takeAndSend() {
+	    try {
+	      const answer = await takePhrase()
+	      if (this.disposed) return
+	      if (answer.ok !== true || answer.value === null || answer.value === undefined) return
+	      const audio = answer.value.audioBase64
+	      if (typeof audio !== 'string' || audio === '') return
+	      const text = await this.recognize(audio)
+	      if (this.disposed) return
+	      const clean = typeof text === 'string' ? text.trim() : ''
+	      // Пустой результат — это не ошибка: человек выдохнул, а не сказал слова.
+	      // Отправлять пустоту в беседу нельзя, от неё ломается история диалога.
+	      if (clean === '') return
+	      this.onSend?.(clean)
+	    } catch (failure) {
+	      if (this.disposed === false) {
+	        const { message } = describeFailure(failure)
+	        this.onFailure?.('recognize', message)
+	      }
+	    } finally {
+	      this.busy = false
+	      // Возвращаемся к слушанию: следующая фраза может прийти в любой момент.
+	      if (this.disposed === false) {
+	        this.phase = 'listening'
+	        this.emitState()
+	      }
+	    }
+	  }
+
+	  /**
+	   * Распознаёт фразу.
+	   *
+	   * Распознавание передаётся снаружи: маршрут живёт в другом слое, и знать про
+	   * него здесь незачем — достаточно знать, что фраза превратится в текст.
+	   *
+	   * @param {string} audioBase64 - звук фразы.
+	   * @returns {Promise<string>} распознанный текст.
+	   */
+	  async recognize(audioBase64) {
+	    if (typeof this.recognizer !== 'function') return ''
+	    return await this.recognizer(audioBase64)
+	  }
+
+	  /**
+	   * Произносит ответ агента вслух.
+	   *
+	   * Голос берётся из настроек, но если настройка не задана, хост выберет голос
+	   * системы. Текст очищается от разметки: читать вслух «закрывающая скобка» или
+	   * имя файла из ссылки — не разговор, а рябь в колонках.
+	   *
+	   * @param {string} text - ответ агента.
+	   * @returns {Promise<boolean>} удалось ли.
+	   */
+	  async say(text) {
+	    const speech = this.settings.speech ?? {}
+	    if (speech.enabled === false) return false
+	    const sayable = speakable(text)
+	    if (sayable === '') return false
+	    this.talking = true
+	    this.emitState()
+	    const done = await speak({
+	      text: sayable,
+	      voice: typeof speech.voice === 'string' ? speech.voice : '',
+	      rate: typeof speech.rate === 'number' ? speech.rate : 0,
+	      volume: typeof speech.volume === 'number' ? speech.volume : 100,
+	    })
+	    this.talking = false
+	    this.emitState()
+	    return done
+	  }
+
+	  /**
+	   * Замолчать.
+	   *
+	   * В разговоре это не украшение: человек перебивает голос, чтобы ответ не
+	   * заглушал его собственную фразу, — иначе приходится ждать конца длинного
+	   * ответа, чтобы задать вопрос.
+	   *
+	   * @returns {Promise<void>}
+	   */
+	  async hush() {
+	    if (this.talking === false) return
+	    await stopSpeaking()
+	    this.talking = false
+	    this.emitState()
+	  }
+
+	  /**
+	   * Останавливает разговор.
+	   *
+	   * @returns {Promise<void>}
+	   */
+	  async stop() {
+	    this.phase = 'stopped'
+	    this.clearTimer()
+	    await this.hush()
+	    void cancelRecording()
+	    this.emitState()
+	  }
+
+	  /** Останавливает таймер опроса, если он идёт. */
+	  clearTimer() {
+	    if (this.timer !== 0) {
+	      clearInterval(this.timer)
+	      this.timer = 0
+	    }
+	  }
+
+	  /** Сообщает панели о состоянии: слушаем, говорит человек или говорит голос. */
+	  emitState() {
+	    this.onState?.({
+	      phase: this.phase,
+	      speaking: this.speaking,
+	      talking: this.talking,
+	      pending: this.pending,
+	    })
+	  }
+
+	  /**
+	   * Гасит разговор: снимает таймер, останавливает микрофон и голос.
+	   *
+	   * Идемпотентно — к нему обращаются и остановка, и выгрузка плагина.
+	   *
+	   * @returns {void}
+	   */
+	  dispose() {
+	    if (this.disposed) return
+	    this.disposed = true
+	    this.clearTimer()
+	    this.phase = 'idle'
+	    void stopSpeaking()
+	    void cancelRecording()
+	  }
+	}
+
+	// ── src/client/echo.js ──────────────────────────────────────────
+	// Наблюдатель за ответами агента: чтобы голос знал, что именно сказать.
+	//
+	// Откуда берётся текст ответа. У плагина нет доступа к потоку агента: клиентские
+	// слоты отдают состояние беседы, но не текст сообщений, а сервис запросов сессии
+	// читает сохранённые на диске сессии, а не живую. Прямой путь закрыт, и любая
+	// попытка вытащить текст из внутренних сторов DSH упрётся в чужой приватный код.
+	//
+	// Поэтому наблюдаем за DOM. Это осознанный компромисс, и он не так страшен, как
+	// кажется: у сообщений человека в чате есть модификатор класса `user`, а у
+	// ответа агента — нет. Значит «последний абзац без этого класса» — это ответ.
+	// Наблюдатель молчит, пока не увидит новый текст, и не трогает ничего: он
+	// только читает.
+	//
+	// Что делает с текстом. Ждёт, пока текст перестанет меняться: агент пишет по
+	// мере генерации, и произносить текст, который ещё дописывается, значит
+	// прочитать половину предложения и остановиться.
+
+	/** Сколько тишины считается концом ответа, мс. */
+	const ANSWER_SETTLE_MS = 900
+
+	/** Как часто проверяется, что текст перестал меняться, мс. */
+	const CHECK_MS = 120
+
+	/**
+	 * Селектор области чата в интерфейсе DSH.
+	 *
+	 * Атрибут называется `data-conversation-region` — БЕЗ префикса `dsh-`. Ошибка в
+	 * один префикс стоила разговора целиком: наблюдатель не находил область чата,
+	 * `start()` возвращал false, и ответ агента не произносился никогда. При этом
+	 * запись и отправка работали, поэтому выглядело это как «я говорю, а в ответ
+	 * тишина» — то есть как поломка диалога, а не как неверный селектор.
+	 */
+	const CHAT_REGION = '[data-conversation-region="chat"]'
+
+	/**
+	 * Наблюдатель за чатом.
+	 *
+	 * Наблюдение начинается по запросу и снимается по запросу же: держать
+	 * MutationObserver на странице, когда озвучка выключена, незачем — это лишняя
+	 * работа браузера в чужом интерфейсе.
+	 */
+	class ReplyWatcher {
+	  /**
+	   * @param {object} [options] - параметры.
+	   * @param {(text: string) => void} [options.onReply] - новый ответ агента.
+	   */
+	  constructor(options = {}) {
+	    this.onReply = typeof options.onReply === 'function' ? options.onReply : null
+	    this.observer = null
+	    this.pending = null
+	    this.timer = 0
+	    this.lastSeen = ''
+	    this.armed = false
+	  }
+
+	  /**
+	   * Начинает наблюдение.
+	   *
+	   * @returns {boolean} удалось ли начать.
+	   */
+	  start() {
+	    if (this.observer !== null) return true
+	    if (typeof MutationObserver !== 'function') return false
+	    const root = typeof document === 'undefined' ? null : document.querySelector(CHAT_REGION)
+	    // Области чата может не быть ещё: сессия открывается позже. Тогда ждём
+	    // появления и тогда включаемся, иначе озвучка молча не работала бы.
+	    if (root === null) return false
+	    this.armed = true
+	    this.observer = new MutationObserver(() => { this.scan(root) })
+	    this.observer.observe(root, { childList: true, subtree: true, characterData: true })
+	    this.lastSeen = this.latestReply(root)
+	    return true
+	  }
+
+	  /**
+	   * Останавливает наблюдение.
+	   *
+	   * @returns {void}
+	   */
+	  stop() {
+	    this.armed = false
+	    if (this.observer !== null) {
+	      this.observer.disconnect()
+	      this.observer = null
+	    }
+	    if (this.timer !== 0) {
+	      clearTimeout(this.timer)
+	      this.timer = 0
+	    }
+	    this.pending = null
+	  }
+
+	  /**
+	   * Ищет новый ответ агента в области чата.
+	   *
+	   * @param {Element} root - область чата.
+	   * @returns {void}
+	   */
+	  scan(root) {
+	    const text = this.latestReply(root)
+	    if (text === '' || text === this.lastSeen) return
+	    this.lastSeen = text
+	    this.pending = text
+	    if (this.timer !== 0) clearTimeout(this.timer)
+	    this.timer = setTimeout(() => { this.settle() }, CHECK_MS)
+	  }
+
+	  /**
+	   * Проверяет, что ответ перестал меняться.
+	   *
+	   * @returns {void}
+	   */
+	  settle() {
+	    this.timer = 0
+	    if (this.armed === false || this.pending === null) return
+	    const root = typeof document === 'undefined' ? null : document.querySelector(CHAT_REGION)
+	    const text = root === null ? this.pending : this.latestReply(root)
+	    if (text === this.pending) {
+	      // Текст замер — значит ответ дописан и можно говорить.
+	      this.onReply?.(text)
+	      this.pending = null
+	      return
+	    }
+	    // Ещё пишет: ждём дальше.
+	    this.pending = text
+	    this.timer = setTimeout(() => { this.settle() }, CHECK_MS)
+	  }
+
+	  /**
+	   * Достаёт текст последнего ответа агента.
+	   *
+	   * @param {Element} root - область чата.
+	   * @returns {string} текст или пусто.
+	   */
+	  latestReply(root) {
+	    const nodes = root.querySelectorAll('[class*="MessageItem"], [data-message], article, li')
+	    for (let index = nodes.length - 1; index >= 0; index -= 1) {
+	      const node = nodes[index]
+	      if (node === null || node === undefined) continue
+	      // Сообщение человека — не ответ. Иначе плагин читал бы вслух слова,
+	      // которые человек только что произнёс, и разговаривал бы сам с собой.
+	      const classes = typeof node.className === 'string' ? node.className : ''
+	      if (/(^|\s|\.)user(\s|$)/.test(classes)) continue
+	      const text = normalize(node.innerText ?? node.textContent ?? '')
+	      if (text !== '') return text
+	    }
+	    return ''
+	  }
+	}
+
+	/**
+	 * Приводит текст узла к одной строке без ролей пробелов.
+	 *
+	 * @param {string} text - исходный текст.
+	 * @returns {string} нормализованный текст.
+	 */
+	function normalize(text) {
+	  return String(text).replace(/\s+/g, ' ').trim()
+	}
+
 
 	// ── src/client/settingsPanel.js ─────────────────────────────────
 	// Настройки голосового ввода: страница в общих настройках приложения.
@@ -1371,6 +2142,27 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  { group: 'insert', key: 'preserveChips', label: 'settings.preserveChips', type: 'bool', hint: 'settings.hintPreserveChips' },
 	  { group: 'ui', key: 'showBrowserFallback', label: 'settings.browser', type: 'bool', hint: 'settings.hintBrowser' },
 	  { group: 'ui', key: 'confirmOnInsert', label: 'settings.confirm', type: 'bool', hint: 'settings.hintConfirm' },
+
+	  // Разговорный режим: отдельная кнопка в панели ввода. Здесь решается, где
+	  // кончается фраза и показывать ли вторую кнопку вообще. Без этих чисел
+	  // микрофон не может отличить «человек договорил» от «человек думает».
+	  //
+	  // `enabled` больше НЕ переключает поведение кнопки микрофона: раньше одна
+	  // кнопка означала то диктовку, то беседу в зависимости от этой настройки, и
+	  // человек не мог предугадать, что случится по нажатию. Теперь кнопок две, а
+	  // настройка только разрешает или запрещает кнопку разговора.
+	  { group: 'conversation', key: 'enabled', label: 'settings.converse', type: 'bool', hint: 'settings.hintConverse' },
+	  { group: 'conversation', key: 'threshold', label: 'settings.threshold', type: 'number', hint: 'settings.hintThreshold' },
+	  { group: 'conversation', key: 'silenceMs', label: 'settings.silence', type: 'number', hint: 'settings.hintSilence' },
+	  { group: 'conversation', key: 'onsetMs', label: 'settings.onset', type: 'number', hint: 'settings.hintOnset' },
+	  { group: 'conversation', key: 'minPhraseMs', label: 'settings.minPhrase', type: 'number', hint: 'settings.hintMinPhrase' },
+
+	  // Голос ответа. Голос выбирается списком с машины: имена вроде
+	  // «Microsoft Irina Desktop» человек не обязан знать наизусть.
+	  { group: 'speech', key: 'enabled', label: 'settings.speakOn', type: 'bool', hint: 'settings.hintSpeakOn' },
+	  { group: 'speech', key: 'voice', label: 'settings.voice', type: 'voice', hint: 'settings.hintVoice' },
+	  { group: 'speech', key: 'rate', label: 'settings.rate', type: 'number', hint: 'settings.hintRate' },
+	  { group: 'speech', key: 'volume', label: 'settings.volume', type: 'number', hint: 'settings.hintVolume' },
 	]
 
 	/**
@@ -1400,12 +2192,19 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	]
 
 	/** Группы и их заголовки. */
+	const COLUMNS = [
+	  { id: 'dictation', title: 'settings.columnDictation' },
+	  { id: 'talk', title: 'settings.columnTalk' },
+	]
+
 	const GROUPS = [
-	  { id: 'asr', title: 'settings.groupAsr' },
-	  { id: 'polish', title: 'settings.groupPolish' },
-	  { id: 'recording', title: 'settings.groupRecording' },
-	  { id: 'insert', title: 'settings.groupInsert' },
-	  { id: 'ui', title: 'settings.groupUi' },
+	  { id: 'asr', title: 'settings.groupAsr', column: 'dictation' },
+	  { id: 'polish', title: 'settings.groupPolish', column: 'dictation' },
+	  { id: 'recording', title: 'settings.groupRecording', column: 'dictation' },
+	  { id: 'insert', title: 'settings.groupInsert', column: 'dictation' },
+	  { id: 'conversation', title: 'settings.groupConversation', column: 'talk' },
+	  { id: 'speech', title: 'settings.groupSpeech', column: 'talk' },
+	  { id: 'ui', title: 'settings.groupUi', column: 'talk' },
 	]
 
 	/**
@@ -1488,8 +2287,6 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	    }))
 	  }
 	  if (spec.type === 'credential') {
-	    // Список имён записей с ключами. Показаны только имена: сами ключи остаются
-	    // на хосте и в интерфейс не попадают — ни в списке, ни в значении поля.
 	    const credentials = Array.isArray(spec.credentials) ? spec.credentials : []
 	    const current = value === undefined || value === null ? '' : String(value)
 	    const known = credentials.some((item) => item.provider === current)
@@ -1520,6 +2317,33 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	      onChange: (event) => onChange(event.target.value),
 	    }, options.map((option) => React.createElement('option', { key: option, value: option },
 	      label(t, `settings.option.${option}`),
+	    )))
+	  }
+	  if (spec.type === 'voice') {
+	    // Голос выбирается списком с машины. Если голосов нет — платформа без
+	    // синтеза (или поломан SAPI), и тогда поле честно говорит об этом, вместо
+	    // того чтобы показывать пустой список.
+	    const voices = Array.isArray(spec.voices) ? spec.voices : null
+	    const current = value === undefined || value === null ? '' : String(value)
+	    // Пока ответ не пришёл — просто пустое место, а не слова: надпись о
+	    // недоступности, мигающая при загрузке, сбивала бы с толку.
+	    if (voices === null) return React.createElement('span', { className: 'vet-page__hint' }, '')
+	    if (voices === 'missing') {
+	      return React.createElement('span', { className: 'vet-page__hint' },
+	        label(t, 'settings.voicesMissing'))
+	    }
+	    if (voices.length === 0) {
+	      return React.createElement('span', { className: 'vet-page__hint' }, label(t, 'settings.noVoices'))
+	    }
+	    return React.createElement('select', {
+	      className: 'vet-page__select',
+	      'aria-label': label(t, spec.label),
+	      value: current,
+	      onChange: (event) => onChange(event.target.value),
+	    }, voices.map((voice) => React.createElement('option', { key: voice.name, value: voice.name },
+	      voice.culture === ''
+	        ? voice.name
+	        : `${voice.name} — ${voice.culture}`,
 	    )))
 	  }
 	  if (spec.type === 'preset') {
@@ -1582,6 +2406,9 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	 */
 	function SettingsSection({ t: translate = (key) => key }) {
 	  const React = require('react')
+	  // Смена языка интерфейса должна перерисовать страницу целиком, а не только
+	  // подписи слотов: иначе в русском окне остались бы английские подписи полей.
+	  useActiveLocale()
 	  const [draft, setDraft] = React.useState(null)
 	  const [busy, setBusy] = React.useState(true)
 	  const [saving, setSaving] = React.useState(false)
@@ -1589,6 +2416,7 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  const [saved, setSaved] = React.useState(false)
 	  const [models, setModels] = React.useState([])
 	  const [credentials, setCredentials] = React.useState([])
+	  const [voices, setVoices] = React.useState(null)
 
 	  // Перевод нужен внутри обработчика выбора задачи, а он переживает смену языка:
 	  // держим свежую ссылку, чтобы подставленная инструкция всегда была на том
@@ -1614,6 +2442,11 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	    void readCredentials().then((list) => {
 	      if (!alive || list === null) return
 	      setCredentials(list)
+	    })
+	    // Голоса на machine: список нужен для выбора голоса ответа.
+	    void readVoices().then((list) => {
+	      if (!alive) return
+	      setVoices(list)
 	    })
 	    return () => { alive = false }
 	  }, [])
@@ -1671,38 +2504,12 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  }
 
 	  return React.createElement('div', { className: 'vet-page' },
+	    // Кнопка сохранения стоит вверху, рядом с названием, и повторяет её при
+	    // прокрутке. Внизу она была бесполезна: до неё ещё нужно было доскроллить,
+	    // а настройки занимают два экрана, и человек закрывал окно, ни разу не
+	    // нажав «Сохранить» — а изменения уходили молча.
 	    React.createElement('header', { className: 'vet-page__head' },
 	      React.createElement('h2', { className: 'vet-page__title' }, label(translate, 'settings.title')),
-	    ),
-	    // Группы завёрнуты в общий контейнер: он раскладывает их двумя колонками,
-	    // а заголовок и кнопка сохранения остаются во всю ширину.
-	    React.createElement('div', { className: 'vet-page__groups' },
-	      ...GROUPS.map((group) => React.createElement('section', { className: 'vet-page__group', key: group.id },
-	        React.createElement('h3', { className: 'vet-page__groupTitle' }, label(translate, group.title)),
-	        ...FIELDS.filter((item) => item.group === group.id).map((item) => {
-	          const id = `${item.group}.${item.key}`
-	          // Модели подставляются только в поля-списки: текстовые поля от них
-	          // не зависят и лишний пропс им ни к чему.
-	          let spec = item
-	        if (item.type === 'model') spec = Object.assign({}, item, { models })
-	        if (item.type === 'credential') spec = Object.assign({}, item, { credentials })
-	          return React.createElement('label', { className: 'vet-page__field', key: id },
-	            React.createElement('span', { className: 'vet-page__label' }, label(translate, item.label)),
-	            renderInput(spec, valueAt(draft, id), (raw) => set(id, raw), translate),
-	            // Подсказка под полем, а не всплывающая: настройку читают один раз, и
-	            // объяснение должно быть на виду, а не ждать наведения мышью.
-	            React.createElement('span', { className: 'vet-page__hint' }, label(translate, item.hint)),
-	          )
-	        }),
-	      )),
-	    ),
-	    error === ''
-	      ? null
-	      : React.createElement('p', { className: 'vet-page__error', role: 'alert' }, error),
-	    saved === true
-	      ? React.createElement('p', { className: 'vet-page__saved', role: 'status' }, label(translate, 'settings.saved'))
-	      : null,
-	    React.createElement('div', { className: 'vet-page__foot' },
 	      React.createElement('button', {
 	        type: 'button',
 	        className: 'vet-page__save',
@@ -1711,6 +2518,43 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	        onClick: () => { void save() },
 	      }, label(translate, 'settings.save')),
 	    ),
+	    // Настройки разделены по смыслу на две колонки: слева диктовка (что
+	    // записываем и куда вставляем), справа разговор (как режем фразы и каким
+	    // голосом отвечаем). Это не украшение: человек приходит либо надиктовать,
+	    // либо поговорить, и обе задачи требуют разного, а смешанный список
+	    // заставлял искать нужное среди семи групп.
+	    React.createElement('div', { className: 'vet-page__groups' },
+	      ...COLUMNS.map((column) => React.createElement('section', { className: 'vet-page__column', key: column.id },
+	        React.createElement('h2', { className: 'vet-page__columnTitle' }, label(translate, column.title)),
+	        ...GROUPS.filter((group) => group.column === column.id).map((group) => (
+	          React.createElement('section', { className: 'vet-page__group', key: group.id },
+	        React.createElement('h3', { className: 'vet-page__groupTitle' }, label(translate, group.title)),
+	        ...FIELDS.filter((item) => item.group === group.id).map((item) => {
+	          const id = `${item.group}.${item.key}`
+	          // Модели подставляются только в поля-списки: текстовые поля от них
+	          // не зависят и лишний пропс им ни к чему.
+	          let spec = item
+	        if (item.type === 'model') spec = Object.assign({}, item, { models })
+	        if (item.type === 'credential') spec = Object.assign({}, item, { credentials })
+	        if (item.type === 'voice') spec = Object.assign({}, item, { voices })
+	          return React.createElement('label', { className: 'vet-page__field', key: id },
+	            React.createElement('span', { className: 'vet-page__label' }, label(translate, item.label)),
+	            renderInput(spec, valueAt(draft, id), (raw) => set(id, raw), translate),
+	            // Подсказка под полем, а не всплывающая: настройку читают один раз, и
+	            // объяснение должно быть на виду, а не ждать наведения мышью.
+	            React.createElement('span', { className: 'vet-page__hint' }, label(translate, item.hint)),
+	          )
+	        }),
+	          ))),
+	        )),
+	    ),
+	    error === ''
+	      ? null
+	      : React.createElement('p', { className: 'vet-page__error', role: 'alert', key: 'error' }, error),
+	    saved === true
+	      ? React.createElement('p', { className: 'vet-page__saved', role: 'status', key: 'saved' },
+	        label(translate, 'settings.saved'))
+	      : null,
 	  )
 	}
 
@@ -1758,6 +2602,7 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 
 
 
+
 	/** Ключ ячейки слота. Менять нельзя: по нему владелец обращается к кнопке. */
 	const SLOT_ID = 'voice-eternia-dictate'
 
@@ -1794,7 +2639,10 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  const t = typeof translate === 'function' ? translate : defaultTranslate
 	  const [phase, setPhase] = React.useState('idle')
 	  const [message, setMessage] = React.useState('')
+	  // Язык интерфейса: кнопка и полоса записи обязаны поехать вместе с ним.
+	  useActiveLocale()
 	  const [level, setLevel] = React.useState(0)
+	  const [bands, setBands] = React.useState([])
 	  const [pending, setPending] = React.useState('')
 	  const [browserUrl, setBrowserUrl] = React.useState('')
 	  // По умолчанию вставка автоматическая: человек сказал — текст встал. Карточка
@@ -1850,9 +2698,12 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	      recording.current.dispose()
 	      recording.current = null
 	    }
+	    // Разговор снимается своей кнопкой: у диктовки нет ни `talk`, ни
+	    // наблюдателя за ответом — они переехали в `talkButton.js`.
 	    setPhase('idle')
 	    setMessage('')
 	    setLevel(0)
+	    setBands([])
 	  }
 
 	  /** Отменяет запись и не показывает результата. */
@@ -1897,6 +2748,11 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 
 	  /** Останавливает запись, распознаёт и вставляет текст. */
 	  const finish = async () => {
+	    // Никакой ветки разговора здесь больше нет: он уехал в отдельную кнопку
+	    // (`talkButton.js`). Ветка осталась ссылкой на удалённые `talk` и `watcher`,
+	    // и `finish` падал на первой же строке — то есть ровно тогда, когда человек
+	    // нажимал кнопку второй раз, чтобы закончить запись. Снаружи это выглядело
+	    // как «кнопка не нажимается».
 	    const active = recording.current
 	    if (active === null) return
 	    const run = generation.current
@@ -1993,8 +2849,12 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	    setPhase('requesting')
 	    try {
 	      await active.start({
-	        onLevel: (value) => {
-	          if (mounted.current && recording.current === active) setLevel(value)
+	        onLevel: (value, edges) => {
+	          if (!mounted.current || recording.current !== active) return
+	          setLevel(value)
+	          // Полосы приходят тем же опросом: отдельный запрос на кадр означал бы
+	          // двойной поток к хосту и рассинхрон между уровнем и рисунком голоса.
+	          if (Array.isArray(edges)) setBands(edges)
 	        },
 	        onFailure: (kind, text) => {
 	          if (!mounted.current || recording.current !== active) return
@@ -2031,10 +2891,8 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	    className: CLASSES.button,
 	    'data-recording': active ? 'true' : 'false',
 	    'data-open': open ? 'true' : 'false',
-	    disabled: busy,
-	    title: t(busy ? 'title.busy' : 'title.idle'),
-	    'aria-label': t('dictate'),
 	    'aria-pressed': open ? 'true' : 'false',
+	    disabled: busy,
 	    onClick: () => {
 	      if (busy) return
 	      if (active) {
@@ -2049,10 +2907,15 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	      }
 	      void start()
 	    },
+	    title: t(busy ? 'title.busy' : 'title.idle'),
 	  }, React.createElement(MicIcon))
 
-	  if (phase === 'idle') return button
-
+	  // Развилки «в покое отдаём голую кнопку, при записи — кнопку с панелью» больше
+	  // нет. Она ломала повторное нажатие: при смене состояния React размонтировал
+	  // старый узел и монтировал новый, и клик, начатый по одному элементу,
+	  // завершался уже на другом — кнопка выглядела неработающей ровно тогда, когда
+	  // её нужно нажать второй раз, чтобы закончить запись. Контейнер теперь один и
+	  // тот же во всех состояниях, меняется только содержимое панели.
 	  const statusText = phase === 'requesting'
 	    ? t('status.requesting')
 	    : phase === 'recording'
@@ -2070,6 +2933,8 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	    ),
 	  ]
 
+	  // Гистограмма и уровень — только пока идёт запись: в покое это украшение,
+	// которое занимало бы место в панели ввода.
 	  if (phase === 'recording') {
 	    children.push(React.createElement('div', {
 	      className: CLASSES.meter,
@@ -2083,6 +2948,22 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	      className: CLASSES.meterFill,
 	      style: { '--vet-level': `${Math.round(level * 100)}%` },
 	    })))
+	    // Гистограмма голоса. Один уровень — одно число, и по нему не видно,
+	    // слышат тебя или нет: громко это или шелест. Полосы показывают огибающую
+	    // звука, и человек видит собственный голос — это и есть разница между
+	    // «программа записала что-то» и «со мной разговаривают».
+	    if (Array.isArray(bands) && bands.length > 0) {
+	      children.push(React.createElement('div', {
+	        className: CLASSES.histo,
+	        key: 'histo',
+	        role: 'img',
+	        'aria-label': t('histo.label'),
+	      }, bands.map((value, index) => React.createElement('span', {
+	        key: index,
+	        className: CLASSES.histoBar,
+	        style: { '--vet-band': `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%` },
+	      }))))
+	    }
 	  }
 
 	  // Распознанный текст, который не вставлен сам. Полоса объявлена кнопкой:
@@ -2129,21 +3010,283 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 
 	  // Панель — полоска без кнопок. Всё управление живёт на самом микрофоне:
 	  // нажал — пишет, нажал ещё раз — закончило.
-	  const panel = React.createElement('div', {
-	    key: 'panel-wrap',
-	    style: { position: 'absolute', bottom: '100%', right: 0, width: 'min(420px, 90vw)', marginBottom: 6, zIndex: 40 },
-	  }, React.createElement('div', {
-	    className: CLASSES.panel,
-	    'data-state': phase === 'recording' || phase === 'requesting' ? 'recording' : phase === 'error' ? 'error' : 'busy',
-	    role: 'status',
-	    'aria-label': t('dictate'),
-	    'aria-live': 'polite',
-	  }, ...children))
+	  //
+	  // Контейнер отдаётся ВСЕГДА, даже в покое: развилка «в покое голая кнопка,
+	  // при записи — с обёрткой» заставляла React размонтировать узел при смене
+	  // состояния, и повторное нажатие (то самое, которым заканчивают запись) не
+	  // доходило до обработчика. В покое панель просто пустая и не рисуется.
+	  const panelVisible = phase !== 'idle'
+	  const panel = panelVisible
+	    ? React.createElement('div', {
+	      key: 'panel-wrap',
+	      style: { position: 'absolute', bottom: '100%', right: 0, width: 'min(420px, 90vw)', marginBottom: 6, zIndex: 40 },
+	    }, React.createElement('div', {
+	      className: CLASSES.panel,
+	      'data-state': phase === 'recording' || phase === 'requesting' ? 'recording' : phase === 'error' ? 'error' : 'busy',
+	      role: 'status',
+	      'aria-label': t('dictate'),
+	      'aria-live': 'polite',
+	    }, ...children))
+	    : null
 
 	  return React.createElement('span', {
 	    style: { position: 'relative', display: 'inline-flex' },
 	  }, button, panel)
 	}
+
+	// ── src/client/talkButton.js ────────────────────────────────────
+	// Кнопка разговора: отдельная ячейка рядом с микрофоном.
+	//
+	// Почему отдельная кнопка, а не переключатель в настройках. Раньше кнопка была
+	// одна, и что именно произойдёт по нажатию, решала настройка «Отправлять
+	// сразу». Человек этого не видит: он нажимает микрофон, ожидая диктовку, а
+	// начинается беседа — или наоборот, и тогда его слова уходят в поле ввода,
+	// хотя он ждал ответа. Две кнопки убирают догадку: микрофон — диктовка,
+	// вторая кнопка — разговор. Режим виден до нажатия, а не после.
+	//
+	// Место в слоте то же, рядом с микрофоном: `conversation.input.right`.
+
+
+
+
+
+
+
+
+	/** Ключ ячейки. Отличается от ключа микрофона: это другая кнопка. */
+	const TALK_SLOT_ID = 'voice-eternia-talk'
+
+	/** Позиция в слоте: сразу после микрофона (`voice-eternia-dictate`, order 20). */
+	const TALK_SLOT_ORDER = 21
+
+	/**
+	 * Иконка разговора: микрофон, от которого расходятся звуковые волны.
+	 *
+	 * Отличается от иконки микрофона нарочно. Две одинаковые иконки рядом человек
+	 * не различит, и кнопки снова станут загадкой — только теперь их две.
+	 *
+	 * @returns {object} элемент React.
+	 */
+	function TalkIcon() {
+	  return React.createElement('svg', {
+	    width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none',
+	    stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+	    'aria-hidden': 'true',
+	  },
+	    React.createElement('path', { d: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z' }),
+	    React.createElement('path', { d: 'M6.5 11a5.5 5.5 0 0 0 11 0' }),
+	    React.createElement('line', { x1: 12, y1: 16.5, x2: 12, y2: 20 }),
+	    React.createElement('path', { d: 'M3 8.5a3 3 0 0 0 0 5' }),
+	    React.createElement('path', { d: 'M21 8.5a3 3 0 0 1 0 5' }),
+	  )
+	}
+
+	/**
+	 * Кнопка разговора.
+	 *
+	 * Нажатие начинает слушать и отправлять фразы в беседу; повторное — заканчивает.
+	 * Ответ агента читается вслух, если это разрешено в настройках.
+	 *
+	 * @param {object} props - свойства ячейки слота.
+	 * @param {object} props.inputActions - действия поля ввода: черновик и отправка.
+	 * @param {(key: string, vars?: object) => string} [props.t] - переводчик.
+	 * @returns {object} элемент React.
+	 */
+	function TalkButton({ inputActions, t: translate }) {
+	  const React = require('react')
+	  const t = typeof translate === 'function' ? translate : defaultTranslate
+	  // Смена языка интерфейса обязана перерисовать кнопку вместе с её подписью.
+	  useActiveLocale()
+	  const mounted = React.useRef(true)
+	  const talk = React.useRef(null)
+	  const watcher = React.useRef(null)
+	  const [phase, setPhase] = React.useState('idle')
+	  const [bands, setBands] = React.useState([])
+	  const [speaking, setSpeaking] = React.useState(false)
+	  const [talking, setTalking] = React.useState(false)
+	  const [message, setMessage] = React.useState('')
+	  const [settings, setSettings] = React.useState(null)
+
+	  React.useEffect(() => {
+	    mounted.current = true
+	    let alive = true
+	    void readConfig().then((config) => {
+	      if (!alive || !mounted.current || config === null) return
+	      setSettings(config)
+	    })
+	    return () => {
+	      alive = false
+	      mounted.current = false
+	      if (watcher.current !== null) watcher.current.stop()
+	      if (talk.current !== null) talk.current.dispose()
+	    }
+	  }, [])
+
+	  /** Начинает разговор. */
+	  const start = async () => {
+	    if (talk.current !== null) return
+	    setMessage('')
+	    setBands([])
+	    setPhase('requesting')
+	    const active = new Talk({
+	      settings: settings ?? {},
+	      // Отправка в беседу: черновик и отправка. Именно эта пара действий, а не
+	      // вставка в поле, отличает разговор от диктовки.
+	      onSend: (text) => {
+	        if (mounted.current === false) return
+	        try {
+	          inputActions.setDraft(text)
+	          inputActions.submit()
+	          setMessage(t('status.sent'))
+	        } catch {
+	          setMessage(t('error.noSpan'))
+	        }
+	      },
+	      onBands: (edges) => { if (mounted.current) setBands(edges) },
+	      onState: (state) => {
+	        if (mounted.current === false) return
+	        setSpeaking(state.speaking === true)
+	        setTalking(state.talking === true)
+	        // Фаза разговора приходит из Talk: слушаю / распознаю / отвечаю.
+	        setPhase(state.phase === 'recognizing' ? 'recognizing' : 'listening')
+	      },
+	      onFailure: (kind, text) => {
+	        if (!mounted.current) return
+	        if (kind === 'ended') {
+	          talk.current?.dispose()
+	          talk.current = null
+	          setPhase('idle')
+	          setMessage(t('status.closed'))
+	          return
+	        }
+	        setMessage(text)
+	      },
+	      // Распознавание тем же маршрутом, что и у диктовки: разговор отличается
+	      // отправкой, а не моделью.
+	      recognize: async (audioBase64) => {
+	        const recognized = await transcribe({ audioBase64 })
+	        return recognized.ok === true && typeof recognized.text === 'string' ? recognized.text : ''
+	      },
+	    })
+	    talk.current = active
+	    try {
+	      await active.start()
+	      if (!mounted.current || talk.current !== active) {
+	        active.dispose()
+	        return
+	      }
+	      setPhase('listening')
+	      // Наблюдатель за ответом. Если области чата ещё нет в документе, он
+	      // честно скажет об этом: молчащая кнопка хуже кнопки с объяснением.
+	      const replyWatcher = new ReplyWatcher({
+	        onReply: (text) => { void active.say(text) },
+	      })
+	      if (replyWatcher.start()) {
+	        watcher.current = replyWatcher
+	      } else {
+	        setMessage(t('error.noChatRegion'))
+	      }
+	    } catch (failure) {
+	      active.dispose()
+	      talk.current = null
+	      setPhase('error')
+	      setMessage(classifyFailureMessage(failure, t))
+	    }
+	  }
+
+	  /** Заканчивает разговор. */
+	  const stop = async () => {
+	    const active = talk.current
+	    talk.current = null
+	    if (watcher.current !== null) {
+	      watcher.current.stop()
+	      watcher.current = null
+	    }
+	    if (active !== null) await active.stop()
+	    setPhase('idle')
+	    setSpeaking(false)
+	    setTalking(false)
+	    setBands([])
+	    setMessage(t('status.closed'))
+	  }
+
+	  const open = phase !== 'idle'
+	  const busy = phase === 'requesting'
+	  const button = React.createElement('button', {
+	    type: 'button',
+	    className: CLASSES.button,
+	    'data-recording': phase === 'listening' ? 'true' : 'false',
+	    'data-open': open ? 'true' : 'false',
+	    'data-converse': 'true',
+	    disabled: busy,
+	    title: t(busy ? 'title.busy' : 'title.talk'),
+	    'aria-label': t('talk'),
+	    'aria-pressed': open ? 'true' : 'false',
+	    onClick: () => {
+	      if (busy) return
+	      if (open) void stop()
+	      else void start()
+	    },
+	  }, React.createElement(TalkIcon))
+
+	  if (phase !== 'listening') {
+	    // Полоса появляется только при разговоре: в покое кнопка не занимает место
+	    // и не мешает соседям по панели ввода.
+	    return button
+	  }
+
+	  const status = phase === 'recognizing'
+	    ? t('status.recognizing')
+	    : talking === true
+	      ? t('status.answering')
+	      : (speaking === true ? t('status.hearing') : t('status.waiting'))
+
+	  return React.createElement('span', {
+	    // Панель обязана быть absolute и висеть НАД кнопкой. В потоке она растянула
+	    // бы ячейку слота на всю ширину панели ввода и накрыла соседей — в том числе
+	    // микрофон, по которому после этого нельзя щёлкнуть: клик попадал в чужую
+	    // панель. Ровно так и выглядела жалоба «кнопка микрофона не нажимается».
+	    style: { position: 'relative', display: 'inline-flex' },
+	  },
+	    button,
+	    React.createElement('div', {
+	      key: 'panel-wrap',
+	      style: {
+	        position: 'absolute',
+	        bottom: '100%',
+	        right: 0,
+	        width: 'min(360px, 90vw)',
+	        marginBottom: 6,
+	        zIndex: 40,
+	      },
+	    }, React.createElement('div', {
+	      className: CLASSES.panel,
+	      'data-state': 'listening',
+	      role: 'status',
+	      'aria-label': t('talk'),
+	      'aria-live': 'polite',
+	    },
+	      React.createElement('div', { className: CLASSES.status },
+	        React.createElement('span', { className: CLASSES.dot, 'aria-hidden': 'true' }),
+	        React.createElement('span', null, status),
+	      ),
+	      Array.isArray(bands) && bands.length > 0
+	        ? React.createElement('div', {
+	          className: CLASSES.histo,
+	          role: 'img',
+	          'aria-label': t('histo.label'),
+	        }, bands.map((value, index) => React.createElement('span', {
+	          key: index,
+	          className: CLASSES.histoBar,
+	          style: { '--vet-band': `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%` },
+	        })))
+	        : null,
+	      message === '' ? null : React.createElement('p', { className: CLASSES.hint }, message),
+	      React.createElement('p', { className: CLASSES.hint }, t('hint.talk')),
+	    )),
+	  )
+	}
+
 
 	// ── src/client/index.js ─────────────────────────────────────────
 	// dsh-client-voice-eternia — голосовой ввод на русском языке.
@@ -2287,21 +3430,35 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	      return () => {}
 	    }
 	    return slots.inject('conversation.input.right', () => {
-	      const dispose = slots.register({
-	        name: 'conversation.input.right',
-	        id: SLOT_ID,
-	        order: SLOT_ORDER,
-	        // Thunk: текст перечитывается на каждой проекции, поэтому смена языка
-	        // подхватывается без перерегистрации ячейки.
-	        label: () => labelOf(ctx, 'dictate'),
-	        locale: NAMESPACE,
-	        // Модель сессии ищется тем же сервисом, что рисует селектор модели в
-	        // панели ввода: одна модель — один источник правды. Полировка идёт
-	        // именно ею, поэтому отдельной настройки для неё в форме нет.
-	        inject: (sessionId) => ({ currentModel: () => readSessionModel(ctx, sessionId) }),
-	      }, DictateButton)
-	      console.log(`voice-eternia: ячейка «${SLOT_ID}» зарегистрирована в панели ввода`)
-	      return () => dispose()
+	      // Две ячейки — две кнопки. Раньше кнопка была одна, и её поведение
+	      // зависело от настройки: человек нажимал микрофон в ожидании диктовки, а
+	      // попадал в разговор — или наоборот. Теперь режим виден до нажатия:
+	      // микрофон пишет и вставляет текст, вторая кнопка ведёт беседу.
+	      const disposers = [
+	        slots.register({
+	          name: 'conversation.input.right',
+	          id: SLOT_ID,
+	          order: SLOT_ORDER,
+	          // Thunk: текст перечитывается на каждой проекции, поэтому смена языка
+	          // подхватывается без перерегистрации ячейки.
+	          label: () => labelOf(ctx, 'dictate'),
+	          locale: NAMESPACE,
+	          // Модель сессии ищется тем же сервисом, что рисует селектор модели в
+	          // панели ввода: одна модель — один источник правды. Полировка идёт
+	          // именно ею, поэтому отдельной настройки для неё в форме нет.
+	          inject: (sessionId) => ({ currentModel: () => readSessionModel(ctx, sessionId) }),
+	        }, DictateButton),
+	        slots.register({
+	          name: 'conversation.input.right',
+	          id: TALK_SLOT_ID,
+	          order: TALK_SLOT_ORDER,
+	          label: () => labelOf(ctx, 'talk'),
+	          locale: NAMESPACE,
+	          inject: (sessionId) => ({ currentModel: () => readSessionModel(ctx, sessionId) }),
+	        }, TalkButton),
+	      ]
+	      console.log(`voice-eternia: ячейки «${SLOT_ID}» и «${TALK_SLOT_ID}» зарегистрированы в панели ввода`)
+	      return () => { for (const dispose of disposers) dispose() }
 	    })
 	  } catch (error) {
 	    console.error('voice-eternia: не удалось занять место в слоте панели ввода', error)
@@ -2361,6 +3518,63 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	 * @param {string} key - ключ словаря.
 	 * @returns {string} подпись для интерфейса.
 	 */
+	/**
+	 * Активный язык интерфейса, о котором плагин знает сам.
+	 *
+	 * Зачем своя копия, если есть `getLocale().active`. Снимок локали читается
+	 * верно, но он меняется только у того, кто на него подписан: без подписки
+	 * подпись в слоте остаётся на старом языке, пока интерфейс DSH уже переключили.
+	 * Человек видел бы русский пункт в английском окне — и наоборот.
+	 *
+	 * Сервис `locale` сам предлагает для этого событие `locale/change` (в
+	 * `installLocale` есть только в будущем, в слотах его нет), поэтому подписка
+	 * идёт на событие. Значение хранится здесь, а не в состоянии компонента:
+	 * подписи слотов вызываются рантаймом без доступа к React.
+	 *
+	 * @type {string | undefined}
+	 */
+	let activeContext
+
+	let watchedLocale
+
+	/**
+	 * Читает активный язык один раз и следит за его сменой.
+	 *
+	 * @param {object} ctx - клиентский контекст.
+	 * @returns {void}
+	 */
+	function watchLocale(ctx) {
+	  activeContext = ctx
+	  watchedLocale = readActiveLocale(ctx)
+	  // Клиентский контекст ОГРАНИЧЕН: из всех подписок доступен `on`. Возвращает
+	  // ли он отписку — неизвестно, поэтому уборщик пробует оба способа, а при
+	  // отсутствии обоих полагается на `ctx.effect`, который снимает всё сам.
+	  let off
+	  try {
+	    off = ctx.on('locale/change', () => { watchedLocale = readActiveLocale(ctx) })
+	  } catch {
+	    // Событие может не поддерживаться — тогда текст просто останется на том
+	    // языке, который был при загрузке. Это заметно, но не ломает ничего.
+	  }
+	  if (typeof off === 'function') return off
+	  return undefined
+	}
+
+	/**
+	 * Активный язык из снимка локали.
+	 *
+	 * @param {object} ctx - клиентский контекст.
+	 * @returns {string | undefined} код языка либо undefined.
+	 */
+	function readActiveLocale(ctx) {
+	  try {
+	    const active = ctx.get('locale')?.getLocale?.()?.active
+	    return typeof active === 'string' ? active : undefined
+	  } catch {
+	    return undefined
+	  }
+	}
+
 	function labelOf(ctx, key) {
 	  // Ступень 1: язык берём из снимка локали, текст — из своих таблиц.
 	  //
@@ -2370,7 +3584,7 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  // подпись будет принята как годная, и человек увидит «Настройки голоса» в
 	  // английском окне.
 	  try {
-	    const active = ctx.get('locale')?.getLocale?.()?.active
+	    const active = watchedLocale ?? readActiveLocale(ctx)
 	    const own = active === undefined ? undefined : DICTIONARIES[active]?.[key]
 	    if (typeof own === 'string' && own !== '') return own
 	  } catch {
@@ -2490,10 +3704,15 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	    let removeSlot = () => {}
 	    let removeSettings = () => {}
 	    let removeLocale = () => {}
+	    let stopWatching = () => {}
 	    try {
 	      // Словари идут первыми: ячейка ссылается на пространство имён, и пустая
 	      // подписка показала бы сырые ключи в первый же кадр.
 	      removeLocale = installLocale(ctx)
+	      // Смена языка интерфейса ловится здесь: человек переключает DSH на
+	      // русский — и плагин обязан поехать вместе с ним, а не остаться в
+	      // английском окне русским текстом.
+	      stopWatching = watchLocale(ctx) ?? (() => {})
 	      removeStyle = insertStyle(VOICE_ETERNIA_CSS)
 	      removeSlot = installSlot(ctx)
 	      removeSettings = installSettings(ctx)
@@ -2505,6 +3724,7 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	      try {
 	        removeSettings()
 
+	        stopWatching()
 	        removeSlot()
 	        removeStyle()
 	        removeLocale()
@@ -2517,6 +3737,37 @@ if (typeof styleSeat !== 'undefined' && styleSeat !== null) {
 	  console.log(`voice-eternia: кнопка диктовки подключена (${CLASSES.button})`)
 	}
 
+
+	/**
+	 * Активный язык интерфейса для компонентов.
+	 *
+	 * Подписи слотов получают язык сами (через `labelOf`), а компоненты читают его
+	 * здесь: без подписки React не перерисует страницу настроек после смены языка,
+	 * и человек увидит русские поля в английском окне — то есть ровно то, что
+	 * требовал убрать.
+	 *
+	 * @returns {string | undefined} код языка либо undefined.
+	 */
+	function useActiveLocale() {
+	  const React = require('react')
+	  const [active, setActive] = React.useState(watchedLocale)
+	  React.useEffect(() => {
+	    // Снимок на момент подписки: язык мог смениться между рендером и эффектом.
+	    setActive(watchedLocale)
+	    const ctx = activeContext
+	    if (ctx === undefined) return
+	    let off
+	    try {
+	      off = ctx.on('locale/change', () => { setActive(watchedLocale) })
+	    } catch {
+	      return
+	    }
+	    return () => {
+	      if (typeof off === 'function') off()
+	    }
+	  }, [])
+	  return active
+	}
 
 exports.SLOT_ID = SLOT_ID;
 exports.SLOT_ORDER = SLOT_ORDER;

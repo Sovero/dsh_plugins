@@ -54,8 +54,25 @@ async function post(url, body) {
  *
  * @returns {Promise<{ ok: boolean, device?: string, maxSeconds?: number, error?: object }>}
  */
-export async function startRecording() {
-  return post(`${API_PREFIX}/record/start`, {})
+export async function startRecording(options = {}) {
+  return post(`${API_PREFIX}/record/start`, { streaming: options.streaming === true })
+}
+
+/**
+ * Забирает очередную нарезанную фразу.
+ *
+ * Фразы режет хост: он слышит речь и сам решает, где она кончилась. Пока фраза
+ * не забрана, она лежит на хосте и в сеть не идёт.
+ *
+ * @returns {Promise<{ ok: boolean, value?: { audioBase64: string, durationMs: number } | null }>}
+ */
+export async function takePhrase() {
+  try {
+    const response = await fetch(`${API_PREFIX}/record/phrase`, { method: 'GET' })
+    return await parse(response)
+  } catch {
+    return { ok: false }
+  }
 }
 
 /**
@@ -245,5 +262,67 @@ export async function readCredentials() {
     return payload.ok === true && Array.isArray(payload.credentials) ? payload.credentials : null
   } catch {
     return null
+  }
+}
+
+/**
+ * Читает список голосов синтеза с машины.
+ *
+ * Список приходит с хоста, потому что голоса — часть системы, а не плагина:
+ * то, что стоит на этой Windows, и есть предложение. Имя голоса приходит
+ * ровно такое, каким его знает SAPI, иначе выбрать было бы нечем.
+ *
+ * @returns {Promise<Array<object>|null>} голоса либо null при недоступности.
+ */
+export async function readVoices() {
+  try {
+    const response = await fetch(`${API_PREFIX}/voices`, { method: 'GET' })
+    // Отсутствие маршрута и пустой список — разные вещи, и человек должен
+    // видеть разное: первый говорит «перезапусти DSH», второй — «на этой
+    // машине нет голосов». null означает «не знаю», [] — «знаю, что пусто».
+    if (response.status === 404) return 'missing'
+    const payload = await parse(response)
+    return payload.ok === true && Array.isArray(payload.voices) ? payload.voices : 'missing'
+  } catch {
+    return 'missing'
+  }
+}
+
+/**
+ * Просит хоста произнести текст.
+ *
+ * @param {object} options - параметры.
+ * @param {string} options.text - что сказать.
+ * @param {string} [options.voice] - голос.
+ * @param {number} [options.rate] - темп.
+ * @param {number} [options.volume] - громкость.
+ * @returns {Promise<boolean>} получилось ли.
+ */
+export async function speak({ text, voice, rate, volume }) {
+  try {
+    const response = await fetch(`${API_PREFIX}/speak`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text, voice, rate, volume }),
+    })
+    const payload = await parse(response)
+    return payload.ok === true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Просит хоста замолчать.
+ *
+ * @returns {Promise<boolean>} получилось ли.
+ */
+export async function stopSpeaking() {
+  try {
+    const response = await fetch(`${API_PREFIX}/stop-speaking`, { method: 'POST' })
+    const payload = await parse(response)
+    return payload.ok === true
+  } catch {
+    return false
   }
 }

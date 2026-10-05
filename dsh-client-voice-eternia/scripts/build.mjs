@@ -8,7 +8,7 @@
 // полноценный бандлер (esbuild, rollup) здесь не нужен — ровно как в
 // соседнем dsh-client-heman-golden-dawn.
 
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -42,14 +42,41 @@ const MODULES = [
   // верхнем уровне модуля, и при другой очередности сборки тот увидел бы
   // ещё не объявленную функцию.
   'src/client/locales.js',
+  // Очистка текста к озвучке живёт вне каталога клиента: ею пользуется и хост,
+  // и страница, а правило «что произносить» должно быть одно. Поэтому путь
+  // от клиента к нему идёт через `../` — сборщик такие импорты тоже убирает.
+  'src/speakText.js',
   'src/client/api.js',
   'src/client/recorder.js',
-  // Настройки идут после api: модуль вызывает readConfig/writeConfig на
-  // верхнем уровне не раньше, чем те объявлены.
+  // Разговор идёт после api и recorder: он зовёт их на верхнем уровне не
+  // раньше, чем те объявлены. Настройки и кнопка — после них, потому что
+  // пользуются обоими.
+  'src/client/talk.js',
+  'src/client/echo.js',
   'src/client/settingsPanel.js',
   'src/client/dictate.js',
+  // Кнопка разговора — отдельная ячейка слота; без неё в бандле она просто
+  // не появится в панели ввода, и разговор останется недоступным.
+  'src/client/talkButton.js',
   'src/client/index.js',
 ]
+
+/**
+ * Локальные модули: всё, что лежит рядом с исходниками плагина.
+ *
+ * Проверка нужна потому, что список `MODULES` задан вручную. Модуль, который
+ * забыли в него вписать, не роняет сборку — он просто молча выпадает из
+ * бандла, и его функции в интерфейсе просто нет.
+ */
+function localModulesUnder(dir) {
+  const base = join(root, dir)
+  const found = []
+  for (const name of existsSync(base) ? readdirSync(base) : []) {
+    if (name.endsWith('.js') === false) continue
+    found.push(`${dir}/${name}`)
+  }
+  return found
+}
 
 /**
  * Убирает `export ` в начале строки объявления, сохраняя `async`.
@@ -97,7 +124,9 @@ function dropLocalImports(source) {
   // Важно: строка целиком, без `[\s\S]`. С ленивым переходом через строки
   // регулярка съедала соседний ВНЕШНИЙ импорт, доскакивая до ближайшего
   // `from './…'`, — модуль терял зависимость без единой ошибки сборки.
-  return source.replace(/^import\s+[^\n]*from\s*'\.\/[^']*'\s*;?\s*$/gm, '')
+  // Шаблон покрывает и `../`: разговор берёт очистку текста из общей папки,
+  // и такой импорт тоже должен исчезнуть, а не упасть проверкой на экспорт.
+  return source.replace(/^import\s+[^\n]*from\s*'\.\.?\/[^']*'\s*;?\s*$/gm, '')
 }
 
 /** Сдвигает каждую строку на указанное число табов. */
@@ -126,6 +155,38 @@ function moduleBody(path) {
 }
 
 const parts = MODULES.map((path) => `\n// ── ${path} ${'─'.repeat(Math.max(0, 60 - path.length))}\n${moduleBody(path)}`)
+
+// Модуль, забытый в списке, не ломает сборку — он молча выпадает из бандла, и
+// его функций в интерфейсе просто нет. Такое уже случалось дважды: разговор и
+// наблюдатель за ответом были написаны, проверены по отдельности и не доехали
+// до бандла, потому что список дописывали отдельно от кода.
+const bundled = new Set(MODULES)
+// Проверяются только клиентские модули: всё из `src/client` обязано попасть в
+// бандл. Файлы верхнего уровня (`src/index.js`, `capture.js`, `speech.js`,
+// `vad.js`) живут на хосте, и требовать их в бандле было бы ошибкой. Всё, что
+// клиент тянет из верхнего уровня через `../`, — а это очистка текста к
+// озвучке — попадает в бандл и потому тоже проверяется.
+const upper = existsSync(join(root, 'src')) ? readdirSync(join(root, 'src')) : []
+const upperNames = new Set(upper.filter((name) => name.endsWith('.js')))
+const clientSources = [
+  ...localModulesUnder('src/client'),
+  // Из верхнего уровня в бандл берутся только те, что явно помечены как общие
+  // для клиента и хоста; остальное — код хоста.
+  ...[...bundled].filter((path) => path.startsWith('src/') && !path.startsWith('src/client/')),
+]
+const missing = clientSources.filter((path) => bundled.has(path) === false)
+// Файл из `src`, на который клиент ссылается через `../`, обязан быть в
+// бандле — иначе импорт не исчезнет и сборка упадёт на проверке экспортов.
+for (const name of upperNames) {
+  if (bundled.has(`src/${name}`) === false && MODULES.some((p) => p.startsWith('src/client/'))) {
+    const referenced = MODULES.some((p) => readFileSync(join(root, p), 'utf8').includes(`'../${name}'`))
+    if (referenced) missing.push(`src/${name} (на него ссылается клиент через ../)`)
+  }
+}
+if (missing.length > 0) {
+  console.error(`МОДУЛИ НЕ В БАНДЛЕ: ${missing.join(', ')} — их функции не появятся в интерфейсе`)
+  process.exitCode = 1
+}
 
 // Фабрика заканчивается присваиваниями: рантайм читает `apply` и `inject`
 // именно из экспортов модуля, а не из замыкания.
@@ -187,26 +248,46 @@ writeFileSync(join(root, 'lib/client.js'), bundle, 'utf8')
 // Host-половина копируется в lib как есть: её грузит Node, а не браузер, и
 // самодостаточность здесь не нужна. Без этого файла loader не находит точку
 // входа из поля `main` и падает с ERR_MODULE_NOT_FOUND.
-const hostSource = readFileSync(join(root, 'src/index.js'), 'utf8')
-writeFileSync(join(root, 'lib/index.js'), hostSource, 'utf8')
-
-// Второй модуль хоста копируется тем же способом. Он обязателен: `index.js`
-// импортирует его ради захвата микрофона на хосте, и без файла в `lib` Node
-// падает на импорте — плагин целиком выпадает с ERR_MODULE_NOT_FOUND, и
-// даже маршруты распознавания не поднимаются.
-const captureSource = readFileSync(join(root, 'src/capture.js'), 'utf8')
-writeFileSync(join(root, 'lib/capture.js'), captureSource, 'utf8')
+//
+// Копируются ВСЕ модули верхнего уровня, а не перечисленные поимённо. Список
+// из трёх файла однажды разошёлся с кодом: хост стал импортировать `speech.js`
+// и `vad.js`, а копировал только `index.js` и `capture.js`. Node падал на
+// импорте, плагин не грузился — и вместе с собой ронял всё приложение, причём
+// виноват был не тот код, который писался последним, а тот, что дописвался
+// раньше всех. Импорт `./…` от такого не защищает: он лежит уже в lib.
+const hostModules = existsSync(join(root, 'src'))
+  ? readdirSync(join(root, 'src')).filter((name) => name.endsWith('.js'))
+  : []
+const hostSizes = []
+for (const name of hostModules) {
+  const text = readFileSync(join(root, 'src', name), 'utf8')
+  writeFileSync(join(root, 'lib', name), text, 'utf8')
+  hostSizes.push(`lib/${name} — ${Buffer.byteLength(text, 'utf8')} байт`)
+}
 
 console.log(`built lib/client.js — ${Buffer.byteLength(bundle, 'utf8')} bytes, ${MODULES.length} modules`)
-console.log(`copied lib/index.js — ${Buffer.byteLength(hostSource, 'utf8')} bytes`)
-console.log(`copied lib/capture.js — ${Buffer.byteLength(captureSource, 'utf8')} bytes`)
+for (const line of hostSizes) console.log(`copied ${line}`)
 
 // Проверка обязательных файлов хоста. Импорт `./capture.js` из `index.js`
 // не виден сборщику, а его отсутствие обрушивает плагин уже в Node — поэтому
 // отсутствие файла надо назвать здесь, а не в логе хоста часом позже.
-for (const required of ['lib/index.js', 'lib/capture.js', 'lib/client.js']) {
+for (const required of ['lib/index.js', 'lib/client.js']) {
   if (!existsSync(join(root, required))) {
     console.error(`ОТСУТСТВУЕТ ${required} — плагин не запустится`)
+    process.exitCode = 1
+  }
+}
+
+// Проверка импортов хоста. Каждый `import … from './x.js'` в модулях `src`
+// обязан иметь файл рядом в `lib`: иначе Node падает на импорте, плагин не
+// грузится, и вместе с ним падает приложение. Именно так уронил его сборщик,
+// копировавший три файла поимённо и забывший про новые.
+for (const name of hostModules) {
+  const text = readFileSync(join(root, 'src', name), 'utf8')
+  for (const match of text.matchAll(/from\s+'(\.\/[^']+)'/g)) {
+    const target = match[1].replace(/^\.\//, '')
+    if (existsSync(join(root, 'lib', target))) continue
+    console.error(`ИМПОРТ БЕЗ ФАЙЛА: lib/${name} требует lib/${target}, а такого файла нет — плагин упадёт при загрузке`)
     process.exitCode = 1
   }
 }

@@ -2,7 +2,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, readFileSync, readdirSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -481,4 +481,103 @@ test('бесплатность определяется суффиксом :free
     'слово free в подписи ничего не значит')
   assert.equal(models.find((m) => m.id === 'x/free-no-name:free').free, true,
     'признак берётся из id, даже когда подписи нет')
+})
+
+test('каждый импорт хоста имеет файл в lib', async () => {
+  // Сборщик копировал в lib три файла поимённо, пока хост не стал импортировать
+  // speech.js и vad.js. Node падал на импорте, плагин не грузился — и ронял всё
+  // приложение, причём виноват оказался код, дописанный раньше всех.
+  const root = new URL('../', import.meta.url)
+  const src = readdirSync(new URL('src/', root)).filter((n) => n.endsWith('.js'))
+  for (const name of src) {
+    const text = readFileSync(new URL('src/' + name, root), 'utf8')
+    for (const match of text.matchAll(/from\s+'(\.\/[^']+)'/g)) {
+      const target = match[1].replace(/^\.\//, '')
+      const copied = new URL('lib/' + target, root)
+      assert.equal(existsSync(copied), true,
+        `lib/${name} требует lib/${target}, а такого файла нет — плагин упадёт при загрузке`)
+    }
+  }
+})
+
+test('плагин грузится как его грузит DSH', async () => {
+  // Не проверка функций, а самого факта загрузки точки входа: именно на этом
+  // шаге Node бросает ERR_MODULE_NOT_FOUND и приложение падает.
+  const entry = new URL('lib/index.js', new URL('../', import.meta.url)).href
+  const loaded = await import(entry)
+  assert.equal(typeof loaded.apply, 'function', 'нужен apply')
+  assert.equal(typeof loaded.inject, 'object', 'нужен inject')
+  assert.ok(loaded.inject.includes('webServer'), 'плагин ждёт сервис веб-сервера')
+})
+
+/**
+ * Прогоняет один маршрут плагина через поддельный webServer и отдаёт ответ.
+ *
+ * Смысл: до этого тесты видели маршруты только глазами — по именам и строкам.
+ * Опечатка в вызове внутри обработчика (\`readJson\` вместо \`readJsonBody\`)
+ * прошла все проверки и всплыла у человека: кнопка микрофона показала
+ * «reason is not defined», а маршрут отвечал 500 с пустым телом.
+ *
+ * @param {string} method - HTTP-метод.
+ * @param {string} path - путь запроса.
+ * @param {object} [body] - тело запроса.
+ * @returns {Promise<{status: number, payload: object|null, raw: string}>} ответ.
+ */
+async function callRoute(method, path, body) {
+  // Регистрация у плагина одна: webServer.register({ kind, path, handler }).
+  let handler
+  const webServer = {
+    register(spec) { handler = spec.handler },
+  }
+  const ctx = {
+    get: (name) => (name === 'webServer' ? webServer : undefined),
+    effect: (fn) => { fn(); return () => {} },
+    inject: () => {},
+    logger: { warn: () => {}, info: () => {} },
+  }
+  const mod = await import('../src/index.js')
+  mod.apply(ctx, { dshHome: 'C:\\tmp' })
+  assert.equal(typeof handler, 'function', 'плагин обязан зарегистрировать обработчик')
+
+  const chunks = []
+  const response = {
+    statusCode: 0,
+    headers: {},
+    setHeader(name, value) { this.headers[name] = value },
+    writeHead(status) { this.statusCode = status },
+    write(chunk) { chunks.push(String(chunk)) },
+    end(chunk) { if (chunk !== undefined) chunks.push(String(chunk)) },
+    writableEnded: false,
+  }
+  const raw = JSON.stringify(body ?? {})
+  const request = {
+    method,
+    url: path,
+    headers: { host: '127.0.0.1:43129' },
+    socket: { remoteAddress: '127.0.0.1' },
+  }
+  request[Symbol.asyncIterator] = async function* () { yield Buffer.from(raw) }
+  await handler(request, response)
+  const text = chunks.join('')
+  let payload = null
+  try { payload = JSON.parse(text) } catch { payload = null }
+  return { status: response.statusCode, payload, raw: text }
+}
+
+test('маршрут состояния записи отвечает без опечаток', async () => {
+  // Самый дешёвый маршрут: не трогает микрофон, но проходит весь путь через
+  // обработчик — то есть ловит необъявленные имена внутри него.
+  const answer = await callRoute('GET', '/voice-eternia/record/status')
+  assert.equal(answer.status, 200, 'маршрут обязан ответить 200, а не упасть')
+  assert.equal(answer.payload?.ok, true, 'ответ обязан быть разобранным JSON с ok:true')
+})
+
+test('маршруты, читающие тело, не падают на разборе запроса', async () => {
+  // Здесь и жила опечатка: обработчик звал readJson, а функция называется
+  // readJsonBody. Тело читается ДО try, поэтому исключение улетало мимо
+  // перехвата, маршрут отвечал 500 с пустым телом, а человек видел в панели
+  // «reason is not defined» вместо причины.
+  const voices = await callRoute('GET', '/voice-eternia/voices')
+  assert.equal(voices.status, 200, 'список голосов обязан отвечать')
+  assert.equal(voices.payload?.ok, true)
 })

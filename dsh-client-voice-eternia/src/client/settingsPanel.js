@@ -11,7 +11,7 @@
 // штатные слоты, куда пишут locale и тема оформления, и их риск уже измерили
 // другие плагины.
 
-import { readConfig, writeConfig, readModels, readCredentials } from './api.js'
+import { readConfig, writeConfig, readModels, readCredentials, readVoices } from './api.js'
 
 /** Идентификатор страницы настроек. */
 export const SECTION_ID = 'voice-eternia'
@@ -77,6 +77,27 @@ const FIELDS = [
   { group: 'insert', key: 'preserveChips', label: 'settings.preserveChips', type: 'bool', hint: 'settings.hintPreserveChips' },
   { group: 'ui', key: 'showBrowserFallback', label: 'settings.browser', type: 'bool', hint: 'settings.hintBrowser' },
   { group: 'ui', key: 'confirmOnInsert', label: 'settings.confirm', type: 'bool', hint: 'settings.hintConfirm' },
+
+  // Разговорный режим: отдельная кнопка в панели ввода. Здесь решается, где
+  // кончается фраза и показывать ли вторую кнопку вообще. Без этих чисел
+  // микрофон не может отличить «человек договорил» от «человек думает».
+  //
+  // `enabled` больше НЕ переключает поведение кнопки микрофона: раньше одна
+  // кнопка означала то диктовку, то беседу в зависимости от этой настройки, и
+  // человек не мог предугадать, что случится по нажатию. Теперь кнопок две, а
+  // настройка только разрешает или запрещает кнопку разговора.
+  { group: 'conversation', key: 'enabled', label: 'settings.converse', type: 'bool', hint: 'settings.hintConverse' },
+  { group: 'conversation', key: 'threshold', label: 'settings.threshold', type: 'number', hint: 'settings.hintThreshold' },
+  { group: 'conversation', key: 'silenceMs', label: 'settings.silence', type: 'number', hint: 'settings.hintSilence' },
+  { group: 'conversation', key: 'onsetMs', label: 'settings.onset', type: 'number', hint: 'settings.hintOnset' },
+  { group: 'conversation', key: 'minPhraseMs', label: 'settings.minPhrase', type: 'number', hint: 'settings.hintMinPhrase' },
+
+  // Голос ответа. Голос выбирается списком с машины: имена вроде
+  // «Microsoft Irina Desktop» человек не обязан знать наизусть.
+  { group: 'speech', key: 'enabled', label: 'settings.speakOn', type: 'bool', hint: 'settings.hintSpeakOn' },
+  { group: 'speech', key: 'voice', label: 'settings.voice', type: 'voice', hint: 'settings.hintVoice' },
+  { group: 'speech', key: 'rate', label: 'settings.rate', type: 'number', hint: 'settings.hintRate' },
+  { group: 'speech', key: 'volume', label: 'settings.volume', type: 'number', hint: 'settings.hintVolume' },
 ]
 
 /**
@@ -106,12 +127,19 @@ const PRESETS = [
 ]
 
 /** Группы и их заголовки. */
+const COLUMNS = [
+  { id: 'dictation', title: 'settings.columnDictation' },
+  { id: 'talk', title: 'settings.columnTalk' },
+]
+
 const GROUPS = [
-  { id: 'asr', title: 'settings.groupAsr' },
-  { id: 'polish', title: 'settings.groupPolish' },
-  { id: 'recording', title: 'settings.groupRecording' },
-  { id: 'insert', title: 'settings.groupInsert' },
-  { id: 'ui', title: 'settings.groupUi' },
+  { id: 'asr', title: 'settings.groupAsr', column: 'dictation' },
+  { id: 'polish', title: 'settings.groupPolish', column: 'dictation' },
+  { id: 'recording', title: 'settings.groupRecording', column: 'dictation' },
+  { id: 'insert', title: 'settings.groupInsert', column: 'dictation' },
+  { id: 'conversation', title: 'settings.groupConversation', column: 'talk' },
+  { id: 'speech', title: 'settings.groupSpeech', column: 'talk' },
+  { id: 'ui', title: 'settings.groupUi', column: 'talk' },
 ]
 
 /**
@@ -194,8 +222,6 @@ function renderInput(spec, value, onChange, t) {
     }))
   }
   if (spec.type === 'credential') {
-    // Список имён записей с ключами. Показаны только имена: сами ключи остаются
-    // на хосте и в интерфейс не попадают — ни в списке, ни в значении поля.
     const credentials = Array.isArray(spec.credentials) ? spec.credentials : []
     const current = value === undefined || value === null ? '' : String(value)
     const known = credentials.some((item) => item.provider === current)
@@ -226,6 +252,33 @@ function renderInput(spec, value, onChange, t) {
       onChange: (event) => onChange(event.target.value),
     }, options.map((option) => React.createElement('option', { key: option, value: option },
       label(t, `settings.option.${option}`),
+    )))
+  }
+  if (spec.type === 'voice') {
+    // Голос выбирается списком с машины. Если голосов нет — платформа без
+    // синтеза (или поломан SAPI), и тогда поле честно говорит об этом, вместо
+    // того чтобы показывать пустой список.
+    const voices = Array.isArray(spec.voices) ? spec.voices : null
+    const current = value === undefined || value === null ? '' : String(value)
+    // Пока ответ не пришёл — просто пустое место, а не слова: надпись о
+    // недоступности, мигающая при загрузке, сбивала бы с толку.
+    if (voices === null) return React.createElement('span', { className: 'vet-page__hint' }, '')
+    if (voices === 'missing') {
+      return React.createElement('span', { className: 'vet-page__hint' },
+        label(t, 'settings.voicesMissing'))
+    }
+    if (voices.length === 0) {
+      return React.createElement('span', { className: 'vet-page__hint' }, label(t, 'settings.noVoices'))
+    }
+    return React.createElement('select', {
+      className: 'vet-page__select',
+      'aria-label': label(t, spec.label),
+      value: current,
+      onChange: (event) => onChange(event.target.value),
+    }, voices.map((voice) => React.createElement('option', { key: voice.name, value: voice.name },
+      voice.culture === ''
+        ? voice.name
+        : `${voice.name} — ${voice.culture}`,
     )))
   }
   if (spec.type === 'preset') {
@@ -288,6 +341,9 @@ function renderInput(spec, value, onChange, t) {
  */
 export function SettingsSection({ t: translate = (key) => key }) {
   const React = require('react')
+  // Смена языка интерфейса должна перерисовать страницу целиком, а не только
+  // подписи слотов: иначе в русском окне остались бы английские подписи полей.
+  useActiveLocale()
   const [draft, setDraft] = React.useState(null)
   const [busy, setBusy] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
@@ -295,6 +351,7 @@ export function SettingsSection({ t: translate = (key) => key }) {
   const [saved, setSaved] = React.useState(false)
   const [models, setModels] = React.useState([])
   const [credentials, setCredentials] = React.useState([])
+  const [voices, setVoices] = React.useState(null)
 
   // Перевод нужен внутри обработчика выбора задачи, а он переживает смену языка:
   // держим свежую ссылку, чтобы подставленная инструкция всегда была на том
@@ -320,6 +377,11 @@ export function SettingsSection({ t: translate = (key) => key }) {
     void readCredentials().then((list) => {
       if (!alive || list === null) return
       setCredentials(list)
+    })
+    // Голоса на machine: список нужен для выбора голоса ответа.
+    void readVoices().then((list) => {
+      if (!alive) return
+      setVoices(list)
     })
     return () => { alive = false }
   }, [])
@@ -377,38 +439,12 @@ export function SettingsSection({ t: translate = (key) => key }) {
   }
 
   return React.createElement('div', { className: 'vet-page' },
+    // Кнопка сохранения стоит вверху, рядом с названием, и повторяет её при
+    // прокрутке. Внизу она была бесполезна: до неё ещё нужно было доскроллить,
+    // а настройки занимают два экрана, и человек закрывал окно, ни разу не
+    // нажав «Сохранить» — а изменения уходили молча.
     React.createElement('header', { className: 'vet-page__head' },
       React.createElement('h2', { className: 'vet-page__title' }, label(translate, 'settings.title')),
-    ),
-    // Группы завёрнуты в общий контейнер: он раскладывает их двумя колонками,
-    // а заголовок и кнопка сохранения остаются во всю ширину.
-    React.createElement('div', { className: 'vet-page__groups' },
-      ...GROUPS.map((group) => React.createElement('section', { className: 'vet-page__group', key: group.id },
-        React.createElement('h3', { className: 'vet-page__groupTitle' }, label(translate, group.title)),
-        ...FIELDS.filter((item) => item.group === group.id).map((item) => {
-          const id = `${item.group}.${item.key}`
-          // Модели подставляются только в поля-списки: текстовые поля от них
-          // не зависят и лишний пропс им ни к чему.
-          let spec = item
-        if (item.type === 'model') spec = Object.assign({}, item, { models })
-        if (item.type === 'credential') spec = Object.assign({}, item, { credentials })
-          return React.createElement('label', { className: 'vet-page__field', key: id },
-            React.createElement('span', { className: 'vet-page__label' }, label(translate, item.label)),
-            renderInput(spec, valueAt(draft, id), (raw) => set(id, raw), translate),
-            // Подсказка под полем, а не всплывающая: настройку читают один раз, и
-            // объяснение должно быть на виду, а не ждать наведения мышью.
-            React.createElement('span', { className: 'vet-page__hint' }, label(translate, item.hint)),
-          )
-        }),
-      )),
-    ),
-    error === ''
-      ? null
-      : React.createElement('p', { className: 'vet-page__error', role: 'alert' }, error),
-    saved === true
-      ? React.createElement('p', { className: 'vet-page__saved', role: 'status' }, label(translate, 'settings.saved'))
-      : null,
-    React.createElement('div', { className: 'vet-page__foot' },
       React.createElement('button', {
         type: 'button',
         className: 'vet-page__save',
@@ -417,6 +453,43 @@ export function SettingsSection({ t: translate = (key) => key }) {
         onClick: () => { void save() },
       }, label(translate, 'settings.save')),
     ),
+    // Настройки разделены по смыслу на две колонки: слева диктовка (что
+    // записываем и куда вставляем), справа разговор (как режем фразы и каким
+    // голосом отвечаем). Это не украшение: человек приходит либо надиктовать,
+    // либо поговорить, и обе задачи требуют разного, а смешанный список
+    // заставлял искать нужное среди семи групп.
+    React.createElement('div', { className: 'vet-page__groups' },
+      ...COLUMNS.map((column) => React.createElement('section', { className: 'vet-page__column', key: column.id },
+        React.createElement('h2', { className: 'vet-page__columnTitle' }, label(translate, column.title)),
+        ...GROUPS.filter((group) => group.column === column.id).map((group) => (
+          React.createElement('section', { className: 'vet-page__group', key: group.id },
+        React.createElement('h3', { className: 'vet-page__groupTitle' }, label(translate, group.title)),
+        ...FIELDS.filter((item) => item.group === group.id).map((item) => {
+          const id = `${item.group}.${item.key}`
+          // Модели подставляются только в поля-списки: текстовые поля от них
+          // не зависят и лишний пропс им ни к чему.
+          let spec = item
+        if (item.type === 'model') spec = Object.assign({}, item, { models })
+        if (item.type === 'credential') spec = Object.assign({}, item, { credentials })
+        if (item.type === 'voice') spec = Object.assign({}, item, { voices })
+          return React.createElement('label', { className: 'vet-page__field', key: id },
+            React.createElement('span', { className: 'vet-page__label' }, label(translate, item.label)),
+            renderInput(spec, valueAt(draft, id), (raw) => set(id, raw), translate),
+            // Подсказка под полем, а не всплывающая: настройку читают один раз, и
+            // объяснение должно быть на виду, а не ждать наведения мышью.
+            React.createElement('span', { className: 'vet-page__hint' }, label(translate, item.hint)),
+          )
+        }),
+          ))),
+        )),
+    ),
+    error === ''
+      ? null
+      : React.createElement('p', { className: 'vet-page__error', role: 'alert', key: 'error' }, error),
+    saved === true
+      ? React.createElement('p', { className: 'vet-page__saved', role: 'status', key: 'saved' },
+        label(translate, 'settings.saved'))
+      : null,
   )
 }
 

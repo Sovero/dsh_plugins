@@ -11,6 +11,7 @@
 // появляется карточкой, где решение принимает человек.
 
 import { CLASSES } from './theme.css.js'
+import { useActiveLocale } from './index.js'
 import { Recording, probeSupport, describeFailure, classifyFailureMessage, isDesktopShell } from './recorder.js'
 import { transcribe, polish, readEnvironment, readConfig } from './api.js'
 import { defaultTranslate } from './locales.js'
@@ -51,7 +52,10 @@ export function DictateButton({ inputActions, currentModel, t: translate }) {
   const t = typeof translate === 'function' ? translate : defaultTranslate
   const [phase, setPhase] = React.useState('idle')
   const [message, setMessage] = React.useState('')
+  // Язык интерфейса: кнопка и полоса записи обязаны поехать вместе с ним.
+  useActiveLocale()
   const [level, setLevel] = React.useState(0)
+  const [bands, setBands] = React.useState([])
   const [pending, setPending] = React.useState('')
   const [browserUrl, setBrowserUrl] = React.useState('')
   // По умолчанию вставка автоматическая: человек сказал — текст встал. Карточка
@@ -107,9 +111,12 @@ export function DictateButton({ inputActions, currentModel, t: translate }) {
       recording.current.dispose()
       recording.current = null
     }
+    // Разговор снимается своей кнопкой: у диктовки нет ни `talk`, ни
+    // наблюдателя за ответом — они переехали в `talkButton.js`.
     setPhase('idle')
     setMessage('')
     setLevel(0)
+    setBands([])
   }
 
   /** Отменяет запись и не показывает результата. */
@@ -154,6 +161,11 @@ export function DictateButton({ inputActions, currentModel, t: translate }) {
 
   /** Останавливает запись, распознаёт и вставляет текст. */
   const finish = async () => {
+    // Никакой ветки разговора здесь больше нет: он уехал в отдельную кнопку
+    // (`talkButton.js`). Ветка осталась ссылкой на удалённые `talk` и `watcher`,
+    // и `finish` падал на первой же строке — то есть ровно тогда, когда человек
+    // нажимал кнопку второй раз, чтобы закончить запись. Снаружи это выглядело
+    // как «кнопка не нажимается».
     const active = recording.current
     if (active === null) return
     const run = generation.current
@@ -250,8 +262,12 @@ export function DictateButton({ inputActions, currentModel, t: translate }) {
     setPhase('requesting')
     try {
       await active.start({
-        onLevel: (value) => {
-          if (mounted.current && recording.current === active) setLevel(value)
+        onLevel: (value, edges) => {
+          if (!mounted.current || recording.current !== active) return
+          setLevel(value)
+          // Полосы приходят тем же опросом: отдельный запрос на кадр означал бы
+          // двойной поток к хосту и рассинхрон между уровнем и рисунком голоса.
+          if (Array.isArray(edges)) setBands(edges)
         },
         onFailure: (kind, text) => {
           if (!mounted.current || recording.current !== active) return
@@ -288,10 +304,8 @@ export function DictateButton({ inputActions, currentModel, t: translate }) {
     className: CLASSES.button,
     'data-recording': active ? 'true' : 'false',
     'data-open': open ? 'true' : 'false',
-    disabled: busy,
-    title: t(busy ? 'title.busy' : 'title.idle'),
-    'aria-label': t('dictate'),
     'aria-pressed': open ? 'true' : 'false',
+    disabled: busy,
     onClick: () => {
       if (busy) return
       if (active) {
@@ -306,10 +320,15 @@ export function DictateButton({ inputActions, currentModel, t: translate }) {
       }
       void start()
     },
+    title: t(busy ? 'title.busy' : 'title.idle'),
   }, React.createElement(MicIcon))
 
-  if (phase === 'idle') return button
-
+  // Развилки «в покое отдаём голую кнопку, при записи — кнопку с панелью» больше
+  // нет. Она ломала повторное нажатие: при смене состояния React размонтировал
+  // старый узел и монтировал новый, и клик, начатый по одному элементу,
+  // завершался уже на другом — кнопка выглядела неработающей ровно тогда, когда
+  // её нужно нажать второй раз, чтобы закончить запись. Контейнер теперь один и
+  // тот же во всех состояниях, меняется только содержимое панели.
   const statusText = phase === 'requesting'
     ? t('status.requesting')
     : phase === 'recording'
@@ -327,6 +346,8 @@ export function DictateButton({ inputActions, currentModel, t: translate }) {
     ),
   ]
 
+  // Гистограмма и уровень — только пока идёт запись: в покое это украшение,
+// которое занимало бы место в панели ввода.
   if (phase === 'recording') {
     children.push(React.createElement('div', {
       className: CLASSES.meter,
@@ -340,6 +361,22 @@ export function DictateButton({ inputActions, currentModel, t: translate }) {
       className: CLASSES.meterFill,
       style: { '--vet-level': `${Math.round(level * 100)}%` },
     })))
+    // Гистограмма голоса. Один уровень — одно число, и по нему не видно,
+    // слышат тебя или нет: громко это или шелест. Полосы показывают огибающую
+    // звука, и человек видит собственный голос — это и есть разница между
+    // «программа записала что-то» и «со мной разговаривают».
+    if (Array.isArray(bands) && bands.length > 0) {
+      children.push(React.createElement('div', {
+        className: CLASSES.histo,
+        key: 'histo',
+        role: 'img',
+        'aria-label': t('histo.label'),
+      }, bands.map((value, index) => React.createElement('span', {
+        key: index,
+        className: CLASSES.histoBar,
+        style: { '--vet-band': `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%` },
+      }))))
+    }
   }
 
   // Распознанный текст, который не вставлен сам. Полоса объявлена кнопкой:
@@ -386,16 +423,24 @@ export function DictateButton({ inputActions, currentModel, t: translate }) {
 
   // Панель — полоска без кнопок. Всё управление живёт на самом микрофоне:
   // нажал — пишет, нажал ещё раз — закончило.
-  const panel = React.createElement('div', {
-    key: 'panel-wrap',
-    style: { position: 'absolute', bottom: '100%', right: 0, width: 'min(420px, 90vw)', marginBottom: 6, zIndex: 40 },
-  }, React.createElement('div', {
-    className: CLASSES.panel,
-    'data-state': phase === 'recording' || phase === 'requesting' ? 'recording' : phase === 'error' ? 'error' : 'busy',
-    role: 'status',
-    'aria-label': t('dictate'),
-    'aria-live': 'polite',
-  }, ...children))
+  //
+  // Контейнер отдаётся ВСЕГДА, даже в покое: развилка «в покое голая кнопка,
+  // при записи — с обёрткой» заставляла React размонтировать узел при смене
+  // состояния, и повторное нажатие (то самое, которым заканчивают запись) не
+  // доходило до обработчика. В покое панель просто пустая и не рисуется.
+  const panelVisible = phase !== 'idle'
+  const panel = panelVisible
+    ? React.createElement('div', {
+      key: 'panel-wrap',
+      style: { position: 'absolute', bottom: '100%', right: 0, width: 'min(420px, 90vw)', marginBottom: 6, zIndex: 40 },
+    }, React.createElement('div', {
+      className: CLASSES.panel,
+      'data-state': phase === 'recording' || phase === 'requesting' ? 'recording' : phase === 'error' ? 'error' : 'busy',
+      role: 'status',
+      'aria-label': t('dictate'),
+      'aria-live': 'polite',
+    }, ...children))
+    : null
 
   return React.createElement('span', {
     style: { position: 'relative', display: 'inline-flex' },

@@ -1,8 +1,8 @@
 {
   "id": "dsh-client-voice-eternia",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": "./lib/index.js",
-  "description": "Голосовой ввод на русском: кнопка микрофона (диктовка) и кнопка беседы на панели ввода.",
+  "description": "Voice input for DSH: microphone button, Russian speech recognition, text inserted at the caret; conversation mode with spoken replies.",
   "client": {
     "main": "./lib/client.js",
     "inject": [
@@ -10,7 +10,7 @@
     ]
   },
   "engines": {
-    "dsh": ">=0.1.7-rc.1"
+    "dsh": ">=0.1.7-rc.2"
   },
   "contributes": {
     "tools": [],
