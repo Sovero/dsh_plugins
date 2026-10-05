@@ -1,0 +1,53 @@
+{
+  "name": "dsh-client-voice-eternia",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Голосовой ввод для DSH: диктовка и режим беседы на русском языке с полировкой текста. Две кнопки на панели ввода.",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "voice",
+    "speech-to-text",
+    "asr",
+    "russian",
+    "heman"
+  ],
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.4"
+  },
+  "peerDependenciesMeta": {},
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.4"
+  },
+  "files": [
+    "lib",
+    "src",
+    "dsh.plugin.json",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test \"tests/*.test.mjs\"",
+    "check": "npm run build && npm run test"
+  },
+  "license": "MIT"
+}
