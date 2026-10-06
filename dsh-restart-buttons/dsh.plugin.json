@@ -1,0 +1,19 @@
+{
+  "id": "dsh-restart-buttons",
+  "version": "1.0.0",
+  "main": "./lib/index.js",
+  "description": "Две кнопки в подвале боковой панели DSH: перезагрузка интерфейса и полный перезапуск DSH Desktop на Windows / Two sidebar-foot buttons for DSH: reload the interface, or fully relaunch DSH Desktop on Windows.",
+  "client": {
+    "main": "./lib/client.js",
+    "inject": [
+      "@deepseek-ai/dsh-client-ui-slots"
+    ]
+  },
+  "engines": {
+    "dsh": ">=0.1.7-rc.2"
+  },
+  "contributes": {
+    "tools": [],
+    "skills": []
+  }
+}

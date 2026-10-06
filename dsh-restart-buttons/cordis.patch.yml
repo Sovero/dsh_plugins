@@ -1,0 +1,8 @@
+# dsh-restart-buttons bundle patch: adds one host row over the active profile.
+#
+# A bundle patch is the profile-layer half of this package: when the package is
+# listed in `dsh.profile.bundles`, its patch files compose before the profile's
+# own `cordis.patch.yml`. The row below is what actually mounts the host half.
+- insert:
+    - id: restart-buttons
+      name: dsh-restart-buttons

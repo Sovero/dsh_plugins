@@ -9,6 +9,7 @@
 | [`dsh-poslanik-deep-space`](dsh-poslanik-deep-space) | Тема «Глубокий космос»: звёзды, туманности, карлики, солнца, чёрные дыры, планеты, корабли со шлейфами, кометы, метеоры. Движение мыши вносит электромагнитное возмущение пространства. Панель настроек двуязычная. | 1.4.0 |
 | [`dsh-ocean-theme`](dsh-ocean-theme) | Тема «Океан»: косяки мелкой рыбы, киты, акулы, медузы, кельп, кораллы и затонувший корабль на дне. Движение мыши расходится по воде рябью. Тёмная и светлая схемы. | 1.0.1 |
 | [`dsh-client-voice-eternia`](dsh-client-voice-eternia) | Голосовой ввод «Голос Этернии»: две кнопки на панели ввода — микрофон для диктовки и кнопка разговора для беседы голосом. Распознавание русской речи, отправка фраз без Enter, озвучка ответа локальным голосом, гистограмма голоса. Три языка интерфейса. | 0.2.1 |
+| [`dsh-restart-buttons`](dsh-restart-buttons) | Кнопки «перезагрузка» в подвале боковой панели: перезагрузка интерфейса и полный перезапуск DSH Desktop на Windows через отвязанный воркер. Двухшаговое подтверждение, четырёхсторонний забор безопасности, двуязычные подписи. | 1.0.0 |
 
 ## Установка
 
@@ -18,6 +19,7 @@
 dsh plugin --profile web add github:Sovero/dsh_plugins#path:dsh-poslanik-deep-space
 dsh plugin --profile web add github:Sovero/dsh_plugins#path:dsh-ocean-theme
 dsh plugin --profile web add github:Sovero/dsh_plugins#path:dsh-client-voice-eternia
+dsh plugin --profile web add github:Sovero/dsh_plugins#path:dsh-restart-buttons
 ```
 
 После установки перезапустите DSH Desktop: хост собирает конфигурацию профиля
@@ -30,6 +32,7 @@ dsh plugin --profile web add github:Sovero/dsh_plugins#path:dsh-client-voice-ete
 dsh plugin --profile web add /absolute/path/to/dsh-poslanik-deep-space
 dsh plugin --profile web add /absolute/path/to/dsh-ocean-theme
 dsh plugin --profile web add /absolute/path/to/dsh-client-voice-eternia
+dsh plugin --profile web add /absolute/path/to/dsh-restart-buttons
 ```
 
 ## Лицензия
