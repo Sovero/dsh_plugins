@@ -1,0 +1,1 @@
+{ "name": "course", "version": "0.1.0", "description": "Курс: приоритеты и правила проекта на виду и в начале каждой сессии", "types": "./types/index.d.ts", "author": { "name": "Sovero" } }

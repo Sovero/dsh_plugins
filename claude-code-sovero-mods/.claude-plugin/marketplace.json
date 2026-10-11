@@ -1,0 +1,36 @@
+{
+  "name": "sovero-mods",
+  "owner": {
+    "name": "Sovero"
+  },
+  "metadata": {
+    "description": "Свои моды Claude Code: собраны под привычки работы над RIFTBOUND"
+  },
+  "plugins": [
+    {
+      "name": "pulse",
+      "source": "./plugins/pulse",
+      "description": "Пульс: в строке состояния видно, чем занят Claude и сколько это длится; /pulse — журнал шагов"
+    },
+    {
+      "name": "next-step",
+      "source": "./plugins/next-step",
+      "description": "Далее: кнопки «Далее», «Запусти», «Закоммить» над полем ввода, когда Claude закончил ход"
+    },
+    {
+      "name": "course",
+      "source": "./plugins/course",
+      "description": "Курс: приоритеты и правила проекта на виду и в памяти Claude с начала каждой сессии"
+    },
+    {
+      "name": "key-vault",
+      "source": "./plugins/key-vault",
+      "description": "Ключ в сейф: ловит ключ в сообщении до отправки и убирает его в зашифрованное хранилище"
+    },
+    {
+      "name": "expert-teams",
+      "source": "./plugins/expert-teams",
+      "description": "Команды экспертов: /team dev | ux | qa | sec | review выбирает команду, тимлид ведёт задачу и зовёт экспертов субагентами"
+    }
+  ]
+}

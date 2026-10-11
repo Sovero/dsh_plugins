@@ -1,0 +1,7 @@
+{
+  "name": "expert-teams",
+  "version": "0.1.0",
+  "description": "Команды экспертов: выбираешь в чате командой /team (разработка из 8 ролей, UI/UX, QA, безопасность, ревью), и тимлид ведёт задачу, вызывая экспертов субагентами.",
+  "author": { "name": "Sergey Savchenko" },
+  "types": "./types/index.d.ts"
+}
