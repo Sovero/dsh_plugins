@@ -44,6 +44,17 @@ window.__ModuleLoader__.load({
 		var TOKEN_SOURCE = "dsh-veil-of-ulgard";
 
 		/**
+		 * Ключ панели в левой колонке.
+		 *
+		 * Одно и то же значение служит id иконки в `sidebar.panellist` и ключом
+		 * страницы в `main`: оболочка связывает их именно по совпадению, и
+		 * разные значения оставили бы иконку без панели. Значение своё, не
+		 * совпадающее со штатными (`plugins`, `conversation`, `mnemon`):
+		 * повтор чужого id встал бы в ЧУЖУЮ ячейку и заменил её.
+		 */
+		var PANEL_ID = "dsh-veil-of-ulgard";
+
+		/**
 		 * Округление до десятых: координаты SVG не должны тащить длинные числа.
 		 * @param {number} n - значение.
 		 * @returns {number} округлённое.
@@ -677,7 +688,58 @@ window.__ModuleLoader__.load({
 			".dsh-veil-panel input[type=range]{flex:1 1 auto;min-width:0;accent-color:var(--dsw-alias-brand-primary);}" +
 			".dsh-veil-panel input[type=checkbox]{accent-color:var(--dsw-alias-brand-primary);width:15px;height:15px;}" +
 			".dsh-veil-value{flex:0 0 40px;text-align:right;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;}" +
-			".dsh-veil-note{color:var(--dsw-alias-label-secondary);}";
+			".dsh-veil-note{color:var(--dsw-alias-label-secondary);}" +
+			// ── страница панели ──
+			// Каркас повторяет штатные панели: прокручиваемое тело, шапка с
+			// заголовком, контент в колонке с отступами. Своя вёрстка нужна
+			// потому, что слот `main` отдаёт странице всю центральную колонку, и
+			// без собственного `overflow` длинный список настроек уводил бы
+			// прокрутку на всю оболочку.
+			//
+			// `container` объявлен на странице: по её ширине правила ниже
+			// перестраивают сетку, а не по ширине окна — панель живёт в колонке,
+			// и на узком окне ей нужен другой расклад, чем на широком.
+			".dsh-veil-page{box-sizing:border-box;background:var(--dsw-alias-bg-base);" +
+			"width:100%;min-width:0;height:100%;min-height:0;color:var(--dsw-alias-label-primary);" +
+			"display:flex;flex-direction:column;font-size:13px;overflow:hidden;container:dsh-veil/inline-size;}" +
+			".dsh-veil-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-gutter:stable;}" +
+			".dsh-veil-content{padding:0 clamp(20px,4vw,44px) 40px;}" +
+			// `padding-top` учитывает верхнюю кромку окна на macOS: без переменной
+			// заголовок уезжал бы под светофоры.
+			".dsh-veil-head{display:flex;flex-wrap:wrap;align-items:center;gap:16px;" +
+			"margin-bottom:20px;padding-top:28px;}" +
+			"[data-platform=darwin] .dsh-veil-head{padding-top:calc(28px + var(--dsh-frame-top-clearance,0px));}" +
+			".dsh-veil-title{margin:0;font-size:20px;font-weight:500;line-height:28px;flex:0 auto;min-width:0;}" +
+			".dsh-veil-sub{margin:-14px 0 18px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.6;}" +
+			// Карточка настроек: плотная, без «воздуха» ради воздуха.
+			".dsh-veil-card{background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);" +
+			"border-radius:10px;padding:14px 16px;margin-bottom:12px;}" +
+			".dsh-veil-card-title{margin:0 0 12px;font-size:13px;font-weight:600;line-height:1.4;}" +
+			".dsh-veil-card-note{margin:10px 0 0;color:var(--dsw-alias-label-secondary);font-size:11.5px;line-height:1.55;}" +
+			// Строка настройки: подпись, ползунок, значение. На узкой колонке
+			// подпись уходит наверх, иначе ползунок сжимается в точку.
+			".dsh-veil-field{display:flex;align-items:center;gap:12px;padding:7px 0;font-size:12px;line-height:1.4;}" +
+			".dsh-veil-field+.dsh-veil-field{border-top:1px solid var(--dsw-alias-border-l1);}" +
+			".dsh-veil-field-name{flex:0 0 130px;color:var(--dsw-alias-label-primary);}" +
+			".dsh-veil-field-body{flex:1 1 auto;display:flex;align-items:center;gap:10px;min-width:0;}" +
+			".dsh-veil-page input[type=range]{flex:1 1 auto;min-width:0;accent-color:var(--dsw-alias-brand-primary);}" +
+			".dsh-veil-page input[type=checkbox]{accent-color:var(--dsw-alias-brand-primary);width:15px;height:15px;flex:none;}" +
+			".dsh-veil-field-value{flex:0 0 44px;text-align:right;color:var(--dsw-alias-label-secondary);" +
+			"font-variant-numeric:tabular-nums;}" +
+			"@container dsh-veil (width<=560px){.dsh-veil-field{flex-wrap:wrap;}" +
+			".dsh-veil-field-name{flex:1 1 100%;}}" +
+			// Кнопки панели: сброс и предпросмотр схемы.
+			".dsh-veil-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}" +
+			".dsh-veil-btn{font:inherit;font-size:12px;cursor:pointer;border-radius:7px;padding:5px 14px;" +
+			"border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);" +
+			"color:var(--dsw-alias-label-primary);" +
+			"transition:border-color var(--ds-transition-duration,.2s) var(--ds-ease-in-out,ease-in-out);}" +
+			".dsh-veil-btn:hover{border-color:var(--dsw-alias-label-secondary);}" +
+			// Образец палитры: видно, что тема даёт, не выходя из панели.
+			".dsh-veil-swatches{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}" +
+			".dsh-veil-swatch{width:34px;height:22px;border-radius:5px;" +
+			"border:1px solid var(--dsw-alias-border-l2);}" +
+			".dsh-veil-hint{margin:12px 0 0;color:var(--dsw-alias-label-secondary);font-size:11.5px;line-height:1.55;}";
 
 		// ─────────────────────────────────────────────────────────────────────
 		// Панель настроек
@@ -774,6 +836,300 @@ window.__ModuleLoader__.load({
 				slider("Фонарь", run.lantern, 0, 1, 0.05, function (v) {
 					run.lantern = v;
 				})
+			);
+		}
+
+		// ─────────────────────────────────────────────────────────────────────
+		// Панель в левой колонке
+		// ─────────────────────────────────────────────────────────────────────
+
+		/**
+		 * Иконка пункта левой панели.
+		 *
+		 * Слот `sidebar.panellist` отдаёт размер и признак активности; `size`
+		 * обязателен — по нему оболочка выравнивает иконку в ряду.
+		 * `data-dsh-panel-entry` с нашим id оболочка читает как якорь: по нему
+		 * она связывает иконку с панелью в центральной колонке.
+		 *
+		 * @param {object} props - `size` и `active` от владельца слота.
+		 * @returns {object} элемент React.
+		 */
+		function VeilPanelIcon(props) {
+			var size = props && typeof props.size === "number" ? props.size : 16;
+			return React.createElement(
+				"svg",
+				{
+					"data-dsh-panel-entry": PANEL_ID,
+					viewBox: "0 0 16 16",
+					width: size,
+					height: size,
+					fill: "none",
+					stroke: "currentColor",
+					strokeWidth: "1.3",
+					strokeLinecap: "round",
+					strokeLinejoin: "round",
+					"aria-hidden": "true",
+				},
+				// Стрельчатая арка врат: узнаётся силуэтом и не путается с
+				// иконками-документами и списками соседних панелей.
+				React.createElement("path", { d: "M4 14V7.4C4 5.3 5.8 3.6 8 2.4c2.2 1.2 4 2.9 4 5V14" }),
+				React.createElement("path", { d: "M6.4 14V8.6c0-1.1.7-1.9 1.6-2.5.9.6 1.6 1.4 1.6 2.5V14" }),
+				// Луна над аркой: вторая узнаваемая черта темы.
+				React.createElement("circle", { cx: "12.4", cy: "4.4", r: "1.5" })
+			);
+		}
+
+		/**
+		 * Строка настройки на странице панели: подпись, ползунок, значение.
+		 *
+		 * @param {object} props - label, value, min, max, step, onChange, format.
+		 * @returns {object} элемент React.
+		 */
+		function VeilField(props) {
+			return React.createElement(
+				"div",
+				{ className: "dsh-veil-field" },
+				React.createElement("span", { className: "dsh-veil-field-name" }, props.label),
+				React.createElement(
+					"span",
+					{ className: "dsh-veil-field-body" },
+					React.createElement("input", {
+						type: "range",
+						min: props.min,
+						max: props.max,
+						step: props.step,
+						value: props.value,
+						onChange: function (event) {
+							props.onChange(Number(event.target.value));
+						},
+					}),
+					React.createElement(
+						"span",
+						{ className: "dsh-veil-field-value" },
+						props.format ? props.format(props.value) : String(props.value)
+					)
+				)
+			);
+		}
+
+		/**
+		 * Страница темы в центральной колонке.
+		 *
+		 * Слот `main` отдаёт странице всю колонку, поэтому она сама отвечает за
+		 * прокрутку и шапку. Разметка повторяет штатные панели: заголовок,
+		 * карточки настроек, образец палитры.
+		 *
+		 * @param {object} props - run, persist, requestRepaint.
+		 * @returns {object} элемент React.
+		 */
+		function VeilPage(props) {
+			var run = props.run;
+			var saved = React.useState(0);
+			var refresh = saved[1];
+
+			/**
+			 * Перерисовать страницу после изменения настройки.
+			 * @param {() => void} mutate - что изменить в run.
+			 * @returns {void}
+			 */
+			function change(mutate) {
+				mutate();
+				refresh(function (n) {
+					return n + 1;
+				});
+				props.persist();
+				props.requestRepaint();
+			}
+
+			var swatches = [
+				["--dsw-alias-brand-primary", "акцент"],
+				["--dsw-alias-bg-base", "подложка"],
+				["--dsw-alias-bg-layer-1", "слой 1"],
+				["--dsw-alias-bg-layer-2", "слой 2"],
+				["--dsw-alias-label-primary", "текст"],
+				["--dsw-alias-border-l2", "граница"],
+			];
+
+			return React.createElement(
+				"div",
+				{ className: "dsh-veil-page", "data-dsh-veil-view": "" },
+				React.createElement(
+					"div",
+					{ className: "dsh-veil-scroll" },
+					React.createElement(
+						"div",
+						{ className: "dsh-veil-content" },
+						React.createElement(
+							"div",
+							{ className: "dsh-veil-head" },
+							React.createElement("h1", { className: "dsh-veil-title" }, "Покров Ульгарда")
+						),
+						React.createElement(
+							"p",
+							{ className: "dsh-veil-sub" },
+							"Ночь над мёртвым городом: башни в три плана, луна за покровом, мгла, вороны и пепел. " +
+								"Фонарь идёт за курсором и разгоняет тьму."
+						),
+
+						// ── карточка «Покров» ──
+						React.createElement(
+							"div",
+							{ className: "dsh-veil-card" },
+							React.createElement("h2", { className: "dsh-veil-card-title" }, "Покров"),
+							React.createElement(
+								"div",
+								{ className: "dsh-veil-field" },
+								React.createElement("span", { className: "dsh-veil-field-name" }, "Тема включена"),
+								React.createElement(
+									"span",
+									{ className: "dsh-veil-field-body" },
+									React.createElement("input", {
+										type: "checkbox",
+										checked: run.enabled !== false,
+										onChange: function (event) {
+											var next = event.target.checked;
+											change(function () {
+												run.enabled = next;
+											});
+										},
+									}),
+									React.createElement(
+										"span",
+										{ className: "dsh-veil-note" },
+										run.enabled === false ? "тьма отступила" : "ночь Ульгарда"
+									)
+								)
+							),
+							React.createElement(
+								"p",
+								{ className: "dsh-veil-card-note" },
+								run.enabled === false
+									? "Фон возвращён оболочке. Настройки ниже сохраняются и ждут возвращения."
+									: "Сцена и фонарь работают. Выключение возвращает фон оболочке."
+							)
+						),
+
+						// ── карточка «Сцена» ──
+						React.createElement(
+							"div",
+							{ className: "dsh-veil-card" },
+							React.createElement("h2", { className: "dsh-veil-card-title" }, "Сцена"),
+							React.createElement(VeilField, {
+								label: "Плотность",
+								value: run.density,
+								min: 0.2,
+								max: 2,
+								step: 0.05,
+								format: function (v) {
+									return v.toFixed(2);
+								},
+								onChange: function (v) {
+									change(function () {
+										run.density = v;
+									});
+								},
+							}),
+							React.createElement(VeilField, {
+								label: "Сумрак",
+								value: run.tint,
+								min: 0,
+								max: 1,
+								step: 0.05,
+								format: function (v) {
+									return v.toFixed(2);
+								},
+								onChange: function (v) {
+									change(function () {
+										run.tint = v;
+									});
+								},
+							}),
+							React.createElement(
+								"p",
+								{ className: "dsh-veil-card-note" },
+								"«Плотность» задаёт число башен, воронов и пепла. «Сумрак» — насколько глубоко тонут края экрана."
+							)
+						),
+
+						// ── карточка «Фонарь» ──
+						React.createElement(
+							"div",
+							{ className: "dsh-veil-card" },
+							React.createElement("h2", { className: "dsh-veil-card-title" }, "Фонарь"),
+							React.createElement(VeilField, {
+								label: "Свет",
+								value: run.lantern,
+								min: 0,
+								max: 1,
+								step: 0.05,
+								format: function (v) {
+									return v.toFixed(2);
+								},
+								onChange: function (v) {
+									change(function () {
+										run.lantern = v;
+									});
+								},
+							}),
+							React.createElement(
+								"p",
+								{ className: "dsh-veil-card-note" },
+								"Свет идёт за курсором. Пепел, попав в пятно, разгорается и льнёт к фонарю."
+							)
+						),
+
+						// ── карточка «Палитра» ──
+						React.createElement(
+							"div",
+							{ className: "dsh-veil-card" },
+							React.createElement("h2", { className: "dsh-veil-card-title" }, "Палитра темы"),
+							React.createElement(
+								"div",
+								{ className: "dsh-veil-swatches" },
+								swatches.map(function (pair) {
+									return React.createElement("span", {
+										key: pair[0],
+										className: "dsh-veil-swatch",
+										title: pair[1],
+										style: { background: "var(" + pair[0] + ")" },
+									});
+								})
+							),
+							React.createElement(
+								"p",
+								{ className: "dsh-veil-card-note" },
+								"Цвета следуют схеме оболочки: светлая и тёмная несут свои значения, и переключатель «Светлая/Тёмная/Системная» работает штатно."
+							)
+						),
+
+						// ── действия ──
+						React.createElement(
+							"div",
+							{ className: "dsh-veil-actions" },
+							React.createElement(
+								"button",
+								{
+									type: "button",
+									className: "dsh-veil-btn",
+									onClick: function () {
+										change(function () {
+											run.density = 1;
+											run.tint = 0.45;
+											run.lantern = 0.7;
+											run.enabled = true;
+										});
+									},
+								},
+								"Вернуть умолчания"
+							)
+						),
+						React.createElement(
+							"p",
+							{ className: "dsh-veil-hint" },
+							"Настройки хранятся в браузере под ключом dsh-veil-of-ulgard.prefs."
+						)
+					)
+				)
 			);
 		}
 
@@ -1233,6 +1589,41 @@ window.__ModuleLoader__.load({
 				// исключение, а исключение из apply уносит волокно вместе с фоном.
 				// Поэтому каждая регистрация стоит в своём try: сбой панели не
 				// должен уносить ночь.
+				//
+				// Настройки живут в ДВУХ местах, и это не дублирование:
+				//   • `sidebar.panellist` + `main` — своя страница в левой панели,
+				//     где помещаются пояснения и образец палитры;
+				//   • `settings.general.item` — короткая строка в «Настройках»,
+				//     чтобы переключатель темы был там, где его ищут.
+				// Обе половины читают один и тот же `run`, поэтому расхождению
+				// взяться неоткуда.
+				try {
+					slots.inject("sidebar.panellist", function () {
+						return slots.register(
+							{ name: "sidebar.panellist", id: PANEL_ID, order: 40, label: "Покров Ульгарда" },
+							VeilPanelIcon
+						);
+					});
+				} catch (error) {
+					console.error("[veil] иконка панели не зарегистрирована", error);
+				}
+
+				try {
+					slots.inject("main", function () {
+						return slots.register({ name: "main", key: PANEL_ID }, function () {
+							return React.createElement(VeilPage, {
+								run: run,
+								persist: function () {
+									savePrefs(run);
+								},
+								requestRepaint: requestRepaint,
+							});
+						});
+					});
+				} catch (error) {
+					console.error("[veil] страница панели не зарегистрирована", error);
+				}
+
 				try {
 					slots.inject("settings.general.item", function () {
 						return slots.register(
@@ -1249,7 +1640,7 @@ window.__ModuleLoader__.load({
 						);
 					});
 				} catch (error) {
-					console.error("[veil] панель настроек не зарегистрирована", error);
+					console.error("[veil] строка в настройках не зарегистрирована", error);
 				}
 			});
 		}

@@ -110,9 +110,31 @@ globalThis.cancelAnimationFrame = win.cancelAnimationFrame
 globalThis.setInterval = win.setInterval
 globalThis.clearInterval = win.clearInterval
 globalThis.localStorage = win.localStorage
-// Минимальный React: панель настроек в дыму не рендерится, но если бы
-// рендерилась, createElement обязан существовать.
-globalThis.React = { createElement: (type, props, ...kids) => ({ type, props, kids }), useState: (v) => [v, () => {}] }
+// Заглушка React. Она обязана быть здесь, а НЕ в `globalThis.React`: фабрика
+// берёт React через `require("react")`, и если в дереве рядом с плагином лежит
+// настоящий пакет, вызов хука вне рендера бросает «Invalid hook call» — ошибка
+// приходит из библиотеки, а не из проверяемого кода, и маскирует настоящую
+// поломку. Поэтому `require` подменяется целиком (см. stubRequire ниже).
+const reactStub = {
+  createElement: (type, props, ...kids) => ({ type, props: props || {}, kids }),
+  useState: (initial) => [initial, () => {}],
+  useRef: (initial) => ({ current: initial }),
+  useEffect: () => {},
+  useLayoutEffect: () => {},
+  useMemo: (fn) => fn(),
+  useCallback: (fn) => fn,
+}
+globalThis.React = reactStub
+/**
+ * `require` для фабрики: React отдаётся заглушкой, всё остальное — настоящим
+ * резолвером. Без этого шага проверка падает на хуках настоящего React.
+ * @param {string} name - имя модуля.
+ * @returns {unknown} модуль.
+ */
+function stubRequire(name) {
+  if (name === 'react') return reactStub
+  return require(name)
+}
 
 const effects = []
 const listeners = []
@@ -154,7 +176,7 @@ if (captured === null) {
 }
 // Фабрика принимает только `require`, а свой `module` держит в замыкании и
 // возвращает наружу: разбирать надо возвращённое значение, а не переданное.
-const moduleExports = captured.factory(require)
+const moduleExports = captured.factory(stubRequire)
 if (moduleExports === undefined || typeof moduleExports.apply !== 'function') {
   console.error('модуль не отдал exports.apply')
   process.exit(1)
@@ -204,13 +226,90 @@ if (svg.includes('xlink:') && !svg.includes('xmlns:xlink=')) {
 
 const uses = (svg.match(/<use /g) || []).length
 console.log('сцена: ' + svg.length + ' байт, воронов ' + uses + ', эффектов ' + effects.length + ', слушателей ' + listeners.length)
-console.log('слотов зарегистрировано: ' + registered.map((r) => r.props.id).join(', '))
+// `main` регистрируется ключом, остальные слоты — id: печатаем то, что есть.
+console.log(
+  'слотов зарегистрировано: ' +
+    registered.map((r) => r.props.id || r.props.key).join(', ')
+)
 console.log('сцена записана: ' + sceneOut)
 
 if (registered.length === 0) {
   console.error('панель настроек не зарегистрирована ни в одном слоте')
   process.exit(1)
 }
+
+// Панель левой колонки: оболочка связывает иконку и страницу по совпадению id
+// и ключа. Разные значения оставили бы иконку без панели — и это ровно та
+// поломка, которую видно только в браузере, поэтому проверяем здесь.
+const icon = registered.find((r) => r.props.name === 'sidebar.panellist')
+if (icon === undefined) {
+  console.error('иконка панели не зарегистрирована в sidebar.panellist')
+  process.exit(1)
+}
+const page = registered.find((r) => r.props.name === 'main')
+if (page === undefined) {
+  console.error('страница панели не зарегистрирована в main')
+  process.exit(1)
+}
+if (icon.props.id !== page.props.key) {
+  console.error(
+    'id иконки (' + icon.props.id + ') не совпадает с ключом страницы (' + page.props.key + '): панель не откроется'
+  )
+  process.exit(1)
+}
+// Строка в «Настройках» остаётся: переключатель темы ищут и там.
+if (registered.find((r) => r.props.name === 'settings.general.item') === undefined) {
+  console.error('строка темы не зарегистрирована в settings.general.item')
+  process.exit(1)
+}
+// Иконка обязана отрисоваться: слот отдаёт size, и компонент должен вернуть
+// элемент, а не упасть на отсутствующем React.createElement.
+try {
+  const iconEl = icon.render({ size: 16, active: false })
+  if (!iconEl || iconEl.type !== 'svg') {
+    console.error('иконка панели не отрисовалась в svg')
+    process.exit(1)
+  }
+  // Якорь оболочки: по нему она связывает иконку с панелью.
+  if (iconEl.props['data-dsh-panel-entry'] !== icon.props.id) {
+    console.error('иконка без якоря data-dsh-panel-entry, равного id панели')
+    process.exit(1)
+  }
+} catch (error) {
+  console.error('иконка панели упала при отрисовке: ' + error.message)
+  process.exit(1)
+}
+// Страница обязана отрисоваться целиком: слот `main` отдаёт ей всю колонку, и
+// исключение здесь оставило бы пустую панель без объяснения. Заглушка React не
+// рендерит дерево, поэтому элемент страницы — описание компонента: вызываем
+// компонент, чтобы выполнилось его тело. Хуки вне настоящего рендера вызывать
+// нельзя, поэтому на время вызова подставляем их рабочую заглушку и возвращаем
+// настоящую после: иначе падение хука маскировало бы ошибку самой страницы.
+try {
+  const pageEl = page.render({})
+  let tree = pageEl
+  if (typeof pageEl.type === 'function') {
+    const realUseState = globalThis.React.useState
+    globalThis.React.useState = (initial) => [initial, () => {}]
+    try {
+      tree = pageEl.type({
+        run: { enabled: true, density: 1, tint: 0.45, lantern: 0.7 },
+        persist() {},
+        requestRepaint() {},
+      })
+    } finally {
+      globalThis.React.useState = realUseState
+    }
+  }
+  if (!tree || tree.type !== 'div' || tree.props.className !== 'dsh-veil-page') {
+    console.error('страница панели не отрисовалась в корневой div.dsh-veil-page')
+    process.exit(1)
+  }
+} catch (error) {
+  console.error('страница панели упала при отрисовке: ' + error.message)
+  process.exit(1)
+}
+console.log('панель: иконка и страница связаны по ключу ' + page.props.key)
 
 // Стекло обязано нести обе схемы: тема выбирает нужную сама, и панели
 // следуют за переключением темы, а не замирают на первой заливке.

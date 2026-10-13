@@ -39,14 +39,19 @@ lantern**.
 
 ## Settings
 
-The theme adds a panel under **Settings → General**:
+The theme adds **its own panel to the left column** — an entry with a gate-and-moon
+icon. It has room for explanations, a palette sample and a reset button.
 
-| Slider | What it changes |
+| Setting | What it changes |
 | --- | --- |
-| **Veil** | Turns the theme on. Off restores the shell's own background |
+| **Theme enabled** | Off restores the shell's own background |
 | **Density** | How many towers, ravens and ash motes fill the scene (0.2–2) |
 | **Gloom** | How deeply the screen edges sink (0–1) |
-| **Lantern** | Radius and brightness of the light (0–1) |
+| **Light** | Radius and brightness of the lantern (0–1) |
+
+A short switch row is duplicated under **Settings → General**: a theme is a
+preference, and people look for it there too. Both halves read one state, so they
+cannot drift apart.
 
 Settings are stored in `localStorage` under `dsh-veil-of-ulgard.prefs`.
 
