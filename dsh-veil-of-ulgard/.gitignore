@@ -1,0 +1,6 @@
+# Артефакты сборки и локальной проверки: тема не несёт их в репозиторий.
+node_modules/
+scene.svg
+scene-light.svg
+preview.html
+preview-light.html

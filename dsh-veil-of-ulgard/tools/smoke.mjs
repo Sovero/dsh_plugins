@@ -1,0 +1,241 @@
+// Проверка клиентской половины без браузера.
+//
+// Клиентская половина склеивается движком как обычный скрипт, поэтому здесь
+// подставляются заглушки окружения, а весь код выполняется как есть: так
+// ловится ровно та поломка, из-за которой фон молча не рисуется.
+//
+// Запуск: node tools/smoke.mjs [путь-к-lib/client.js] [куда-положить-scene.svg]
+
+import { readFileSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const require = createRequire(import.meta.url)
+
+const here = fileURLToPath(new URL('.', import.meta.url))
+const bundle = resolve(process.argv[2] || new URL('../lib/client.js', new URL(here, '..')).pathname.slice(1))
+const sceneOut = process.argv[3] || resolve(here, '../scene.svg')
+
+/**
+ * Элемент-заглушка: нужны только те свойства, которые трогает тема.
+ */
+function makeElement(tag) {
+  const el = {
+    tagName: String(tag).toUpperCase(),
+    style: { setProperty() {}, removeProperty() {} },
+    children: [],
+    className: '',
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value },
+    getAttribute(name) { return this.attributes[name] },
+    appendChild(child) { this.children.push(child); child.parentNode = this; return child },
+    removeChild(child) {
+      const i = this.children.indexOf(child)
+      if (i >= 0) this.children.splice(i, 1)
+      child.parentNode = null
+      return child
+    },
+    get textContent() { return '' },
+    set textContent(_) {},
+    // Холст фонаря: заглушка обязана отдать контекст, иначе живой слой
+    // молча уходит в catch и проверка не увидит, что он вообще создан.
+    getContext() {
+      return {
+        setTransform() {}, clearRect() {}, fillRect() {}, beginPath() {}, arc() {},
+        ellipse() {}, fill() {},
+        createRadialGradient() { return { addColorStop() {} } },
+        createLinearGradient() { return { addColorStop() {} } },
+      }
+    },
+    getBoundingClientRect() { return { width: 1600, height: 900 } },
+    querySelector(selector) {
+      const attr = /\[([\w-]+)="([^"]+)"\]/.exec(selector)
+      if (attr === null) return null
+      return this.children.find((child) => child.attributes[attr[1]] === attr[2]) || null
+    },
+  }
+  Object.defineProperty(el, 'parentNode', { value: null, writable: true })
+  return el
+}
+
+const head = makeElement('head')
+const body = makeElement('body')
+const registered = []
+
+const document = {
+  head,
+  body,
+  createElement: makeElement,
+  querySelector(selector) {
+    const attr = /\[([\w-]+)="([^"]+)"\]/.exec(selector)
+    if (attr === null) return null
+    for (const el of body.children.concat(head.children)) {
+      if (el.attributes[attr[1]] === attr[2]) return el
+    }
+    return null
+  },
+}
+
+let captured = null
+const win = {
+  __ModuleLoader__: { load(mod) { captured = mod } },
+  addEventListener() {},
+  removeEventListener() {},
+  requestAnimationFrame() { return 1 },
+  cancelAnimationFrame() {},
+  setTimeout() { return 1 },
+  clearTimeout() {},
+  localStorage: {
+    _v: {},
+    getItem(k) { return Object.prototype.hasOwnProperty.call(this._v, k) ? this._v[k] : null },
+    setItem(k, v) { this._v[k] = String(v) },
+  },
+  document,
+  devicePixelRatio: 1,
+  fetch: () => Promise.resolve({ json: () => Promise.resolve({}) }),
+  setInterval() { return 1 },
+  clearInterval() {},
+}
+win.window = win
+// `document.defaultView` нужен живому фонарю: он берёт оттуда resize и кадры.
+document.defaultView = win
+
+// Тема ищет `globalThis.document` и `globalThis.window`; в Node их нет, но
+// ключевые слова разрешаются в глобальную область, поэтому объявляем здесь.
+globalThis.window = win
+globalThis.document = document
+globalThis.requestAnimationFrame = win.requestAnimationFrame
+globalThis.cancelAnimationFrame = win.cancelAnimationFrame
+globalThis.setInterval = win.setInterval
+globalThis.clearInterval = win.clearInterval
+globalThis.localStorage = win.localStorage
+// Минимальный React: панель настроек в дыму не рендерится, но если бы
+// рендерилась, createElement обязан существовать.
+globalThis.React = { createElement: (type, props, ...kids) => ({ type, props, kids }), useState: (v) => [v, () => {}] }
+
+const effects = []
+const listeners = []
+// Заглушка темы создаётся ОДИН раз: иначе каждый ctx.get('theme') отдавал бы
+// новый объект, и проверка в конце читала бы пустой список слоёв.
+const themeStub = {
+  // getTheme нужен плагину для чтения схемы, overrideTokens — для стекла.
+  // Слои запоминаем, чтобы дым проверял, что в них есть ОБЕ схемы: одна схема
+  // означала бы, что при переключении темы панели останутся стеклом прежней ночи.
+  // Схема берётся из DSH_VEIL_SCHEME: так обе палитры проверяются одним и тем
+  // же кодом, и светлая сцена не остаётся непроверенной.
+  слои: [],
+  getTheme: () => ({ active: { colorScheme: process.env.DSH_VEIL_SCHEME === 'light' ? 'light' : 'dark' } }),
+  overrideTokens: (source, tokens) => { themeStub.слои.push({ source, tokens }); return () => {} },
+}
+const ctx = {
+  get(name) {
+    if (name === 'theme') return themeStub
+    if (name === 'slots') {
+      return {
+        inject(slot, cb) { cb() },
+        register(props, render) { registered.push({ props, render }); return () => {} },
+      }
+    }
+    return undefined
+  },
+  effect(fn) { const dispose = fn(); effects.push(dispose) },
+  on(name, fn) { listeners.push([name, fn]); return () => {} },
+  timeout(fn) { return fn() },
+  effectScope: null,
+}
+
+const source = readFileSync(bundle, 'utf8')
+new Function('require', 'module', 'exports', 'window', 'document', source)(require, { exports: {} }, {}, win, document)
+
+if (captured === null) {
+  console.error('бандл не зарегистрировался через window.__ModuleLoader__.load')
+  process.exit(1)
+}
+// Фабрика принимает только `require`, а свой `module` держит в замыкании и
+// возвращает наружу: разбирать надо возвращённое значение, а не переданное.
+const moduleExports = captured.factory(require)
+if (moduleExports === undefined || typeof moduleExports.apply !== 'function') {
+  console.error('модуль не отдал exports.apply')
+  process.exit(1)
+}
+moduleExports.apply(ctx)
+
+const layer = body.children.find((el) => el.className === 'dsh-veil-layer')
+if (layer === undefined) {
+  console.error('слой картины не создан: в body нет элемента dsh-veil-layer')
+  process.exit(1)
+}
+
+const url = layer.style.backgroundImage || ''
+const match = /url\("data:image\/svg\+xml,([^"]+)"\)/.exec(url)
+if (match === null) {
+  console.error('у слоя нет фоновой картины')
+  process.exit(1)
+}
+const svg = decodeURIComponent(match[1])
+writeFileSync(sceneOut, svg, 'utf8')
+
+// Сцена обязана быть цельным SVG: разорванная разметка читается браузером как
+// пустая картинка, и тема молча исчезает.
+if (!svg.startsWith('<svg ') || !svg.endsWith('</svg>')) {
+  console.error('сцена не является цельным SVG-документом')
+  process.exit(1)
+}
+// Обещанные слои: небо, луна, шпили, врата, земля, вороны, пепел, мгла.
+for (const marker of ['vgSky', 'vgHalo', 'vgMist', 'vgRaven', 'vg-veil-layer-check'.replace('vg-veil-layer-check', 'vg-rise')]) {
+  if (!svg.includes(marker)) {
+    console.error('в сцене нет обязательного элемента: ' + marker)
+    process.exit(1)
+  }
+}
+if (!svg.includes('vg-mist') || !svg.includes('vg-flap')) {
+  console.error('в сцене нет анимаций мглы или воронов')
+  process.exit(1)
+}
+
+// Сцена едет в data-URL и разбирается как XML. Неизвестный префикс — фатальная
+// ошибка: документ не отрисуется целиком, и тема молча исчезнет, хотя `<use>`
+// в разметке есть. Проверяем объявление пространства имён.
+if (svg.includes('xlink:') && !svg.includes('xmlns:xlink=')) {
+  console.error('в сцене есть xlink: без объявления xmlns:xlink — XML не разберётся')
+  process.exit(1)
+}
+
+const uses = (svg.match(/<use /g) || []).length
+console.log('сцена: ' + svg.length + ' байт, воронов ' + uses + ', эффектов ' + effects.length + ', слушателей ' + listeners.length)
+console.log('слотов зарегистрировано: ' + registered.map((r) => r.props.id).join(', '))
+console.log('сцена записана: ' + sceneOut)
+
+if (registered.length === 0) {
+  console.error('панель настроек не зарегистрирована ни в одном слоте')
+  process.exit(1)
+}
+
+// Стекло обязано нести обе схемы: тема выбирает нужную сама, и панели
+// следуют за переключением темы, а не замирают на первой заливке.
+const слойСтекла = themeStub.слои.find((l) => l.source === 'dsh-veil-of-ulgard')
+if (слойСтекла === undefined) {
+  console.error('плагин не наложил слой стекла на тему')
+  process.exit(1)
+}
+const значения = Object.entries(слойСтекла.tokens)
+const безПары = значения.filter(([, v]) => !v || typeof v !== 'object' || !v.light || !v.dark)
+if (безПары.length > 0) {
+  console.error('слой стекла без пары светлая/тёмная: ' + безПары.map(([k]) => k).join(', '))
+  process.exit(1)
+}
+const совпали = значения.filter(([, v]) => v.light === v.dark).map(([k]) => k)
+if (совпали.length > 0) {
+  console.error('светлая и тёмная схемы совпали, тему переключить будет нечем: ' + совпали.join(', '))
+  process.exit(1)
+}
+console.log('стекло: ' + значения.length + ' токенов, обе схемы различаются')
+
+// Фонарь обязан быть живым: холст внутри слоя и слушатель движения.
+const liveCanvas = (layer.children || []).find((el) => el.className === 'dsh-veil-live')
+if (liveCanvas === undefined) {
+  console.error('в слое нет живого холста фонаря')
+  process.exit(1)
+}
+console.log('фонарь: холст живого слоя создан')

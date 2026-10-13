@@ -1,0 +1,16 @@
+{
+  "id": "dsh-veil-of-ulgard",
+  "version": "1.0.0",
+  "main": "./lib/index.js",
+  "description": "Тема «Покров Ульгарда» для DSH / Veil of Ulgard theme for DSH: ashen spires, a veiled moon, drifting mist, rising embers and ravens over a ruined gate; the pointer carries a lantern that parts the darkness.",
+  "client": {
+    "main": "./lib/client.js"
+  },
+  "engines": {
+    "dsh": ">=0.1.7-rc.2"
+  },
+  "contributes": {
+    "tools": [],
+    "skills": []
+  }
+}

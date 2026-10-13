@@ -1,0 +1,54 @@
+{
+  "name": "dsh-veil-of-ulgard",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Тема «Покров Ульгарда» для DSH / Veil of Ulgard theme for DSH: a dark-fantasy night of ashen spires, a veiled moon, drifting mist, rising embers and ravens over a ruined gate; the pointer carries a lantern that parts the darkness.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "dsh-theme",
+    "dark-fantasy",
+    "theme"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sovero/dsh_plugins.git",
+    "directory": "dsh-veil-of-ulgard"
+  },
+  "homepage": "https://github.com/Sovero/dsh_plugins/tree/main/dsh-veil-of-ulgard",
+  "bugs": {
+    "url": "https://github.com/Sovero/dsh_plugins/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "tools",
+    "dsh.plugin.json",
+    "cordis.patch.yml",
+    "README.md",
+    "README_EN.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "node tools/smoke.mjs lib/client.js scene.svg"
+  },
+  "dependencies": {}
+}
