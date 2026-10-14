@@ -10,7 +10,7 @@ command.
 | [`dsh-ocean-theme`](dsh-ocean-theme) | Ocean theme: small-fish schools, whales, sharks, jellyfish, kelp, corals and a shipwreck on the seabed. Pointer movement breaks the surface into ripples. Dark and light schemes. | 1.0.1 |
 | [`dsh-client-voice-eternia`](dsh-client-voice-eternia) | "Voice of Eternia" voice input: two buttons in the composer — a microphone for dictation and a conversation button for talking out loud. Russian speech recognition, phrases sent without Enter, spoken replies with a local voice, voice histogram. Three interface languages. | 0.2.1 |
 | [`dsh-restart-buttons`](dsh-restart-buttons) | "Reload" buttons in the sidebar footer: reload the interface, or fully relaunch DSH Desktop on Windows through a detached worker. Two-step confirmation, four-sided safety fence, bilingual labels. | 1.0.0 |
-| [`dsh-veil-of-ulgard`](dsh-veil-of-ulgard) | "Veil of Ulgard" theme: a night over a dead city — towers in three planes, a veiled moon, mist, ravens and ash. A living seeker's lantern follows the pointer and drives the darkness back; ash flares up inside its light. Its own settings panel in the left column, English and Russian. Dark and light schemes. | 1.2.0 |
+| [`dsh-veil-of-ulgard`](dsh-veil-of-ulgard) | "Veil of Ulgard" theme: a night over a dead city — towers in three planes, a veiled moon, mist, ravens and ash. A living seeker's lantern follows the pointer and drives the darkness back; ash flares up inside its light. Its own settings panel in the left column, English and Russian. Dark and light schemes. | 1.3.0 |
 
 ## Install
 

@@ -14,14 +14,16 @@ you can see it through.
 | Layer | What it does |
 | --- | --- |
 | **Sky** | From black at the zenith to a warm glow at the horizon: something burns beyond the hill |
-| **Veiled moon** | A disc in a halo, its light breathing on an eleven-second cycle |
-| **Cirrus streaks** | Thin clouds in the left sky: they dim the light without arguing with the moon |
+| **Moon** | A disc with a gloss in its upper-left corner and craters; its five-step halo breathes, the body does not |
+| **Cirrus streaks** | Four thin clouds at the top of the sky: they dim the light without arguing with the moon |
 | **Towers in three planes** | Far ones pale and windowless, middle ones with warm windows, near ones dark |
+| **Window light** | A core and a halo around it; each window breathes at its own pace |
 | **The gate** | A pointed arch with a broken right pier: an entrance to the city, not one more tower |
 | **Mist** | Three bands at different depths, drifting opposite ways at different speeds |
-| **Ravens** | Seven silhouettes, wing-beat and a glide across the whole sky |
+| **Ravens** | Six silhouettes: a third glide, the rest flap — each at its own phase with a light bank |
 | **Ash** | Rises slowly and fades; caught in the lantern light, it flares up |
 | **Ground** | Dark at the lower edge, with cracks running out from the gate |
+| **Gloom layer** | Fades top to bottom: darkness by the ground, sky above; silhouettes stay readable |
 
 ## The lantern
 

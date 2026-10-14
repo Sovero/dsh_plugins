@@ -231,15 +231,28 @@ if (!svg.startsWith('<svg ') || !svg.endsWith('</svg>')) {
   console.error('сцена не является цельным SVG-документом')
   process.exit(1)
 }
-// Обещанные слои: небо, луна, шпили, врата, земля, вороны, пепел, мгла.
-for (const marker of ['vgSky', 'vgHalo', 'vgMist', 'vgRaven', 'vg-veil-layer-check'.replace('vg-veil-layer-check', 'vg-rise')]) {
+// Обещанные слои: небо, луна, мгла, пепел, вороны, тьма, свет окон.
+for (const marker of ['vgSky', 'vgHalo', 'vgMoonFace', 'vgMist', 'vgWings', 'vgGloom', 'vg-rise']) {
   if (!svg.includes(marker)) {
     console.error('в сцене нет обязательного элемента: ' + marker)
     process.exit(1)
   }
 }
-if (!svg.includes('vg-mist') || !svg.includes('vg-flap')) {
-  console.error('в сцене нет анимаций мглы или воронов')
+// Крылья ворона обязаны махать вокруг плеча, а не сжиматься целиком: прежний
+// баг (`scaleY` на всей фигуре) читался механической игрушкой. Проверяем, что
+// анимация — это `rotate`, а не `scaleY`.
+if (!svg.includes('vg-wing-r') || !svg.includes('vg-wing-l')) {
+  console.error('нет анимаций взмаха крыльев')
+  process.exit(1)
+}
+if (svg.includes('vg-flap')) {
+  console.error('в сцене осталась старая анимация vg-flap: крылья сжимаются целиком, птица читается механической')
+  process.exit(1)
+}
+// Свет в окне: ядро и ореол вокруг него. Без ореола окно читалось цветной
+// наклейкой на камне.
+if (!svg.includes('vgWindowGlow') || !svg.includes('vg-window')) {
+  console.error('в сцене нет света окон: ни ореола, ни дыхания')
   process.exit(1)
 }
 

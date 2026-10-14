@@ -234,6 +234,18 @@ window.__ModuleLoader__.load({
 		}
 
 		/**
+		 * Округление альфы до сотых: прозрачность в градиенте — дробь с двумя
+		 * знаками, и длинные хвосты вроде `0.666666666666` тащат байты на
+		 * каждую ступень тьмы.
+		 *
+		 * @param {number} n - значение.
+		 * @returns {number} округлённое.
+		 */
+		function round2(n) {
+			return Math.round(n * 100) / 100;
+		}
+
+		/**
 		 * Прочитать сохранённые настройки. Любая поломка — просто значения по
 		 * умолчанию.
 		 * @returns {{ enabled?: boolean, density?: number, tint?: number, lantern?: number }} прочитанное.
@@ -321,29 +333,29 @@ window.__ModuleLoader__.load({
 		 */
 		var SCHEMES = {
 			dark: {
-				skyTop: "#02040a",
-				skyMid: "#060a12",
-				skyLow: "#0b1018",
-				horizon: "#141b26",
-				glowWarm: "#2e2210",
-				moon: "#ded8c4",
-				moonGlow: "#f2e6c4",
-				cloud: "#0d121b",
-				cloudEdge: "#1a2230",
-				spireFar: "#151d2a",
-				spireMid: "#0b111b",
-				spireNear: "#04070d",
-				gate: "#03050a",
-				ground: "#05080e",
-				crack: "#0d121b",
-				window: "#e8a24a",
+				skyTop: "#000103",
+				skyMid: "#03050a",
+				skyLow: "#070b12",
+				horizon: "#0e141d",
+				glowWarm: "#22160a",
+				moon: "#c4beac",
+				moonGlow: "#e2d6b4",
+				cloud: "#070b13",
+				cloudEdge: "#131b2a",
+				spireFar: "#111927",
+				spireMid: "#0b1220",
+				spireNear: "#070c16",
+				gate: "#05080f",
+				ground: "#080c14",
+				crack: "#121a28",
+				window: "#ffb44a",
 				ember: "#e8a24a",
 				emberHot: "#ffdca6",
-				raven: "#03050a",
-				mist: "#4a5468",
+				raven: "#060a11",
+				mist: "#384154",
 				lantern: "#f0c070",
 				lanternCore: "#fff2cc",
-				page: "#02040a",
+				page: "#010206",
 			},
 			light: {
 				skyTop: "#a6a194",
@@ -418,13 +430,34 @@ window.__ModuleLoader__.load({
 			"@keyframes vg-rise{0%{transform:translateY(60px);opacity:0}" +
 			"12%{opacity:1}70%{opacity:.85}100%{transform:translateY(-820px);opacity:0}}" +
 			"@keyframes vg-flick{0%,100%{opacity:.35}50%{opacity:1}}" +
-			// Ворон: взмах задаётся сжатием крыла по вертикали.
-			"@keyframes vg-flap{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.42)}}" +
+			// Ворон: каждое крыло вращается ВОКРУГ ПЛЕЧА, тело неподвижно.
+			//
+			// Прежний взмах сжимал по вертикали весь силуэт целиком
+			// (`scaleY` на всей фигуре): тело тоже сплющивалось, и птица
+			// читалась рычагом механизма, а не живым существом. Здесь крылья —
+			// отдельные фигуры, выходящие из начала координат, поэтому
+			// `rotate()` без указания центра вращает каждое вокруг собственного
+			// плеча (у SVG-элемента `transform-origin` по умолчанию — начало
+			// системы координат). Тело и хвост остаются на месте.
+			//
+			// Левое крыло — зеркало правого, поэтому знак угла обратный: иначе
+			// крылья хлопали бы в одну сторону и птица кувыркалась.
+			"@keyframes vg-wing-r{0%,100%{transform:rotate(-15deg)}45%{transform:rotate(21deg)}}" +
+			"@keyframes vg-wing-l{0%,100%{transform:rotate(15deg)}45%{transform:rotate(-21deg)}}" +
+			// Планирование: крылья почти неподвижны, лишь медленно дышат.
+			// Половина воронов парит, половина машет — иначе стая выглядит
+			// заводной игрушкой, выпущенной одним заводом.
+			"@keyframes vg-glide-r{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(-1deg)}}" +
+			"@keyframes vg-glide-l{0%,100%{transform:rotate(4deg)}50%{transform:rotate(1deg)}}" +
 			"@keyframes vg-cross{from{transform:translateX(-200px)}to{transform:translateX(1800px)}}" +
 			"@keyframes vg-cross-back{from{transform:translateX(1800px)}to{transform:translateX(-200px)}}" +
 			// Луна за покровом: дыхание света, а не мигание.
 			"@keyframes vg-halo{0%,100%{opacity:.55}50%{opacity:.9}}" +
 			"@keyframes vg-sway{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}" +
+			// Свет в окне: тёплое дыхание, а не ровная заливка. Разные окна
+			// дышат вразнобой — одинаковый ритм читался бы гирляндой.
+			"@keyframes vg-window{0%,100%{opacity:.72}50%{opacity:1}}" +
+			"@keyframes vg-window-slow{0%,100%{opacity:.55}50%{opacity:.92}}" +
 			"</style>";
 
 		/**
@@ -511,19 +544,43 @@ window.__ModuleLoader__.load({
 				"L" + round(x) + " " + round(top + 6 - sh) +
 				"L" + round(x + waist) + " " + round(top + 6) + "Z' fill='" + col + "'/>";
 			// Окна: редкие, тёплые, только на средних и ближних башнях.
+			//
+			// Свет в окне — не прямоугольник, а ДВА слоя: широкий ореол и ядро.
+			// Одна заливка читалась цветной наклейкой на камне; ореол вокруг
+			// пятна даёт ощущение, что за окном горит огонь, а не светится
+			// краска. Ореол рисуется через `filter='url(#vgWindowGlow)'`.
+			//
+			// Окна дышат вразнобой: у каждого своя длительность и своя задержка.
+			// Одинаковый ритм превращал башню в гирлянду.
 			if (lit) {
-				var rows = Math.max(1, Math.floor(h / 120));
+				var rows = Math.max(1, Math.floor(h / 110));
+				// Ядро: яркая точка.
 				out += "<g fill='" + windowCol + "'>";
 				for (var ry = 0; ry < rows; ry++) {
-					var wy = top + 46 + ry * (h / (rows + 1)) * 0.62;
-					if (wy > base - 30) break;
+					var wy = top + 44 + ry * (h / (rows + 1)) * 0.66;
+					if (wy > base - 28) break;
 					var cols = r() < 0.55 ? 1 : 2;
 					for (var cx2 = 0; cx2 < cols; cx2++) {
-						if (r() < 0.45) continue;
+						if (r() < 0.42) continue;
 						var wx = x - (cols === 1 ? 0 : 7) + cx2 * 14 + (r() - 0.5) * 3;
+						var ww = round(2.6 + r() * 1.4);
+						var wh = round(4 + r() * 3);
+						// Дыхание: медленное у одних, частое у других.
+						var slow = r() < 0.5;
+						var wdur = slow ? round(5 + r() * 4) : round(2.4 + r() * 2);
+						var wdel = round(-r() * wdur);
+						var wanim = slow ? "vg-window-slow" : "vg-window";
+						// Ореол: то же пятно, но размытое и крупнее.
 						out +=
-							"<rect x='" + round(wx) + "' y='" + round(wy) + "' width='3.4' height='" +
-							round(5 + r() * 3) + "' opacity='" + round(0.35 + r() * 0.5) + "'/>";
+							"<rect x='" + round(wx - ww) + "' y='" + round(wy - wh) + "' width='" + round(ww * 3) +
+							"' height='" + round(wh * 3) + "' filter='url(#vgWindowGlow)' opacity='.5' " +
+							"style='animation:" + wanim + " " + wdur + "s ease-in-out infinite;animation-delay:" +
+							wdel + "s'/>";
+						// Ядро.
+						out +=
+							"<rect x='" + round(wx) + "' y='" + round(wy) + "' width='" + ww + "' height='" + wh +
+							"' style='animation:" + wanim + " " + wdur + "s ease-in-out infinite;animation-delay:" +
+							wdel + "s'/>";
 					}
 				}
 				out += "</g>";
@@ -559,11 +616,66 @@ window.__ModuleLoader__.load({
 		}
 
 		/**
-		 * Ворон — силуэт в размахе. Крылья сходятся в теле, хвост оттянут.
-		 * @returns {string} путь.
+		 * Ворон: тело и два отдельных крыла.
+		 *
+		 * Крылья выходят из НАЧАЛА КООРДИНАТ — это плечо. Благодаря этому
+		 * `rotate()` во взмахе вращает каждое крыло вокруг плеча, а не вокруг
+		 * центра фигуры: без этого приёма птица кувыркалась бы целиком.
+		 *
+		 * Тело рисуется последним, поверх крыльев: плечо оказывается скрыто
+		 * тушкой, и стык не виден.
+		 *
+		 * @returns {{ wings: string, body: string }} разметка частей.
 		 */
-		function ravenPath() {
-			return "M-13 0 C-9 -7 -4 -9 0 -4 C4 -9 9 -7 13 0 C8 -2 4 -1 0 3 C-4 -1 -8 -2 -13 0 Z";
+		function ravenParts() {
+			// Правое крыло: от плеча вверх и вбок, с изломом у запястья и
+			// расщеплёнными первостепенными перьями на конце.
+			var wingR =
+				"M0 0 C3 -5 8 -8 15 -9 C19 -9.6 22 -8.4 24 -6.4 " +
+				"L26 -7.2 L25.4 -4.6 L27.6 -4.4 L26 -2 L28 -1.2 L25.6 0.6 " +
+				"C21 0.2 15 0.6 10 2 C6 3.2 2.6 3.4 0 2.6 Z";
+			// Левое крыло — зеркало правого по оси X.
+			var wingL =
+				"M0 0 C-3 -5 -8 -8 -15 -9 C-19 -9.6 -22 -8.4 -24 -6.4 " +
+				"L-26 -7.2 L-25.4 -4.6 L-27.6 -4.4 L-26 -2 L-28 -1.2 L-25.6 0.6 " +
+				"C-21 0.2 -15 0.6 -10 2 C-6 3.2 -2.6 3.4 0 2.6 Z";
+			// Тушка с головой и хвостом: узкое веретено.
+			var body =
+				"M0 -3.2 C2.6 -3.2 4.4 -1.4 4.6 1.2 C4.8 3.4 3.6 5.6 1.8 7.4 " +
+				"L0 9.6 L-1.8 7.4 C-3.6 5.6 -4.8 3.4 -4.6 1.2 C-4.4 -1.4 -2.6 -3.2 0 -3.2 Z";
+			return { wings: "<path d='" + wingR + "'/><path d='" + wingL + "'/>", body: "<path d='" + body + "'/>" };
+		}
+
+		/**
+		 * Слой тьмы.
+		 *
+		 * Чёрный прямоугольник с вертикальным градиентом, лёжащий поверх сцены.
+		 * Не затемняет экран, а ГАСИТ свет: снизу (где лампы и окна) тянется
+		 * мрак, сверху — ночное небо. Без него сцена читалась светлым пятном
+		 * посреди оболочки и не давала ощущения глубины ночи.
+		 *
+		 * @param {boolean} light - светлая ли схема.
+		 * @returns {string} разметка слоя.
+		 */
+		function gloomLayer(light) {
+			// В светлой схеме слой тьмы нужен слабее: там утро, а не ночь, и
+			// мрак не должен съедать все детали.
+			//
+			// Тень ложится в НИЗ, а не поверх всего: раньше альфа доходила до
+			// 0.86 и глушила башни, окна и пепел — мрак съедал сцену. Теперь
+			// уровень подобран так, что силуэты остаются читаемыми, а земля
+			// уходит в черноту: мрак обязан быть глубиной, а не пеленой.
+			var topAlpha = light ? 0.14 : 0.3;
+			var midAlpha = light ? 0.26 : 0.46;
+			var botAlpha = light ? 0.34 : 0.62;
+			return (
+				"<linearGradient id='vgGloom' x1='0' y1='0' x2='0' y2='1'>" +
+				"<stop offset='0' stop-color='#000000' stop-opacity='" + topAlpha + "'/>" +
+				"<stop offset='.42' stop-color='#000000' stop-opacity='" + midAlpha + "'/>" +
+				"<stop offset='.72' stop-color='#000000' stop-opacity='" + botAlpha + "'/>" +
+				"<stop offset='1' stop-color='#000000' stop-opacity='" + botAlpha + "'/>" +
+				"</linearGradient>"
+			);
 		}
 
 		/**
@@ -606,12 +718,26 @@ window.__ModuleLoader__.load({
 					"<stop offset='1' stop-color='" + C.horizon + "'/>" +
 					"</linearGradient>"
 			);
-			// Свет луны: широкий ореол, гаснущий к краям.
+			// Свет луны: ореол в ПЯТЬ ступеней — горячее ядро у диска, мягкий
+			// венец и прозрачная периферия. С двумя ступенями ореол читался
+			// ровным круговым пятном; пять дают ощущение источника света.
 			s.push(
 				"<radialGradient id='vgHalo' cx='.5' cy='.5' r='.5'>" +
-					"<stop offset='0' stop-color='" + C.moonGlow + "' stop-opacity='.85'/>" +
-					"<stop offset='.35' stop-color='" + C.moonGlow + "' stop-opacity='.28'/>" +
+					"<stop offset='0' stop-color='" + C.moonGlow + "' stop-opacity='.95'/>" +
+					"<stop offset='.12' stop-color='" + C.moonGlow + "' stop-opacity='.55'/>" +
+					"<stop offset='.34' stop-color='" + C.moonGlow + "' stop-opacity='.18'/>" +
+					"<stop offset='.65' stop-color='" + C.moonGlow + "' stop-opacity='.06'/>" +
 					"<stop offset='1' stop-color='" + C.moonGlow + "' stop-opacity='0'/>" +
+					"</radialGradient>"
+			);
+			// Сам диск: не ровный круг, а градиент с блеском в левом-верхнем
+			// крае. Единственная деталь, по которой диск читается телом.
+			s.push(
+				"<radialGradient id='vgMoonFace' cx='.38' cy='.32' r='.78'>" +
+					"<stop offset='0' stop-color='#ffffff' stop-opacity='.9'/>" +
+					"<stop offset='.38' stop-color='" + C.moon + "'/>" +
+					"<stop offset='.84' stop-color='" + C.moon + "' stop-opacity='.72'/>" +
+					"<stop offset='1' stop-color='" + C.skyLow + "' stop-opacity='.4'/>" +
 					"</radialGradient>"
 			);
 			// Лента мглы: плотная в середине, растворяется по краям.
@@ -663,8 +789,25 @@ window.__ModuleLoader__.load({
 					"<feGaussianBlur stdDeviation='7'/>" +
 					"</filter>"
 			);
-			// Силуэты переиспользуются: шпили и вороны ставятся через <use>.
-			s.push("<g id='vgRaven'><path d='" + ravenPath() + "'/></g>");
+			// Свечение окна: широкий мягкий ореол вокруг пятна. Общим `vgSoft`
+			// свет окна расплывался бы на пол-башни и читался туманом; здесь
+			// радиус подобран под размер окна, чтобы ореол оставался венчиком
+			// вокруг огня, а не заливкой стены.
+			s.push(
+				"<filter id='vgWindowGlow' x='-120%' y='-120%' width='340%' height='340%'>" +
+					"<feGaussianBlur stdDeviation='2.6'/>" +
+					"</filter>"
+			);
+			// Градиент тьмы: лёг в самом низу defs, чтобы его видели все слои
+			// сцены, идущие ниже.
+			s.push(gloomLayer(light));
+			// Силуэт ворона собирается из ДВУХ символов: крылья и тело.
+			// Крылья обязаны быть отдельной фигурой с плечом в начале
+			// координат — только тогда взмах вращает крыло вокруг плеча, а не
+			// кувыркает всю птицу. Тело ставится последним, поверх плеча.
+			var raven = ravenParts();
+			s.push("<g id='vgWings'>" + raven.wings + "</g>");
+			s.push("<g id='vgBody'>" + raven.body + "</g>");
 			s.push("</defs>");
 
 			// ── небо ──
@@ -698,24 +841,71 @@ window.__ModuleLoader__.load({
 			}
 
 			// ── луна за покровом ──
+			// Ореол дышит, диск — нет: свет пульсирует, тело постоянно. Если
+			// дышать и диску, луна читается живым существом, а не светилом.
 			s.push(
 				"<g style='animation:vg-halo 11s ease-in-out infinite'>" +
-					"<circle cx='1276' cy='168' r='300' fill='url(#vgHalo)'/>" +
+					"<circle cx='1276' cy='168' r='340' fill='url(#vgHalo)'/>" +
 					"</g>"
 			);
+			// Диск побольше, чем был: 64 → 76. Мелкая луна уходила в угол и
+			// читалась блёсткой, крупная становится источником света сцены.
+			var MX = 1276;
+			var MY = 168;
+			var MR = 76;
 			s.push(
-				"<circle cx='1276' cy='168' r='64' fill='" + C.moon + "' opacity='" + (light ? 0.92 : 0.86) + "'/>"
+				"<circle cx='" + MX + "' cy='" + MY + "' r='" + MR + "' fill='url(#vgMoonFace)'/>"
 			);
-			// Покров: тонкие перистые полосы в левой части неба. Пять эллипсов
-			// вокруг луны давали концентрические кольца, сплошные тучи — тёмные
-			// кляксы: полупрозрачная фигура на градиенте читается своей формой, а
-			// не цветом. Поэтому полосы длинные, плоские и уведены от диска луны,
-			// чтобы не спорить с ним; свет они гасят, а не подкрашивают.
-			s.push("<g filter='url(#vgCloud)' opacity='.5'>");
-			for (var cl = 0; cl < 5; cl++) {
+			// Кратеры: тёмные пятна разного размера. Детерминированный
+			// генератор, чтобы перерисовка не перетасовывала лунные моря.
+			var mr = rng(2971031);
+			s.push("<g fill='" + C.skyLow + "' opacity='.5'>");
+			// Море Дождей и Большой Кратер: два крупных и несколько мелких.
+			var craters = [
+				["M" + MX - 22 + " " + (MY - 24) + " a13 10 0 1 0 .1 0 z", 1],
+				["M" + (MX + 24) + " " + (MY + 14) + " a17 13 0 1 0 .1 0 z", 1],
+				["M" + (MX - 6) + " " + (MY + 30) + " a8 6 0 1 0 .1 0 z", 1],
+			];
+			for (var ci = 0; ci < craters.length; ci++) {
+				s.push("<path d='" + craters[ci][0] + "' opacity='" + craters[ci][1] + "'/>");
+			}
+			// Мелкая кратерность.
+			for (var cm = 0; cm < 14; cm++) {
+				var ca = mr() * 6.2832;
+				var cd = 12 + mr() * (MR - 18);
+				var cpx = MX + Math.cos(ca) * cd;
+				var cpy = MY + Math.sin(ca) * cd;
+				var csz = 1.6 + mr() * 3.6;
 				s.push(
-					"<ellipse cx='" + round(120 + r() * 880) + "' cy='" + round(70 + r() * 300) +
-						"' rx='" + round(190 + r() * 300) + "' ry='" + round(5 + r() * 9) +
+					"<circle cx='" + round(cpx) + "' cy='" + round(cpy) + "' r='" + round(csz) +
+						"' opacity='" + round(0.3 + mr() * 0.4) + "'/>"
+				);
+			}
+			s.push("</g>");
+			// Канделябр: узкий венец света вокруг диска, обращённый к башням.
+			// Отдельным кольцом, а не частью ореола: ореол мягкий и широкий,
+			// венец плотный и тонкий — вместе они дают ощущение источника.
+			s.push(
+				"<circle cx='" + MX + "' cy='" + MY + "' r='" + (MR + 16) +
+					"' fill='none' stroke='" + C.moonGlow + "' stroke-width='2.5' opacity='.28'/>"
+			);
+			// Кромка диска слева-сверху: голубая линия, как у настоящей луны.
+			s.push(
+				"<path d='M" + (MX - MR + 4) + " " + (MY - 20) + " a" + MR + " " + MR + " 0 0 1 24 -52' " +
+					"fill='none' stroke='#ffffff' stroke-width='1.6' opacity='.5' stroke-linecap='round'/>"
+			);
+			// Покров: редкие перистые полосы, УВЕДЁННЫЕ от диска луны.
+			//
+			// Пять эллипсов вокруг луны давали концентрические кольца; сплошные
+			// тучи — тёмные кляксы: полупрозрачная фигура на градиенте читается
+			// своей формой, а не цветом. Поэтому полосы длинные, плоские, низкой
+			// прозрачности и стоят ВВЕРХУ: тень оттуда падает как облако, а не
+			// как клякса. Их четыре — три лишние сливались с мглой у горизонта.
+			s.push("<g filter='url(#vgCloud)' opacity='.36'>");
+			for (var cl = 0; cl < 4; cl++) {
+				s.push(
+					"<ellipse cx='" + round(140 + r() * 900) + "' cy='" + round(90 + r() * 260) +
+						"' rx='" + round(240 + r() * 320) + "' ry='" + round(4 + r() * 6) +
 						"' fill='" + C.cloudEdge + "'/>"
 				);
 			}
@@ -803,22 +993,37 @@ window.__ModuleLoader__.load({
 			s.push("</g>");
 
 			// ── вороны ──
-			var ravenN = Math.max(1, Math.round(7 * d));
+			// Половина стаи парит, половина машет. Общий ритм читался бы
+			// заводной игрушкой: живые птицы в стае не совпадают по фазе.
+			var ravenN = Math.max(1, Math.round(6 * d));
 			s.push("<g fill='" + C.raven + "'>");
 			for (var v = 0; v < ravenN; v++) {
-				var ry = round(150 + r() * 330);
-				var rsc = round(0.5 + r() * 0.75);
-				var rdur = round(46 + r() * 54);
+				var ry = round(140 + r() * 340);
+				var rsc = round(0.42 + r() * 0.7);
+				var rdur = round(52 + r() * 62);
 				var rdel = round(-r() * rdur);
 				var back = r() < 0.4;
+				// Планирует ли эта птица. Парящие держат крылья почти
+				// неподвижно, машущие хлопают с разным периодом.
+				var glide = r() < 0.35;
+				var flapDur = round(0.62 + r() * 0.55);
+				var flapDel = round(-r() * flapDur);
+				var wingR = glide ? "vg-glide-r" : "vg-wing-r";
+				var wingL = glide ? "vg-glide-l" : "vg-wing-l";
+				// Лёгкий крен корпуса: без него птица едет боком, как по рельсу.
+				var bank = round((r() - 0.5) * 16);
 				s.push(
-					"<g style='animation:vg-sway " + round(4 + r() * 4) + "s ease-in-out infinite'>" +
+					"<g style='animation:vg-sway " + round(5 + r() * 5) + "s ease-in-out infinite'>" +
 						"<g transform='translate(" + round(r() * 1600) + "," + ry + ")'>" +
 						"<g style='animation:" + (back ? "vg-cross-back" : "vg-cross") + " " + rdur +
 						"s linear infinite;animation-delay:" + rdel + "s'>" +
-						"<g transform='scale(" + rsc + ")' style='animation:vg-flap " +
-						round(0.5 + r() * 0.5) + "s ease-in-out infinite;transform-box:fill-box;transform-origin:center'>" +
-						"<use xlink:href='#vgRaven'/>" +
+						"<g transform='scale(" + rsc + ") rotate(" + bank + ")'>" +
+						// Крылья вращаются вокруг плеча (начало координат), каждое
+						// в свою сторону: левое — зеркало правого.
+						"<use xlink:href='#vgWings' style='animation:" + wingR + " " + flapDur +
+						"s ease-in-out infinite;animation-delay:" + flapDel + "s'/>" +
+						// Тело поверх плеча, чтобы стык крыльев был скрыт.
+						"<use xlink:href='#vgBody'/>" +
 						"</g></g></g></g>"
 				);
 			}
@@ -841,6 +1046,11 @@ window.__ModuleLoader__.load({
 				);
 			}
 			s.push("</g>");
+
+			// ── слой тьмы ──
+			// Последний: лёг поверх всей сцены, включая пепел и воронов. Без
+			// него даже самая тёмная палитра читалась светлым пятном на оболочке.
+			s.push("<rect width='1600' height='900' fill='url(#vgGloom)'/>");
 
 			s.push("</svg>");
 			return s.join("");
@@ -1541,18 +1751,28 @@ window.__ModuleLoader__.load({
 						var R = (170 + 130 * run.lantern) * (0.55 + 0.45 * power);
 
 						// Тьма по краям: фонарь в центре внимания, углы тонут.
+						//
+						// Градиент четырёхступенчатый, а не двух: с двумя тьма
+						// ложилась широким блюдом с заметным тиром. Здесь центр
+						// чистый, дальний круг ещё светел (там работает ореол
+						// фонаря), и только самый край уходит в мрак — тень
+						// вырастает из угла, а не накрывает экран.
 						if (run.tint > 0.05) {
-							var vg = gc.createRadialGradient(
-								lx < -9000 ? W / 2 : lx,
-								ly < -9000 ? H / 2 : ly,
-								R * 0.6,
-								lx < -9000 ? W / 2 : lx,
-								ly < -9000 ? H / 2 : ly,
-								Math.max(W, H) * 0.92
-							);
-							var a = (C === SCHEMES.light ? 0.05 : 0.42) * run.tint;
+							var isLight = C === SCHEMES.light;
+							var cx2 = lx < -9000 ? W / 2 : lx;
+							var cy2 = ly < -9000 ? H / 2 : ly;
+							var vg = gc.createRadialGradient(cx2, cy2, R * 0.55, cx2, cy2, Math.max(W, H) * 0.95);
+							// Пропорции тьмы: в светлой схеме гасить осторожнее,
+							// иначе утро превращалось в сумерки и сцена меркла.
+							var deep = isLight ? 0.16 : 0.52;
+							var mid = isLight ? 0.3 : 0.7;
+							var aDeep = deep * run.tint;
+							var aMid = mid * run.tint;
 							vg.addColorStop(0, "rgba(0,0,0,0)");
-							vg.addColorStop(1, C === SCHEMES.light ? "rgba(120,112,92," + a + ")" : "rgba(0,0,0," + a + ")");
+							vg.addColorStop(0.55, "rgba(0,0,0,0)");
+							vg.addColorStop(0.72, "rgba(" + (isLight ? "120,112,92" : "0,0,0") + "," + round2(aMid * 0.35) + ")");
+							vg.addColorStop(0.88, "rgba(" + (isLight ? "120,112,92" : "0,0,0") + "," + round2(aMid) + ")");
+							vg.addColorStop(1, "rgba(" + (isLight ? "90,84,70" : "0,0,0") + "," + round2(aDeep) + ")");
 							gc.fillStyle = vg;
 							gc.fillRect(0, 0, W, H);
 						}
