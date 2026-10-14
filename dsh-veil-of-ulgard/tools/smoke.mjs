@@ -150,9 +150,36 @@ const themeStub = {
   getTheme: () => ({ active: { colorScheme: process.env.DSH_VEIL_SCHEME === 'light' ? 'light' : 'dark' } }),
   overrideTokens: (source, tokens) => { themeStub.слои.push({ source, tokens }); return () => {} },
 }
+// Заглушка сервиса локализации. Она повторяет настоящую цепочку отката:
+// активный язык -> английский -> сам ключ. Благодаря этому дым ловит главную
+// поломку словарей — ключ, который есть в русском, но забыт в английском:
+// в интерфейсе он всплыл бы голым именем `page.title`, и заметить это можно
+// было бы только глазами.
+const localeStub = {
+  // Словари по локалям: namespace -> locale -> entries.
+  dicts: new Map(),
+  // Активный язык: DSH_VEIL_LANG=ru|en, по умолчанию английский.
+  active: process.env.DSH_VEIL_LANG === 'ru' ? 'ru' : 'en',
+  register(ns, dicts) {
+    const target = new Map()
+    for (const [locale, entries] of Object.entries(dicts)) target.set(locale, entries)
+    localeStub.dicts.set(ns, target)
+    return () => localeStub.dicts.delete(ns)
+  },
+  bind(ns) {
+    return (key) => {
+      const byLocale = localeStub.dicts.get(ns)
+      if (!byLocale) return key
+      const text = byLocale.get(localeStub.active)?.[key] ?? byLocale.get('en')?.[key]
+      return typeof text === 'string' ? text : key
+    }
+  },
+}
+
 const ctx = {
   get(name) {
     if (name === 'theme') return themeStub
+    if (name === 'locale') return localeStub
     if (name === 'slots') {
       return {
         inject(slot, cb) { cb() },
@@ -285,6 +312,12 @@ try {
 // компонент, чтобы выполнилось его тело. Хуки вне настоящего рендера вызывать
 // нельзя, поэтому на время вызова подставляем их рабочую заглушку и возвращаем
 // настоящую после: иначе падение хука маскировало бы ошибку самой страницы.
+const t = (key) => {
+  const byLocale = localeStub.dicts.get('dsh-veil-of-ulgard')
+  if (!byLocale) return key
+  const text = byLocale.get(localeStub.active)?.[key] ?? byLocale.get('en')?.[key]
+  return typeof text === 'string' ? text : key
+}
 try {
   const pageEl = page.render({})
   let tree = pageEl
@@ -294,6 +327,7 @@ try {
     try {
       tree = pageEl.type({
         run: { enabled: true, density: 1, tint: 0.45, lantern: 0.7 },
+        t,
         persist() {},
         requestRepaint() {},
       })
@@ -310,6 +344,73 @@ try {
   process.exit(1)
 }
 console.log('панель: иконка и страница связаны по ключу ' + page.props.key)
+
+// ── локализация ──
+// Словари обязаны быть зарегистрированы: без них панель показала бы английский
+// текст при русском интерфейсе.
+const nsDicts = localeStub.dicts.get('dsh-veil-of-ulgard')
+if (nsDicts === undefined) {
+  console.error('словари темы не зарегистрированы в сервисе локализации')
+  process.exit(1)
+}
+// Набор ключей обязан совпадать: ключ, забытый в одном языке, всплывёт в
+// интерфейсе голым именем — и заметить это можно было бы только глазами.
+const enKeys = Object.keys(nsDicts.get('en') || {}).sort()
+const ruKeys = Object.keys(nsDicts.get('ru') || {}).sort()
+if (enKeys.length === 0) {
+  console.error('английский словарь пуст')
+  process.exit(1)
+}
+const onlyEn = enKeys.filter((k) => !ruKeys.includes(k))
+const onlyRu = ruKeys.filter((k) => !enKeys.includes(k))
+if (onlyEn.length > 0 || onlyRu.length > 0) {
+  console.error(
+    'наборы ключей не совпадают: только в en — ' + (onlyEn.join(', ') || 'нет') +
+      '; только в ru — ' + (onlyRu.join(', ') || 'нет')
+  )
+  process.exit(1)
+}
+// Пустой перевод — это дыра в интерфейсе, а не «почти готово».
+const пустые = []
+for (const locale of ['en', 'ru']) {
+  for (const [key, value] of Object.entries(nsDicts.get(locale) || {})) {
+    if (typeof value !== 'string' || value.trim().length === 0) пустые.push(locale + ':' + key)
+  }
+}
+if (пустые.length > 0) {
+  console.error('пустые переводы: ' + пустые.join(', '))
+  process.exit(1)
+}
+// Подписи слотов обязаны быть функциями: строка застыла бы на языке, который был
+// активен при регистрации, и смена языка её бы не обновила. У `main` подписи нет
+// вовсе — этот слот её не принимает, поэтому проверяются только те, где она есть.
+for (const r of [icon, registered.find((x) => x.props.name === 'settings.general.item')]) {
+  if (typeof r.props.label !== 'function') {
+    console.error('подпись слота не является функцией: смена языка её не обновит (' + r.props.name + ')')
+    process.exit(1)
+  }
+}
+// Активный язык обязан реально менять текст: сравниваем перевод одной и той же
+// подписи на двух языках. Совпадение означало бы, что словарь не подключён.
+const sampleKey = 'field.density'
+const beforeLang = localeStub.active
+localeStub.active = 'en'
+const sampleEn = t(sampleKey)
+localeStub.active = 'ru'
+const sampleRu = t(sampleKey)
+localeStub.active = beforeLang
+if (sampleEn === sampleKey || sampleRu === sampleKey) {
+  console.error('ключ ' + sampleKey + ' не найден ни в одном словаре')
+  process.exit(1)
+}
+if (sampleEn === sampleRu) {
+  console.error('перевод ' + sampleKey + ' одинаков на двух языках: словарь не подключён')
+  process.exit(1)
+}
+console.log(
+  'локализация: ' + enKeys.length + ' ключей, наборы совпадают; ' +
+    sampleKey + ' = «' + sampleEn + '» / «' + sampleRu + '»'
+)
 
 // Стекло обязано нести обе схемы: тема выбирает нужную сама, и панели
 // следуют за переключением темы, а не замирают на первой заливке.

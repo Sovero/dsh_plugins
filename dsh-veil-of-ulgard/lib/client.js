@@ -54,6 +54,176 @@ window.__ModuleLoader__.load({
 		 */
 		var PANEL_ID = "dsh-veil-of-ulgard";
 
+		/** Пространство имён словарей темы в сервисе локализации оболочки. */
+		var NS = "dsh-veil-of-ulgard";
+
+		// ─────────────────────────────────────────────────────────────────────
+		// Словари
+		// ─────────────────────────────────────────────────────────────────────
+		//
+		// Английский — источник набора ключей: русский обязан нести те же ключи,
+		// иначе часть интерфейса молча осталась бы английской. Баланс словарей
+		// проверяет дым (`tools/smoke.mjs`), а не глаз.
+		//
+		// Ключи с точками: `panel.*` — пункт левой панели, `page.*` — страница,
+		// `card.*` — заголовки карточек, `field.*` — подписи настроек,
+		// `state.*` и `note.*` — пояснения, `swatch.*` — образец палитры.
+
+		/** Английский словарь (источник набора ключей). */
+		var en = {
+			"panel.label": "Veil of Ulgard",
+			"page.title": "Veil of Ulgard",
+			"page.subtitle":
+				"A night over a dead city: towers in three planes, a veiled moon, mist, ravens and ash. " +
+				"The lantern follows the pointer and drives the darkness back.",
+			"card.veil.title": "Veil",
+			"field.enabled": "Theme enabled",
+			"state.on": "the night of Ulgard",
+			"state.off": "the darkness has receded",
+			"note.on": "The scene and the lantern are running. Turning the veil off restores the shell's own background.",
+			"note.off": "The background is returned to the shell. The settings below are kept and wait for the veil to return.",
+			"card.scene.title": "Scene",
+			"field.density": "Density",
+			"field.gloom": "Gloom",
+			"note.scene":
+				"“Density” sets how many towers, ravens and ash motes fill the scene. " +
+				"“Gloom” sets how deeply the screen edges sink.",
+			"card.lantern.title": "Lantern",
+			"field.light": "Light",
+			"note.lantern": "The light follows the pointer. Ash caught in the pool flares up and drifts toward the lantern.",
+			"card.palette.title": "Theme palette",
+			"note.palette":
+				"The colours follow the shell's scheme: the light and dark palettes carry their own values, " +
+				"and the Light/Dark/System switch works as usual.",
+			"action.reset": "Restore defaults",
+			"hint.storage": "Settings are stored in the browser under dsh-veil-of-ulgard.prefs.",
+			"swatch.brand": "accent",
+			"swatch.base": "backdrop",
+			"swatch.layer1": "layer 1",
+			"swatch.layer2": "layer 2",
+			"swatch.text": "text",
+			"swatch.border": "border",
+		};
+
+		/** Русский словарь: тот же набор ключей, что и в английском. */
+		var ru = {
+			"panel.label": "Покров Ульгарда",
+			"page.title": "Покров Ульгарда",
+			"page.subtitle":
+				"Ночь над мёртвым городом: башни в три плана, луна за покровом, мгла, вороны и пепел. " +
+				"Фонарь идёт за курсором и разгоняет тьму.",
+			"card.veil.title": "Покров",
+			"field.enabled": "Тема включена",
+			"state.on": "ночь Ульгарда",
+			"state.off": "тьма отступила",
+			"note.on": "Сцена и фонарь работают. Выключение возвращает фон оболочке.",
+			"note.off": "Фон возвращён оболочке. Настройки ниже сохраняются и ждут возвращения.",
+			"card.scene.title": "Сцена",
+			"field.density": "Плотность",
+			"field.gloom": "Сумрак",
+			"note.scene":
+				"«Плотность» задаёт число башен, воронов и пепла. " +
+				"«Сумрак» — насколько глубоко тонут края экрана.",
+			"card.lantern.title": "Фонарь",
+			"field.light": "Свет",
+			"note.lantern": "Свет идёт за курсором. Пепел, попав в пятно, разгорается и льнёт к фонарю.",
+			"card.palette.title": "Палитра темы",
+			"note.palette":
+				"Цвета следуют схеме оболочки: светлая и тёмная несут свои значения, " +
+				"а переключатель «Светлая/Тёмная/Системная» работает штатно.",
+			"action.reset": "Вернуть умолчания",
+			"hint.storage": "Настройки хранятся в браузере под ключом dsh-veil-of-ulgard.prefs.",
+			"swatch.brand": "акцент",
+			"swatch.base": "подложка",
+			"swatch.layer1": "слой 1",
+			"swatch.layer2": "слой 2",
+			"swatch.text": "текст",
+			"swatch.border": "граница",
+		};
+
+		/** Язык по умолчанию, когда сервиса локализации нет. */
+		var FALLBACK_LANG = "en";
+
+		/**
+		 * Подставить параметры в строку: `{name}` заменяется значением.
+		 *
+		 * @param {string} text - шаблон.
+		 * @param {object} params - значения.
+		 * @returns {string} готовая строка.
+		 */
+		function interpolate(text, params) {
+			if (!params || typeof text !== "string") return text;
+			return text.replace(/\{(\w+)\}/g, function (match, name) {
+				return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match;
+			});
+		}
+
+		/**
+		 * Язык по языку браузера. Нужен только как запасной путь: пока сервис
+		 * локализации жив, выбор делает он, а не догадка.
+		 *
+		 * @returns {string} "ru" или "en".
+		 */
+		function detectLang() {
+			try {
+				var nav = globalThis.navigator;
+				var raw = nav && (nav.language || (nav.languages && nav.languages[0]));
+				if (typeof raw === "string" && raw.toLowerCase().indexOf("ru") === 0) return "ru";
+			} catch (error) {
+				/* нет navigator — берём язык по умолчанию */
+			}
+			return FALLBACK_LANG;
+		}
+
+		/**
+		 * Собрать переводчик.
+		 *
+		 * Когда сервис локализации доступен, перевод идёт через него: он сам
+		 * выбирает активный язык и держит общую цепочку отката. Свои словари
+		 * при этом остаются последним рубежом — если ключа нет в слое сервиса,
+		 * показывается наш текст, а не голое имя ключа.
+		 *
+		 * Без сервиса переводчик работает по языку браузера: плагин обязан
+		 * читаться и в урезанной сборке.
+		 *
+		 * @param {object} locale - сервис локализации или undefined.
+		 * @returns {{ t: (key: string, params?: object) => string, bound: boolean }}
+		 */
+		function makeTranslate(locale) {
+			var dicts = { en: en, ru: ru };
+			var bound = null;
+			if (locale !== undefined && locale !== null && typeof locale.bind === "function") {
+				try {
+					bound = locale.bind(NS);
+				} catch (error) {
+					bound = null;
+				}
+			}
+			/**
+			 * Перевод с последним рубежом: свои словари.
+			 * @param {string} key - ключ.
+			 * @param {object} [params] - параметры.
+			 * @returns {string} текст.
+			 */
+			function t(key, params) {
+				if (bound !== null) {
+					try {
+						var text = bound(key, params);
+						// Сервис отдаёт сам ключ, когда словаря нет: это видно в
+						// интерфейсе как `page.title`, поэтому подменяем своим текстом.
+						if (typeof text === "string" && text !== key) return text;
+					} catch (error) {
+						/* падение словаря не должно уносить панель */
+					}
+				}
+				var dict = dicts[detectLang()] || en;
+				var own = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : en[key];
+				if (typeof own !== "string") return key;
+				return interpolate(own, params);
+			}
+			return { t: t, bound: bound !== null };
+		}
+
 		/**
 		 * Округление до десятых: координаты SVG не должны тащить длинные числа.
 		 * @param {number} n - значение.
@@ -746,15 +916,59 @@ window.__ModuleLoader__.load({
 		// ─────────────────────────────────────────────────────────────────────
 
 		/**
-		 * Панель настроек темы в разделе «Общие».
+		 * Хук: перерисовать компонент при смене языка.
 		 *
-		 * @param {object} props - run, persist, requestRepaint.
+		 * Подписи слотов — thunk, и владелец перечитывает их сам, но текст ВНУТРИ
+		 * компонента (заголовки карточек, пояснения) так не обновится: React не
+		 * знает, что словарь сменился. Поэтому компонент подписывается на смену
+		 * языка и форсирует собственный ререндер.
+		 *
+		 * Без подписки панель осталась бы на прежнем языке до перезагрузки — а это
+		 * ровно тот дефект, который в тестах не виден.
+		 *
+		 * @param {Function} subscribe - подписка на локаль; возвращает отписку.
+		 * @returns {number} счётчик ревизий: меняется, когда язык сменился.
+		 */
+		function useLocaleTick(subscribe) {
+			var state = React.useState(0);
+			var tick = state[1];
+			React.useEffect(function () {
+				if (typeof subscribe !== "function") return undefined;
+				var drop = null;
+				try {
+					drop = subscribe(function () {
+						tick(function (n) {
+							return n + 1;
+						});
+					});
+				} catch (error) {
+					return undefined;
+				}
+				return function () {
+					if (typeof drop === "function") {
+						try {
+							drop();
+						} catch (error) {
+							/* отписка не должна уносить панель */
+						}
+					}
+				};
+			}, []);
+			return state[0];
+		}
+
+		/**
+		 * Короткая строка темы в разделе «Общие».
+		 *
+		 * @param {object} props - run, persist, requestRepaint, t, subscribeLocale.
 		 * @returns {object} элемент React.
 		 */
 		function Controls(props) {
 			var run = props.run;
+			var t = props.t;
 			var saved = React.useState(0);
 			var refresh = saved[1];
+			useLocaleTick(props.subscribeLocale);
 
 			/**
 			 * Строка со счётчиком и ползунком.
@@ -804,7 +1018,7 @@ window.__ModuleLoader__.load({
 				React.createElement(
 					"div",
 					{ className: "dsh-veil-row" },
-					React.createElement("span", { className: "dsh-veil-name" }, "Покров"),
+					React.createElement("span", { className: "dsh-veil-name" }, t("card.veil.title")),
 					React.createElement(
 						"span",
 						{ className: "dsh-veil-track" },
@@ -823,17 +1037,17 @@ window.__ModuleLoader__.load({
 						React.createElement(
 							"span",
 							{ className: "dsh-veil-note" },
-							run.enabled === false ? "тьма отступила" : "ночь Ульгарда"
+							run.enabled === false ? t("state.off") : t("state.on")
 						)
 					)
 				),
-				slider("Плотность", run.density, 0.2, 2, 0.05, function (v) {
+				slider(t("field.density"), run.density, 0.2, 2, 0.05, function (v) {
 					run.density = v;
 				}),
-				slider("Сумрак", run.tint, 0, 1, 0.05, function (v) {
+				slider(t("field.gloom"), run.tint, 0, 1, 0.05, function (v) {
 					run.tint = v;
 				}),
-				slider("Фонарь", run.lantern, 0, 1, 0.05, function (v) {
+				slider(t("field.light"), run.lantern, 0, 1, 0.05, function (v) {
 					run.lantern = v;
 				})
 			);
@@ -919,13 +1133,15 @@ window.__ModuleLoader__.load({
 		 * прокрутку и шапку. Разметка повторяет штатные панели: заголовок,
 		 * карточки настроек, образец палитры.
 		 *
-		 * @param {object} props - run, persist, requestRepaint.
+		 * @param {object} props - run, persist, requestRepaint, t, subscribeLocale.
 		 * @returns {object} элемент React.
 		 */
 		function VeilPage(props) {
 			var run = props.run;
+			var t = props.t;
 			var saved = React.useState(0);
 			var refresh = saved[1];
+			useLocaleTick(props.subscribeLocale);
 
 			/**
 			 * Перерисовать страницу после изменения настройки.
@@ -942,12 +1158,12 @@ window.__ModuleLoader__.load({
 			}
 
 			var swatches = [
-				["--dsw-alias-brand-primary", "акцент"],
-				["--dsw-alias-bg-base", "подложка"],
-				["--dsw-alias-bg-layer-1", "слой 1"],
-				["--dsw-alias-bg-layer-2", "слой 2"],
-				["--dsw-alias-label-primary", "текст"],
-				["--dsw-alias-border-l2", "граница"],
+				["--dsw-alias-brand-primary", t("swatch.brand")],
+				["--dsw-alias-bg-base", t("swatch.base")],
+				["--dsw-alias-bg-layer-1", t("swatch.layer1")],
+				["--dsw-alias-bg-layer-2", t("swatch.layer2")],
+				["--dsw-alias-label-primary", t("swatch.text")],
+				["--dsw-alias-border-l2", t("swatch.border")],
 			];
 
 			return React.createElement(
@@ -962,24 +1178,19 @@ window.__ModuleLoader__.load({
 						React.createElement(
 							"div",
 							{ className: "dsh-veil-head" },
-							React.createElement("h1", { className: "dsh-veil-title" }, "Покров Ульгарда")
+							React.createElement("h1", { className: "dsh-veil-title" }, t("page.title"))
 						),
-						React.createElement(
-							"p",
-							{ className: "dsh-veil-sub" },
-							"Ночь над мёртвым городом: башни в три плана, луна за покровом, мгла, вороны и пепел. " +
-								"Фонарь идёт за курсором и разгоняет тьму."
-						),
+						React.createElement("p", { className: "dsh-veil-sub" }, t("page.subtitle")),
 
 						// ── карточка «Покров» ──
 						React.createElement(
 							"div",
 							{ className: "dsh-veil-card" },
-							React.createElement("h2", { className: "dsh-veil-card-title" }, "Покров"),
+							React.createElement("h2", { className: "dsh-veil-card-title" }, t("card.veil.title")),
 							React.createElement(
 								"div",
 								{ className: "dsh-veil-field" },
-								React.createElement("span", { className: "dsh-veil-field-name" }, "Тема включена"),
+								React.createElement("span", { className: "dsh-veil-field-name" }, t("field.enabled")),
 								React.createElement(
 									"span",
 									{ className: "dsh-veil-field-body" },
@@ -996,16 +1207,14 @@ window.__ModuleLoader__.load({
 									React.createElement(
 										"span",
 										{ className: "dsh-veil-note" },
-										run.enabled === false ? "тьма отступила" : "ночь Ульгарда"
+										run.enabled === false ? t("state.off") : t("state.on")
 									)
 								)
 							),
 							React.createElement(
 								"p",
 								{ className: "dsh-veil-card-note" },
-								run.enabled === false
-									? "Фон возвращён оболочке. Настройки ниже сохраняются и ждут возвращения."
-									: "Сцена и фонарь работают. Выключение возвращает фон оболочке."
+								run.enabled === false ? t("note.off") : t("note.on")
 							)
 						),
 
@@ -1013,9 +1222,9 @@ window.__ModuleLoader__.load({
 						React.createElement(
 							"div",
 							{ className: "dsh-veil-card" },
-							React.createElement("h2", { className: "dsh-veil-card-title" }, "Сцена"),
+							React.createElement("h2", { className: "dsh-veil-card-title" }, t("card.scene.title")),
 							React.createElement(VeilField, {
-								label: "Плотность",
+								label: t("field.density"),
 								value: run.density,
 								min: 0.2,
 								max: 2,
@@ -1030,7 +1239,7 @@ window.__ModuleLoader__.load({
 								},
 							}),
 							React.createElement(VeilField, {
-								label: "Сумрак",
+								label: t("field.gloom"),
 								value: run.tint,
 								min: 0,
 								max: 1,
@@ -1044,20 +1253,16 @@ window.__ModuleLoader__.load({
 									});
 								},
 							}),
-							React.createElement(
-								"p",
-								{ className: "dsh-veil-card-note" },
-								"«Плотность» задаёт число башен, воронов и пепла. «Сумрак» — насколько глубоко тонут края экрана."
-							)
+							React.createElement("p", { className: "dsh-veil-card-note" }, t("note.scene"))
 						),
 
 						// ── карточка «Фонарь» ──
 						React.createElement(
 							"div",
 							{ className: "dsh-veil-card" },
-							React.createElement("h2", { className: "dsh-veil-card-title" }, "Фонарь"),
+							React.createElement("h2", { className: "dsh-veil-card-title" }, t("card.lantern.title")),
 							React.createElement(VeilField, {
-								label: "Свет",
+								label: t("field.light"),
 								value: run.lantern,
 								min: 0,
 								max: 1,
@@ -1071,18 +1276,14 @@ window.__ModuleLoader__.load({
 									});
 								},
 							}),
-							React.createElement(
-								"p",
-								{ className: "dsh-veil-card-note" },
-								"Свет идёт за курсором. Пепел, попав в пятно, разгорается и льнёт к фонарю."
-							)
+							React.createElement("p", { className: "dsh-veil-card-note" }, t("note.lantern"))
 						),
 
 						// ── карточка «Палитра» ──
 						React.createElement(
 							"div",
 							{ className: "dsh-veil-card" },
-							React.createElement("h2", { className: "dsh-veil-card-title" }, "Палитра темы"),
+							React.createElement("h2", { className: "dsh-veil-card-title" }, t("card.palette.title")),
 							React.createElement(
 								"div",
 								{ className: "dsh-veil-swatches" },
@@ -1095,11 +1296,7 @@ window.__ModuleLoader__.load({
 									});
 								})
 							),
-							React.createElement(
-								"p",
-								{ className: "dsh-veil-card-note" },
-								"Цвета следуют схеме оболочки: светлая и тёмная несут свои значения, и переключатель «Светлая/Тёмная/Системная» работает штатно."
-							)
+							React.createElement("p", { className: "dsh-veil-card-note" }, t("note.palette"))
 						),
 
 						// ── действия ──
@@ -1120,14 +1317,10 @@ window.__ModuleLoader__.load({
 										});
 									},
 								},
-								"Вернуть умолчания"
+								t("action.reset")
 							)
 						),
-						React.createElement(
-							"p",
-							{ className: "dsh-veil-hint" },
-							"Настройки хранятся в браузере под ключом dsh-veil-of-ulgard.prefs."
-						)
+						React.createElement("p", { className: "dsh-veil-hint" }, t("hint.storage"))
 					)
 				)
 			);
@@ -1164,6 +1357,40 @@ window.__ModuleLoader__.load({
 			if (typeof prefs.density !== "number") run.density = 1;
 			if (typeof prefs.tint !== "number") run.tint = 0.45;
 			if (typeof prefs.lantern !== "number") run.lantern = 0.7;
+
+			// ── локализация ──
+			// Словари регистрируются ДО первого рендера панели: иначе первый кадр
+			// показал бы английские подписи при русском интерфейсе, а второй —
+			// русские, то есть видимый скачок текста.
+			//
+			// `register` берёт словари всех локалей одним вызовом: так баланс
+			// набора ключей проверяется в одном месте, и пропущенный ключ в
+			// русском словаре виден сразу, а не всплывает английской строкой
+			// посреди русского интерфейса.
+			//
+			// Регистрация обёрнута в try: сервис локализации необязателен, и его
+			// отсутствие или отказ не должны уносить тему целиком.
+			var locale = ctx.get("locale");
+			if (locale !== undefined && locale !== null && typeof locale.register === "function") {
+				try {
+					ctx.effect(function () {
+						return locale.register(NS, { en: en, ru: ru });
+					}, "veil: dictionaries");
+				} catch (error) {
+					console.error("[veil] словари не зарегистрированы", error);
+				}
+			}
+			var translated = makeTranslate(locale);
+			var t = translated.t;
+			// Подписка на смену языка: без неё текст внутри панели остался бы на
+			// прежнем языке до перезагрузки, потому что React не знает о смене
+			// словаря. Сервис может не отдать `subscribe` — тогда это no-op.
+			var subscribeLocale =
+				locale !== undefined && locale !== null && typeof locale.subscribe === "function"
+					? function (fn) {
+							return locale.subscribe(fn);
+						}
+					: null;
 
 			var repaint = null;
 			var repaintTimer = null;
@@ -1597,10 +1824,22 @@ window.__ModuleLoader__.load({
 				//     чтобы переключатель темы был там, где его ищут.
 				// Обе половины читают один и тот же `run`, поэтому расхождению
 				// взяться неоткуда.
+				//
+				// Подписи слотов — ФУНКЦИИ, а не строки: владелец слота перечитывает
+				// thunk на каждой проекции, поэтому смена языка обновляет подпись
+				// без повторной регистрации. Строка застыла бы на языке, который
+				// был активен в момент регистрации.
 				try {
 					slots.inject("sidebar.panellist", function () {
 						return slots.register(
-							{ name: "sidebar.panellist", id: PANEL_ID, order: 40, label: "Покров Ульгарда" },
+							{
+								name: "sidebar.panellist",
+								id: PANEL_ID,
+								order: 40,
+								label: function () {
+									return t("panel.label");
+								},
+							},
 							VeilPanelIcon
 						);
 					});
@@ -1613,6 +1852,8 @@ window.__ModuleLoader__.load({
 						return slots.register({ name: "main", key: PANEL_ID }, function () {
 							return React.createElement(VeilPage, {
 								run: run,
+								t: t,
+								subscribeLocale: subscribeLocale,
 								persist: function () {
 									savePrefs(run);
 								},
@@ -1627,10 +1868,19 @@ window.__ModuleLoader__.load({
 				try {
 					slots.inject("settings.general.item", function () {
 						return slots.register(
-							{ name: "settings.general.item", id: "dsh-veil", order: 31, label: "Покров Ульгарда" },
+							{
+								name: "settings.general.item",
+								id: "dsh-veil",
+								order: 31,
+								label: function () {
+									return t("panel.label");
+								},
+							},
 							function () {
 								return React.createElement(Controls, {
 									run: run,
+									t: t,
+									subscribeLocale: subscribeLocale,
 									persist: function () {
 										savePrefs(run);
 									},
@@ -1655,7 +1905,12 @@ window.__ModuleLoader__.load({
 		// `timer` обязателен по той же причине, но с обратной стороны: без него
 		// `ctx.timeout` бросает «cannot get property "timer" without inject», а
 		// requestRepaint() зовёт ctx.timeout на пересборку сцены.
-		exports.inject = ["theme", "slots", "timer"];
+		//
+		// `locale` — жёсткая зависимость, а не `ctx.get`: переводчик нужен обеим
+		// половинам панели с первого кадра, и ждать появления сервиса честнее,
+		// чем отрисовать английский текст при русском интерфейсе. Сам перевод
+		// при этом терпим к отсутствию сервиса — см. makeTranslate.
+		exports.inject = ["theme", "slots", "timer", "locale"];
 		return module.exports;
 	},
 });

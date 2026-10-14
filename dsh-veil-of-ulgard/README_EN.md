@@ -55,6 +55,34 @@ cannot drift apart.
 
 Settings are stored in `localStorage` under `dsh-veil-of-ulgard.prefs`.
 
+## Languages
+
+The theme's interface is bilingual: **English** and **Russian**. It follows the DSH
+language — there is no separate setting, and nothing to switch inside the theme.
+
+| What is translated | Where the text comes from |
+| --- | --- |
+| Left-panel entry label | The theme's dictionary through the locale service |
+| Card titles, setting labels, explanations | The theme's dictionary through the locale service |
+| Palette swatch names | The theme's dictionary through the locale service |
+
+How it works:
+
+- Both locale dictionaries are registered in **one call**
+  (`locale.register(ns, { en, ru })`), so key-set balance is checked in one place.
+  A key missing from one language would surface in the interface as a bare key name
+  (`page.title`) — exactly what `tools/smoke.mjs` catches.
+- Slot labels are **functions**, not strings: the slot owner re-reads the thunk on
+  every projection, so a language change updates the label without re-registering.
+- Text inside the panel subscribes to locale changes (`locale.subscribe`) and
+  re-renders itself: React knows nothing about a dictionary change, and without the
+  subscription the panel would stay in the previous language until a reload.
+- With no locale service, the translator falls back to the browser language and the
+  theme's own dictionaries — the plugin still reads in a stripped-down build.
+
+The theme's strings live in `lib/client.js` next to the code: the plugin has no build
+step, and moving dictionaries into separate files would mean assembling them by hand.
+
 ## Schemes
 
 The theme carries **both schemes** and follows the
