@@ -1,0 +1,37 @@
+THIRD-PARTY NOTICES
+
+This plugin bundles/adapts the following third-party works:
+
+1. dsh-expert (original plugin by jiuaiwo)
+   - Repository: https://github.com/jiuaiwo/dsh-expert
+   - License: MIT
+   - Used as architectural reference and inspiration for catalog structure, tooling patterns, and asset delivery mechanism.
+   - Adapted to Russian language UX, renamed all identifiers to `eksTeam` namespace.
+
+2. @deepseek-ai/cordis, @deepseek-ai/dsh, @deepseek-ai/dsh-*, @deepseek-ai/schemastery, @deepseek-ai/dsh-typert-protocol
+   - DeepSeek Harness framework packages
+   - License: MIT / Apache-2.0 (per package)
+   - Peer dependencies, not bundled.
+
+3. zod
+   - Repository: https://github.com/colinhacks/zod
+   - License: MIT
+   - Runtime dependency for schema validation.
+
+4. React / React DOM
+   - License: MIT
+   - Peer dependencies for client UI components.
+
+5. preact (via @deepseek-ai/dsh-client-ui-primitives)
+   - License: MIT
+   - Used indirectly through DSH client UI primitives.
+
+6. tar (Node.js)
+   - License: ISC
+   - Used in fetch-assets for tarball extraction.
+
+7. Architecture/patterns inspired by:
+   - dsh-plugin-skill-gate (skill gating mechanism)
+   - Various DSH official plugins for settings, systemPrompt, subagents patterns
+
+All third-party licenses are reproduced in `vendor/third-party-licenses/` directory.

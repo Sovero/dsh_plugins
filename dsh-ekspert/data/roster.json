@@ -1,0 +1,488 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-30T12:38:09.544Z",
+  "baseUrl": "https://example.com/ekspert-assets",
+  "threshold": 51200,
+  "packs": {
+    "cross-functional/architecture-review": {
+      "division": "cross-functional",
+      "slug": "architecture-review",
+      "path": "packs/cross-functional/architecture-review.tar.gz",
+      "bytes": 4547,
+      "rawBytes": 4547,
+      "files": 1,
+      "sha256": "a182eb6c10e99389533a4d5153774e1e6f9beabd49be7ce8db9ba2e9308f9205",
+      "dirs": []
+    },
+    "cross-functional/clinical-trial": {
+      "division": "cross-functional",
+      "slug": "clinical-trial",
+      "path": "packs/cross-functional/clinical-trial.tar.gz",
+      "bytes": 6114,
+      "rawBytes": 6114,
+      "files": 1,
+      "sha256": "a71f9aae50d63545229b7f68cdb13d8ad1b28bc74b84485fbb8e53a6c21f692f",
+      "dirs": []
+    },
+    "cross-functional/data-governance": {
+      "division": "cross-functional",
+      "slug": "data-governance",
+      "path": "packs/cross-functional/data-governance.tar.gz",
+      "bytes": 4921,
+      "rawBytes": 4921,
+      "files": 1,
+      "sha256": "09f923e08b6a5f9a0b719d07e73c5db5d278ae8ab1ae981a3312b97847574a3a",
+      "dirs": []
+    },
+    "cross-functional/devex": {
+      "division": "cross-functional",
+      "slug": "devex",
+      "path": "packs/cross-functional/devex.tar.gz",
+      "bytes": 4641,
+      "rawBytes": 4641,
+      "files": 1,
+      "sha256": "bf57ec108b3ec3c5029e00e66546ae199bc0b824f0f1a328ab7e4067db46dc23",
+      "dirs": []
+    },
+    "cross-functional/incident-response": {
+      "division": "cross-functional",
+      "slug": "incident-response",
+      "path": "packs/cross-functional/incident-response.tar.gz",
+      "bytes": 4098,
+      "rawBytes": 4098,
+      "files": 1,
+      "sha256": "97f53d390d65f699a62e69ba61b2ef4f78339a8d5ebbab2b61cf123da898830b",
+      "dirs": []
+    },
+    "cross-functional/product-trio": {
+      "division": "cross-functional",
+      "slug": "product-trio",
+      "path": "packs/cross-functional/product-trio.tar.gz",
+      "bytes": 2900,
+      "rawBytes": 2900,
+      "files": 1,
+      "sha256": "0e7d15ff95d7bc2b7dbc72eac3b04a884c8e879d7f6fa0589023277dd7098b62",
+      "dirs": []
+    },
+    "cross-functional/release-train": {
+      "division": "cross-functional",
+      "slug": "release-train",
+      "path": "packs/cross-functional/release-train.tar.gz",
+      "bytes": 4518,
+      "rawBytes": 4518,
+      "files": 1,
+      "sha256": "6048d9155775907faaf2d0c368303420fa51ca59a01c28a93de582c8e113d9e8",
+      "dirs": []
+    },
+    "cross-functional/security-champions": {
+      "division": "cross-functional",
+      "slug": "security-champions",
+      "path": "packs/cross-functional/security-champions.tar.gz",
+      "bytes": 4265,
+      "rawBytes": 4265,
+      "files": 1,
+      "sha256": "247bf05dd82fc9ea211599445a42b86e8e4aba940919a64cc8bbdebd7c440f94",
+      "dirs": []
+    },
+    "design/ui-ux-dizainer": {
+      "division": "design",
+      "slug": "ui-ux-dizainer",
+      "path": "packs/design/ui-ux-dizainer.tar.gz",
+      "bytes": 1656,
+      "rawBytes": 1656,
+      "files": 1,
+      "sha256": "5da42ed666a494b217cef3239d0d48684c4905225678375e6cefff3174e36f90",
+      "dirs": []
+    },
+    "engineering/api-integration-specialist": {
+      "division": "engineering",
+      "slug": "api-integration-specialist",
+      "path": "packs/engineering/api-integration-specialist.tar.gz",
+      "bytes": 2176,
+      "rawBytes": 2176,
+      "files": 1,
+      "sha256": "18dbefcee1bc264f1b9f8d1e40efba2662abec6b4f9a10dd67b654e12b555e69",
+      "dirs": []
+    },
+    "engineering/backend-architect": {
+      "division": "engineering",
+      "slug": "backend-architect",
+      "path": "packs/engineering/backend-architect.tar.gz",
+      "bytes": 1546,
+      "rawBytes": 1546,
+      "files": 1,
+      "sha256": "76d8ee2c3ffade7b0c7716ca4f8d1de5b49e293168960292a7ffd5dd65870cba",
+      "dirs": []
+    },
+    "engineering/blockchain-razrabotchik": {
+      "division": "engineering",
+      "slug": "blockchain-razrabotchik",
+      "path": "packs/engineering/blockchain-razrabotchik.tar.gz",
+      "bytes": 2154,
+      "rawBytes": 2154,
+      "files": 1,
+      "sha256": "840b9c7649b3b5cc49531496dcfd675f3da7179d27da71b080a4a9fd2f839153",
+      "dirs": []
+    },
+    "engineering/cloud-architect": {
+      "division": "engineering",
+      "slug": "cloud-architect",
+      "path": "packs/engineering/cloud-architect.tar.gz",
+      "bytes": 1746,
+      "rawBytes": 1746,
+      "files": 1,
+      "sha256": "76285a2007815f63fb9842ff83443f0997854c6d217c20ed648fa423d0f22def",
+      "dirs": []
+    },
+    "engineering/data-engineer": {
+      "division": "engineering",
+      "slug": "data-engineer",
+      "path": "packs/engineering/data-engineer.tar.gz",
+      "bytes": 1540,
+      "rawBytes": 1540,
+      "files": 1,
+      "sha256": "8694b5d61ae90214755811d5594cc9025d71acef8a8b64343677b5af722b0260",
+      "dirs": []
+    },
+    "engineering/devops-inzhener": {
+      "division": "engineering",
+      "slug": "devops-inzhener",
+      "path": "packs/engineering/devops-inzhener.tar.gz",
+      "bytes": 1630,
+      "rawBytes": 1630,
+      "files": 1,
+      "sha256": "f1084448ed5d0e84cf7c0575977eebc89aa4ec88fde6c787aae991d1d3999109",
+      "dirs": []
+    },
+    "engineering/embedded-inzhener": {
+      "division": "engineering",
+      "slug": "embedded-inzhener",
+      "path": "packs/engineering/embedded-inzhener.tar.gz",
+      "bytes": 1831,
+      "rawBytes": 1831,
+      "files": 1,
+      "sha256": "109b03a45941923760a4a79baf50b6be4f36aa104ce397caa80bd0b4e46b61a9",
+      "dirs": []
+    },
+    "engineering/frontend-razrabotchik": {
+      "division": "engineering",
+      "slug": "frontend-razrabotchik",
+      "path": "packs/engineering/frontend-razrabotchik.tar.gz",
+      "bytes": 1757,
+      "rawBytes": 1757,
+      "files": 1,
+      "sha256": "949bdda8c60667583492ee0e5ee3790254f47c1fad625213ec0f37d36ee9bc0e",
+      "dirs": []
+    },
+    "engineering/game-developer": {
+      "division": "engineering",
+      "slug": "game-developer",
+      "path": "packs/engineering/game-developer.tar.gz",
+      "bytes": 2077,
+      "rawBytes": 2077,
+      "files": 1,
+      "sha256": "a76d3f350e276ca05ac1e4785aede15c1271fed1876e9deac23fd64c539a16ae",
+      "dirs": []
+    },
+    "engineering/ml-engineer": {
+      "division": "engineering",
+      "slug": "ml-engineer",
+      "path": "packs/engineering/ml-engineer.tar.gz",
+      "bytes": 1755,
+      "rawBytes": 1755,
+      "files": 1,
+      "sha256": "26c581127b5e3e99b25aa43c88c1fc0ae8c10f046fd72c3d4dfcb42f1470b6ac",
+      "dirs": []
+    },
+    "engineering/mobile-razrabotchik": {
+      "division": "engineering",
+      "slug": "mobile-razrabotchik",
+      "path": "packs/engineering/mobile-razrabotchik.tar.gz",
+      "bytes": 2077,
+      "rawBytes": 2077,
+      "files": 1,
+      "sha256": "0847e195c2ffdd107b65ebff65e129a5cca889161fc2248a0c75c677c91d9cb7",
+      "dirs": []
+    },
+    "engineering/qa-avtomatizator": {
+      "division": "engineering",
+      "slug": "qa-avtomatizator",
+      "path": "packs/engineering/qa-avtomatizator.tar.gz",
+      "bytes": 1547,
+      "rawBytes": 1547,
+      "files": 1,
+      "sha256": "b62fcdfa60883ece231a610de3796ea340cf74ede4e0814558b249923dae2e78",
+      "dirs": []
+    },
+    "engineering/security-engineer": {
+      "division": "engineering",
+      "slug": "security-engineer",
+      "path": "packs/engineering/security-engineer.tar.gz",
+      "bytes": 1489,
+      "rawBytes": 1489,
+      "files": 1,
+      "sha256": "feeb0ad6664c0abfbfb77472025945e536f7b5f9c5e4025166b6342c1bd60164",
+      "dirs": []
+    },
+    "engineering/sre-inzhener": {
+      "division": "engineering",
+      "slug": "sre-inzhener",
+      "path": "packs/engineering/sre-inzhener.tar.gz",
+      "bytes": 1815,
+      "rawBytes": 1815,
+      "files": 1,
+      "sha256": "113bbd86a726235fe1f9fbd3a0a60a37fc1b18aaec9cc9c165f23508503386a9",
+      "dirs": []
+    },
+    "finance/finansovyj-analitik": {
+      "division": "finance",
+      "slug": "finansovyj-analitik",
+      "path": "packs/finance/finansovyj-analitik.tar.gz",
+      "bytes": 1682,
+      "rawBytes": 1682,
+      "files": 1,
+      "sha256": "ae34f053d64457516f101460d686a476b16237a3ef5330ca4bfa0ce2edcd0645",
+      "dirs": []
+    },
+    "healthcare/bioinformatik": {
+      "division": "healthcare",
+      "slug": "bioinformatik",
+      "path": "packs/healthcare/bioinformatik.tar.gz",
+      "bytes": 3314,
+      "rawBytes": 3314,
+      "files": 1,
+      "sha256": "1c4f6a811e2a0b049dffd6d56c4201f26f8eed998d9f762b5c9ede338902f0ca",
+      "dirs": []
+    },
+    "healthcare/epidemiolog": {
+      "division": "healthcare",
+      "slug": "epidemiolog",
+      "path": "packs/healthcare/epidemiolog.tar.gz",
+      "bytes": 4596,
+      "rawBytes": 4596,
+      "files": 1,
+      "sha256": "2bba3b6d6822120a727f2788cb9243bb94d63ad842fec3d89d8be581c6982fff",
+      "dirs": []
+    },
+    "healthcare/farmakolog": {
+      "division": "healthcare",
+      "slug": "farmakolog",
+      "path": "packs/healthcare/farmakolog.tar.gz",
+      "bytes": 3887,
+      "rawBytes": 3887,
+      "files": 1,
+      "sha256": "1b305eab7fb4014dfd94c111151edbddb4fa14eb9424b7dee00ad86cbfac5a83",
+      "dirs": []
+    },
+    "healthcare/genetik": {
+      "division": "healthcare",
+      "slug": "genetik",
+      "path": "packs/healthcare/genetik.tar.gz",
+      "bytes": 5435,
+      "rawBytes": 5435,
+      "files": 1,
+      "sha256": "14ec2fca51760eeb755b97030a74fef4bbacc4d53c88d3e765569fd16b90dbf9",
+      "dirs": []
+    },
+    "healthcare/kardiolog": {
+      "division": "healthcare",
+      "slug": "kardiolog",
+      "path": "packs/healthcare/kardiolog.tar.gz",
+      "bytes": 2220,
+      "rawBytes": 2220,
+      "files": 1,
+      "sha256": "063d29b662b40595e4c81b882a52f92b049c93f8435fdf768484bb6b58dd407c",
+      "dirs": []
+    },
+    "healthcare/nevrolog": {
+      "division": "healthcare",
+      "slug": "nevrolog",
+      "path": "packs/healthcare/nevrolog.tar.gz",
+      "bytes": 3007,
+      "rawBytes": 3007,
+      "files": 1,
+      "sha256": "511c18828e3faeef188603ecb0f40e666a0e9ed0340ec0c71ec9beeb5a270bd5",
+      "dirs": []
+    },
+    "healthcare/onkolog": {
+      "division": "healthcare",
+      "slug": "onkolog",
+      "path": "packs/healthcare/onkolog.tar.gz",
+      "bytes": 3246,
+      "rawBytes": 3246,
+      "files": 1,
+      "sha256": "3b6f7d09df0b8b711dfb805082d6e9ce9e63dc18aa7f76aed7492dcb3a1f70d0",
+      "dirs": []
+    },
+    "healthcare/pediatr": {
+      "division": "healthcare",
+      "slug": "pediatr",
+      "path": "packs/healthcare/pediatr.tar.gz",
+      "bytes": 3557,
+      "rawBytes": 3557,
+      "files": 1,
+      "sha256": "989b190e546570a237a67b1ee527470efae649eeb2aba235b538d74f11416ed1",
+      "dirs": []
+    },
+    "healthcare/psihiatr": {
+      "division": "healthcare",
+      "slug": "psihiatr",
+      "path": "packs/healthcare/psihiatr.tar.gz",
+      "bytes": 4558,
+      "rawBytes": 4558,
+      "files": 1,
+      "sha256": "a8e884103d27e44dd2afe289580c10df6e1543d58a769e0b0ab2377e8c56144a",
+      "dirs": []
+    },
+    "healthcare/radiolog": {
+      "division": "healthcare",
+      "slug": "radiolog",
+      "path": "packs/healthcare/radiolog.tar.gz",
+      "bytes": 3971,
+      "rawBytes": 3971,
+      "files": 1,
+      "sha256": "b3219a42d85fb2194675e17e6801b14aa53ace8a08d6cb851435ddbda8cfcc6b",
+      "dirs": []
+    },
+    "healthcare/terapevt": {
+      "division": "healthcare",
+      "slug": "terapevt",
+      "path": "packs/healthcare/terapevt.tar.gz",
+      "bytes": 2412,
+      "rawBytes": 2412,
+      "files": 1,
+      "sha256": "069dcb8ba0f917a9041ac44258c8fa03ce6e77275f06ac948d788e7aa8fb7bda",
+      "dirs": []
+    },
+    "hr/hr-business-partner": {
+      "division": "hr",
+      "slug": "hr-business-partner",
+      "path": "packs/hr/hr-business-partner.tar.gz",
+      "bytes": 1791,
+      "rawBytes": 1791,
+      "files": 1,
+      "sha256": "1baca6ede0eceda4730f73038d74873902a5af57b946bf59b22dd88373f55421",
+      "dirs": []
+    },
+    "legal/corporate-lawyer": {
+      "division": "legal",
+      "slug": "corporate-lawyer",
+      "path": "packs/legal/corporate-lawyer.tar.gz",
+      "bytes": 2029,
+      "rawBytes": 2029,
+      "files": 1,
+      "sha256": "3b4755e8db0c78d6cf26a29c669475d2dba3c13ac6a97b94df38e4149a1bb1d7",
+      "dirs": []
+    },
+    "marketing/performance-marketer": {
+      "division": "marketing",
+      "slug": "performance-marketer",
+      "path": "packs/marketing/performance-marketer.tar.gz",
+      "bytes": 1761,
+      "rawBytes": 1761,
+      "files": 1,
+      "sha256": "7660994023948d7b8385865f62ab4c8b173af76c99189c2177434f80da52014b",
+      "dirs": []
+    },
+    "project-management/menedzher-proektov": {
+      "division": "project-management",
+      "slug": "menedzher-proektov",
+      "path": "packs/project-management/menedzher-proektov.tar.gz",
+      "bytes": 1621,
+      "rawBytes": 1621,
+      "files": 1,
+      "sha256": "c3afaf7da444cf87658efb2144a42dd901afce47680e97c6a82bc0a10c2b57cd",
+      "dirs": []
+    },
+    "research/issledovatel-dannyh": {
+      "division": "research",
+      "slug": "issledovatel-dannyh",
+      "path": "packs/research/issledovatel-dannyh.tar.gz",
+      "bytes": 1687,
+      "rawBytes": 1687,
+      "files": 1,
+      "sha256": "47f2c13fa959a990f457f7f70788fd97d67e550603080f4fd590754d3790f0e9",
+      "dirs": []
+    },
+    "sales/b2b-sales-executive": {
+      "division": "sales",
+      "slug": "b2b-sales-executive",
+      "path": "packs/sales/b2b-sales-executive.tar.gz",
+      "bytes": 1507,
+      "rawBytes": 1507,
+      "files": 1,
+      "sha256": "d2bc63ee9db41b77ccc5ab30cb435dad0b2200cb8c68bed97eecfe28ac221323",
+      "dirs": []
+    },
+    "security/infobez-opasnost": {
+      "division": "security",
+      "slug": "infobez-opasnost",
+      "path": "packs/security/infobez-opasnost.tar.gz",
+      "bytes": 1514,
+      "rawBytes": 1514,
+      "files": 1,
+      "sha256": "2a790dbe55f0a60ade6aa88fe6ceef71d1d22263136760a88907d202e9fcd575",
+      "dirs": []
+    },
+    "team/data-science-team": {
+      "division": "team",
+      "slug": "data-science-team",
+      "path": "packs/team/data-science-team.tar.gz",
+      "bytes": 2651,
+      "rawBytes": 2651,
+      "files": 1,
+      "sha256": "e0b3baf50634933875699dc8e3bac854bc9a8acf1f843c3e0ab1f9acc80129bc",
+      "dirs": []
+    },
+    "team/devops-team": {
+      "division": "team",
+      "slug": "devops-team",
+      "path": "packs/team/devops-team.tar.gz",
+      "bytes": 2785,
+      "rawBytes": 2785,
+      "files": 1,
+      "sha256": "743960241eb2403c220043764fe17489c748766e2fda943b866318872e5b9c3a",
+      "dirs": []
+    },
+    "team/healthcare-team": {
+      "division": "team",
+      "slug": "healthcare-team",
+      "path": "packs/team/healthcare-team.tar.gz",
+      "bytes": 5003,
+      "rawBytes": 5003,
+      "files": 1,
+      "sha256": "f66bfb56ef2e73320722d5dae2bc858e9c73cc4e77a8af040fba482488258323",
+      "dirs": []
+    },
+    "team/ml-platform-team": {
+      "division": "team",
+      "slug": "ml-platform-team",
+      "path": "packs/team/ml-platform-team.tar.gz",
+      "bytes": 2754,
+      "rawBytes": 2754,
+      "files": 1,
+      "sha256": "e4b8f8e244602e0c85e4189e6b07b6fe4499278369dc91b07e5acdf8cdd81071",
+      "dirs": []
+    },
+    "team/mobile-team": {
+      "division": "team",
+      "slug": "mobile-team",
+      "path": "packs/team/mobile-team.tar.gz",
+      "bytes": 3151,
+      "rawBytes": 3151,
+      "files": 1,
+      "sha256": "5a9b4f05834c40962f533e94348a1007e47c65a037c86edf8f3db53d4630f500",
+      "dirs": []
+    },
+    "team/security-team": {
+      "division": "team",
+      "slug": "security-team",
+      "path": "packs/team/security-team.tar.gz",
+      "bytes": 2575,
+      "rawBytes": 2575,
+      "files": 1,
+      "sha256": "8cdb8f82c8266452e959da2258d77bbffe5f9800be48a513cfb8149a2b34d2a7",
+      "dirs": []
+    }
+  }
+}

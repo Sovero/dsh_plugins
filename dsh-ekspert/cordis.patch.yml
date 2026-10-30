@@ -1,0 +1,7 @@
+# Читается `dsh plugin add` и сливается в целевой профиль.
+# Строка remote позволяет api-gateway обнаружить сервис Typert Эксперта (wire-имя eksTeam).
+- insert:
+    - id: eks-team-remote
+      name: 'dsh-ekspert/remote'
+    - id: eks-team
+      name: 'dsh-ekspert'
