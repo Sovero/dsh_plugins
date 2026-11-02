@@ -72,7 +72,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "build": "node tools/build-client.mjs",
+    "build": "npm run typecheck && node tools/build-client.mjs",
     "check-client": "node tools/check-client-refs.mjs",
     "render-smoke": "node tools/render-smoke.mjs",
     "verify": "node tools/verify.mjs",
