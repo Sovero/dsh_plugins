@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#0d1b2a"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00d4aa"/>
+      <stop offset="100%" stop-color="#0099ff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="128" height="128" rx="24" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle grid pattern -->
+  <g opacity="0.08">
+    <pattern id="grid" width="16" height="16" patternUnits="userSpaceOnUse">
+      <path d="M16 0 L0 0 0 16" stroke="#00d4aa" stroke-width="0.5" fill="none"/>
+    </pattern>
+    <rect width="128" height="128" rx="24" fill="url(#grid)"/>
+  </g>
+  
+  <!-- Central hexagon (expert badge) -->
+  <g filter="url(#glow)">
+    <polygon points="64,24 94,40 94,72 64,88 34,72 34,40" 
+             fill="none" stroke="url(#accentGrad)" stroke-width="3"/>
+    <polygon points="64,30 88,44 88,70 64,84 40,70 40,44" 
+             fill="url(#accentGrad)" opacity="0.15"/>
+  </g>
+  
+  <!-- Connection lines (network of experts) -->
+  <g stroke="url(#accentGrad)" stroke-width="2" stroke-linecap="round" opacity="0.7">
+    <line x1="64" y1="24" x2="64" y2="8"/>
+    <line x1="94" y1="40" x2="112" y2="32"/>
+    <line x1="94" y1="72" x2="112" y2="80"/>
+    <line x1="64" y1="88" x2="64" y2="104"/>
+    <line x1="34" y1="72" x2="16" y2="80"/>
+    <line x1="34" y1="40" x2="16" y2="32"/>
+  </g>
+  
+  <!-- Node circles at line ends -->
+  <g fill="url(#accentGrad)">
+    <circle cx="64" cy="8" r="5"/>
+    <circle cx="112" cy="32" r="5"/>
+    <circle cx="112" cy="80" r="5"/>
+    <circle cx="64" cy="104" r="5"/>
+    <circle cx="16" cy="80" r="5"/>
+    <circle cx="16" cy="32" r="5"/>
+  </g>
+  
+  <!-- Center accent -->
+  <circle cx="64" cy="56" r="12" fill="url(#accentGrad)" opacity="0.9">
+    <animate attributeName="opacity" values="0.9;0.5;0.9" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Russian "Э" letter in center -->
+  <text x="64" y="61" text-anchor="middle" 
+        font-family="system-ui, sans-serif" font-size="24" font-weight="700" 
+        fill="#0d1b2a">Э</text>
+  
+  <!-- Subtle ring -->
+  <circle cx="64" cy="56" r="28" fill="none" stroke="url(#accentGrad)" stroke-width="1.5" opacity="0.3"/>
+</svg>

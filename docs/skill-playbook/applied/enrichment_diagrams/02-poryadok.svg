@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="900" height="470" fill="#0f172a"/>
+  <text x="40" y="46" fill="#e2e8f0" font-size="24" font-weight="700">Порядок выгрузки по Чёрному Плащу</text>
+  <text x="40" y="72" fill="#94a3b8" font-size="14">«Сначала каталог, потом уроки, потом прогресс — и только тогда применение»</text>
+
+  <g font-size="13">
+    <rect x="40" y="100" width="230" height="52" rx="8" fill="#312e81" stroke="#818cf8"/>
+    <text x="155" y="122" fill="#c7d2fe" font-size="12" text-anchor="middle">0 · УЖЕ НА БОРТУ</text>
+    <text x="155" y="141" fill="#e0e7ff" font-size="13" text-anchor="middle">skill-creator + agent-experience</text>
+
+    <rect x="40" y="162" width="230" height="46" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+    <text x="155" y="190" fill="#bae6fd" text-anchor="middle">1 · skill-catalog</text>
+
+    <rect x="40" y="218" width="230" height="46" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+    <text x="155" y="246" fill="#bae6fd" text-anchor="middle">2 · skill-lessons</text>
+
+    <rect x="40" y="274" width="230" height="46" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+    <text x="155" y="302" fill="#bae6fd" text-anchor="middle">3 · skill-progress</text>
+
+    <rect x="40" y="330" width="230" height="46" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+    <text x="155" y="358" fill="#bae6fd" text-anchor="middle">4 · skill-media</text>
+
+    <rect x="40" y="386" width="230" height="46" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+    <text x="155" y="414" fill="#bae6fd" text-anchor="middle">5 · skill-license</text>
+  </g>
+
+  <path d="M 275 126 L 330 126" stroke="#818cf8" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M 275 185 L 330 185" stroke="#38bdf8" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M 275 241 L 330 241" stroke="#38bdf8" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M 275 297 L 330 297" stroke="#38bdf8" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M 275 353 L 330 353" stroke="#38bdf8" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M 275 409 L 330 409" stroke="#38bdf8" stroke-width="2" marker-end="url(#a)"/>
+
+  <g font-size="12" fill="#94a3b8">
+    <text x="340" y="130">стандарт оформления без дублей</text>
+    <text x="340" y="189">знать, что уже есть</text>
+    <text x="340" y="245">зафиксировать паттерны</text>
+    <text x="340" y="301">не терять место между вылетами</text>
+    <text x="340" y="357">статья, слайды, диаграммы</text>
+    <text x="340" y="413">бирка на каждый внешний ресурс</text>
+  </g>
+
+  <rect x="620" y="100" width="240" height="332" rx="12" fill="#052e16" stroke="#22c55e" stroke-width="2"/>
+  <text x="740" y="132" fill="#bbf7d0" font-size="15" font-weight="700" text-anchor="middle">6 · skill-qc</text>
+  <text x="740" y="158" fill="#86efac" font-size="12" text-anchor="middle">измеримые пороги</text>
+  <text x="740" y="178" fill="#86efac" font-size="12" text-anchor="middle">гейт между этапами</text>
+  <text x="740" y="198" fill="#86efac" font-size="12" text-anchor="middle">4 гард-хука</text>
+  <line x1="645" y1="216" x2="835" y2="216" stroke="#166534"/>
+  <text x="740" y="242" fill="#dcfce7" font-size="13" font-weight="700" text-anchor="middle">ПРИМЕНЕНИЕ</text>
+  <text x="740" y="266" fill="#86efac" font-size="12" text-anchor="middle">инжест → каталог → урок</text>
+  <text x="740" y="286" fill="#86efac" font-size="12" text-anchor="middle">→ прогресс → медиа</text>
+  <text x="740" y="306" fill="#86efac" font-size="12" text-anchor="middle">→ лицензии → QC</text>
+  <text x="740" y="326" fill="#86efac" font-size="12" text-anchor="middle">→ log.md → handoff.md</text>
+  <line x1="645" y1="344" x2="835" y2="344" stroke="#166534"/>
+  <text x="740" y="370" fill="#dcfce7" font-size="12" text-anchor="middle">Уровень 1: проверка задачи</text>
+  <text x="740" y="390" fill="#dcfce7" font-size="12" text-anchor="middle">Уровень 2: сверка со SPEC</text>
+  <text x="740" y="412" fill="#fbbf24" font-size="12" text-anchor="middle">→ сходимость</text>
+
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8"/>
+    </marker>
+  </defs>
+</svg>

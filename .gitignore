@@ -1,0 +1,24 @@
+# Снабженка: чужие пакеты не уезжают на берег (≈490 МБ)
+node_modules/
+.pnpm-store/
+
+# Сборки и временные файлы
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Локальные секреты (на случай появления)
+.env
+.env.*
+*.pem
+*.key
+.credentials.yaml
+
+# Архивы груза
+*.tgz
+*.tar.gz
+
+# Служебные каталоги DSH
+.dsh/
+.agents/

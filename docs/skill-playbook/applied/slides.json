@@ -1,0 +1,92 @@
+{
+  "title": "Плейбук Плаща на борту DeepSeek Harness",
+  "language": "ru",
+  "generated": "2026-11-12T09:17:03",
+  "slides": [
+    {
+      "id": 1,
+      "heading": "Цель: не прочитать, а зафиксировать",
+      "bullets": [
+        "Изученный сайт или репозиторий превращается в применимые умения",
+        "Шесть новых умений + семь этапов применения",
+        "Перенаправление груза: не Hermes, а DeepSeek Harness"
+      ],
+      "diagram": null
+    },
+    {
+      "id": 2,
+      "heading": "Причалы умений борта",
+      "bullets": [
+        "Ранг 100 — проектный DSH",
+        "Ранг 200 — проектный агентов",
+        "Ранг 300 — customSkillDirs",
+        "Ранг 400 — пользовательский DSH (наш причал)",
+        "Ранг 500 — пользовательский агентов"
+      ],
+      "diagram": "enrichment_diagrams/01-prichaly.svg"
+    },
+    {
+      "id": 3,
+      "heading": "Порядок выгрузки по Плащу",
+      "bullets": [
+        "1. Стандарт оформления — уже на борту",
+        "2. Каталог",
+        "3. Уроки",
+        "4. Прогресс",
+        "5. Медиа",
+        "6. Лицензии",
+        "7. Проверки качества"
+      ],
+      "diagram": "enrichment_diagrams/02-poryadok.svg"
+    },
+    {
+      "id": 4,
+      "heading": "Инжест: dsh-ekspert 0.1.0",
+      "bullets": [
+        "MIT, автор Балу, 131 файл без node_modules/.git",
+        "Стек: TypeScript 5.9, React 18, zod 4, esbuild",
+        "8 паттернов P1–P8 сняты с реальных файлов",
+        "SHA-256 README.md зафиксирован"
+      ],
+      "diagram": null
+    },
+    {
+      "id": 5,
+      "heading": "Паттерн узнаётся, а не навязывается",
+      "bullets": [
+        "Фасеты каталога ↔ list_ekspert с division",
+        "Гейты качества ↔ prepublishOnly из шести проверок",
+        "Лицензионный учёт ↔ LICENSE + THIRD-PARTY-NOTICES",
+        "Передача смены ↔ асинхронный summon_ekspert"
+      ],
+      "diagram": null
+    },
+    {
+      "id": 6,
+      "heading": "Урок и гейты",
+      "bullets": [
+        "7 этапов, 2–5 шагов на этап",
+        "У каждого шага: название, описание, измеримый критерий",
+        "Этап N+1 открывается только после гейта skill-qc",
+        "Прогресс пишется в progress.json"
+      ],
+      "diagram": "enrichment_diagrams/03-geyt.svg"
+    },
+    {
+      "id": 7,
+      "heading": "Двухуровневая проверка",
+      "bullets": [
+        "Уровень 1: у каждой задачи своя проверка",
+        "Уровень 2: сверка всего результата со спецификацией",
+        "Расхождения превращаются в новые задачи",
+        "Чек-лист Плаща закрыт полностью"
+      ],
+      "diagram": null
+    }
+  ],
+  "diagram_refs": [
+    "enrichment_diagrams/01-prichaly.svg",
+    "enrichment_diagrams/02-poryadok.svg",
+    "enrichment_diagrams/03-geyt.svg"
+  ]
+}

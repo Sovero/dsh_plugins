@@ -1,0 +1,14 @@
+{
+  "name": "@michengai/dsh-agency-agents-ru",
+  "version": "1.2.26",
+  "description": "DSH Agency Agents — полная русская локализация",
+  "main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MichengAI/dsh-agency-agents.git"
+  },
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "@deepseek-ai/dsh": ">=0.2.0-rc.1 <0.3.0-0"
+  }
+}
