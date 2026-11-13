@@ -1,4 +1,4 @@
-/** Сборка клиентской части (panel.tsx → lib/client.js). */
+/** Сборка клиентской части в форматеDispетчерской (window.__ModuleLoader__). */
 import { build } from "esbuild";
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -8,25 +8,23 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
 async function main() {
-  // Собираем клиент
+  // Браузерный груз: ленивая фабрика регистрируется через __ModuleLoader__.
+  // React приходит из таблицы модулей страницы (require('react')), поэтому
+  // он объявлен external и не попадает в бандл вторым комплектом.
   await build({
-    entryPoints: [join(ROOT, "src", "client", "index.ts")],
+    entryPoints: [join(ROOT, "src", "client", "entry.js")],
     bundle: true,
-    platform: "node",
-    format: "esm",
+    platform: "browser",
+    format: "iife",
     outfile: join(ROOT, "lib", "client.js"),
-    external: [
-      "preact",
-      "preact/hooks",
-      "@deepseek-ai/dsh-client-ui-settings",
-      "@deepseek-ai/dsh-client-connection",
-      "@deepseek-ai/dsh-client-locale",
-    ],
-    target: "node22",
+    external: ["react"],
+    target: "es2022",
+    charset: "utf8",
     sourcemap: true,
+    legalComments: "none",
   });
 
-  // Копируем locale файлы
+  // Копируем словари (используются хост-половиной и остаются в поставке)
   const localeSrc = join(ROOT, "src", "locale");
   const localeDst = join(ROOT, "lib", "locale");
   if (existsSync(localeSrc)) {
@@ -38,7 +36,7 @@ async function main() {
     }
   }
 
-  console.log("[build-client] Готово: lib/client.js");
+  console.log("[build-client] Готово: lib/client.js (формат __ModuleLoader__)");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

@@ -1,4 +1,4 @@
-/** Smoke-тест рендера: проверяем, что клиентский entry существует и экспортирует setupClient. */
+/** Smoke-тест рендера: проверяем формат клиентского грузаDispетчерской. */
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,13 +8,19 @@ const ROOT = join(__dirname, "..");
 
 function main() {
   try {
-    // Проверяем, что файл существует и содержит экспорт setupClient
-    const clientPath = join(ROOT, "lib", "client.js");
-    const content = readFileSync(clientPath, "utf-8");
-    if (!content.includes("setupClient") || !content.includes("export")) {
-      throw new Error("setupClient не экспортирован из lib/client.js");
+    const content = readFileSync(join(ROOT, "lib", "client.js"), "utf-8");
+    const checks = [
+      ["фабрика __ModuleLoader__", content.includes("__ModuleLoader__.load")],
+      ["id пакета dsh-ekspert", content.includes("dsh-ekspert")],
+      ["Слот настроек", content.includes("settings.section")],
+      ["Слот левой панели", content.includes("conversation.input.left")],
+      ["кнопка Эксперты", content.includes("Эксперты")],
+    ];
+    const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
+    if (failed.length > 0) {
+      throw new Error("Клиентский груз неполон: " + failed.join(", "));
     }
-    console.log("[render-smoke] OK: lib/client.js существует, setupClient экспортирован");
+    console.log("[render-smoke] OK: __ModuleLoader__, оба Слота, кнопка Эксперты на месте");
   } catch (e) {
     console.error("[render-smoke] Ошибка:", e.message);
     process.exit(1);
