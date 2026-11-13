@@ -4,6 +4,9 @@ import { join, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const SNAPSHOT_DIR = join(dirname(dirname(fileURLToPath(import.meta.url))), "data", "eksperts");
+/** Русские бумаги локализации, которые тоже должны попасть в Секретный отсек. */
+export const LOCALE_DIR = join(dirname(dirname(fileURLToPath(import.meta.url))), "data", "ru");
+export const LOCALE_FILES = ["names.json", "descriptions.json", "divisions.json"] as const;
 
 export interface SeedReport {
   ok: boolean;
@@ -51,6 +54,25 @@ export function seedData(options: {
     // Создаём директории если нужно
     if (!existsSync(root)) mkdirSync(root, { recursive: true });
     if (!existsSync(zhRoot)) mkdirSync(zhRoot, { recursive: true });
+
+    // Копируем русские бумаги локализации (names/descriptions/divisions).
+    // Без divisions.json loadCatalog не знает меток разделов и показывает
+    // сырые ключи вроде «engineering» вместо «Инженерия».
+    // По общему правилу отсека: существующие файлы не перезаписываем.
+    if (existsSync(LOCALE_DIR)) {
+      for (const file of LOCALE_FILES) {
+        const src = join(LOCALE_DIR, file);
+        const dst = join(zhRoot, file);
+        if (!existsSync(src) || existsSync(dst)) continue;
+        try {
+          cpSync(src, dst);
+          report.copied.push(`ru/${file}`);
+        } catch (error) {
+          // Одна недоступная бумага не должна ронять всю синхронизацию.
+          report.error = report.error ?? (error instanceof Error ? error.message : String(error));
+        }
+      }
+    }
 
     // Копируем встроенный каталог
     if (existsSync(SNAPSHOT_DIR)) {

@@ -1,4 +1,7 @@
 export declare const SNAPSHOT_DIR: string;
+/** Русские бумаги локализации, которые тоже должны попасть в Секретный отсек. */
+export declare const LOCALE_DIR: string;
+export declare const LOCALE_FILES: readonly ["names.json", "descriptions.json", "divisions.json"];
 export interface SeedReport {
     ok: boolean;
     error?: string;
